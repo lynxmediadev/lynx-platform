@@ -6,7 +6,12 @@
 // Peras y manzanas: “Dejo cinco fichas listas en la libreta; si ya existen,
 //                    las actualizo, si faltan, las creo.”
 // ================================================
+import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "@prisma/client";
+
+loadEnv({ path: ".env.local", quiet: true });
+loadEnv({ path: ".env", quiet: true });
+
 const db = new PrismaClient();
 
 const slugify = (str: string) =>

@@ -1,4 +1,8 @@
+import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "@prisma/client";
+
+loadEnv({ path: ".env.local", quiet: true });
+loadEnv({ path: ".env", quiet: true });
 
 const db = new PrismaClient();
 
@@ -64,4 +68,3 @@ main()
   .finally(async () => {
     await db.$disconnect();
   });
-

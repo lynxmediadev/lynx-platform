@@ -14,7 +14,7 @@ Objetivo: checklist tecnico para preparar PC1 y poder continuar el desarrollo si
 3) Prisma genera clientes en `postinstall`, pero si cambias el schema: `npx prisma generate`.
 
 ## Variables de entorno requeridas
-Crear `.env.local` (o `.env`) usando `.env.example` como base y completar:
+Crear `.env.local` usando `.env.example` como base y completar:
 
 ### Base de datos (Supabase/Postgres)
 - `DATABASE_URL` (conexion principal).

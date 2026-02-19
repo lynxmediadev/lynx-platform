@@ -3,10 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings=0",
@@ -33,15 +29,8 @@
     "db:seed:tickets": "tsx prisma/seed.tickets.ts",
     "db:backfill:playlists": "tsx prisma/backfill.playlists.ts",
     "db:catalog:reset-main-tracks": "tsx prisma/reset.main-catalog-tracks.ts",
-    "landing:db:generate": "npm run db:generate --workspace @lynx/landing",
-    "landing:db:push": "npm run db:push --workspace @lynx/landing",
-    "landing:db:migrate": "npm run db:migrate --workspace @lynx/landing",
-    "landing:preflight": "node scripts/landing-preflight.mjs",
     "auth:preflight": "node scripts/auth-email-preflight.mjs",
-    "test": "vitest run -c vitest.config.ts",
-    "dev:landing": "npm run dev --workspace @lynx/landing --",
-    "build:landing": "npm run build --workspace @lynx/landing",
-    "start:landing": "npm run start --workspace @lynx/landing"
+    "test": "vitest run -c vitest.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.930.0",

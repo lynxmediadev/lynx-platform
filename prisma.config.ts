@@ -5,9 +5,13 @@
 // Qué hace: Reemplaza la configuración de package.json#prisma.
 // Peras y manzanas: “El botón de ‘sembrar’ vive aquí, no en package.json.”
 // ================================================
-import 'dotenv/config';                 // Carga las variables de .env para el CLI
+import { config as loadEnv } from "dotenv";
 import path from "node:path";
 import { defineConfig } from "prisma/config";
+
+// Convención del repo: .env.local como fuente principal; .env queda como fallback legacy.
+loadEnv({ path: ".env.local", quiet: true });
+loadEnv({ path: ".env", quiet: true });
 
 export default defineConfig({
   // Ruta de tu schema Prisma (explícita por claridad)

@@ -3,7 +3,6 @@
 import { config as loadEnv } from "dotenv";
 
 loadEnv({ path: ".env.local", quiet: true });
-loadEnv({ path: ".env", quiet: true });
 
 const provider = (process.env.AUTH_EMAIL_PROVIDER || "console").trim().toLowerCase();
 const from = (process.env.AUTH_EMAIL_FROM || "").trim();

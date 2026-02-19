@@ -11,9 +11,17 @@
 
 # On Linux and macOS you can run this script directly - `./start-database.sh`
 
-# import env variables from .env
+# import env variables from .env.local (fallback legacy: .env)
 set -a
-source .env
+ENV_FILE=".env.local"
+if [ ! -f "$ENV_FILE" ] && [ -f ".env" ]; then
+  ENV_FILE=".env"
+fi
+if [ ! -f "$ENV_FILE" ]; then
+  echo "Missing .env.local. Copy .env.example to .env.local and set DATABASE_URL."
+  exit 1
+fi
+source "$ENV_FILE"
 
 DB_PASSWORD=$(echo "$DATABASE_URL" | awk -F':' '{print $3}' | awk -F'@' '{print $1}')
 DB_PORT=$(echo "$DATABASE_URL" | awk -F':' '{print $4}' | awk -F'\/' '{print $1}')
@@ -66,12 +74,16 @@ if [ "$DB_PASSWORD" = "password" ]; then
   echo "You are using the default database password"
   read -p "Should we generate a random password for you? [y/N]: " -r REPLY
   if ! [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Please change the default password in the .env file and try again"
+    echo "Please change the default password in $ENV_FILE and try again"
     exit 1
   fi
   # Generate a random URL-safe password
   DB_PASSWORD=$(openssl rand -base64 12 | tr '+/' '-_')
-  sed -i '' "s#:password@#:$DB_PASSWORD@#" .env
+  if sed --version >/dev/null 2>&1; then
+    sed -i "s#:password@#:$DB_PASSWORD@#" "$ENV_FILE"
+  else
+    sed -i '' "s#:password@#:$DB_PASSWORD@#" "$ENV_FILE"
+  fi
 fi
 
 $DOCKER_CMD run -d \

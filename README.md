@@ -6,6 +6,12 @@ Este repo incluye una rama `clean-base` que guarda la versión mínima del proye
 
 Usar esta rama como referencia si se requiere volver a un estado inicial sólido.
 
+## Archivo de split
+
+La documentación histórica de la separación Landing/Platform quedó archivada en:
+
+- `docs/archive/landing-split/`
+
 
 ## WSL (Windows Subsystem for Linux)
 
@@ -29,8 +35,8 @@ npm install
 
 ### Base de datos y dev server
 ```bash
-# si no existe, crea tu .env desde el ejemplo
-cp .env.example .env
+# si no existe, crea tu .env.local desde el ejemplo
+cp .env.example .env.local
 
 ./start-database.sh
 npm run db:push

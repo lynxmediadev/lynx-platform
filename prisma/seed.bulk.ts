@@ -5,8 +5,11 @@
 // Qué hace: Agrega registros sin borrar los existentes.
 // Peras y manzanas: “Agrego muchas fichas nuevas para probar el catálogo grande.”
 // ================================================
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "@prisma/client";
+
+loadEnv({ path: ".env.local", quiet: true });
+loadEnv({ path: ".env", quiet: true });
 
 const db = new PrismaClient();
 

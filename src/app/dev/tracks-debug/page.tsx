@@ -4,7 +4,7 @@
  * Peras y manzanas: Visita /dev/tracks-debug, ajusta filtros y usa “Siguiente”.
  */
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type ListItem = { id: string; title: string; artist: string; coverUrl?: string | null; moods: string[]; uses: string[] };
@@ -15,7 +15,7 @@ const ORDER_DIRS = ["asc", "desc"] as const;
 type OrderDir = (typeof ORDER_DIRS)[number];
 function parseCSV(v: string) { return v.split(",").map(s=>s.trim()).filter(Boolean); }
 
-export default function TracksDebugPage() {
+function TracksDebugPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const [q, setQ] = useState(sp.get("q") ?? "");
@@ -140,5 +140,13 @@ export default function TracksDebugPage() {
         ))}
       </section>
     </main>
+  );
+}
+
+export default function TracksDebugPage() {
+  return (
+    <Suspense fallback={<main className="p-6"><p className="text-sm opacity-70">Cargando debug...</p></main>}>
+      <TracksDebugPageInner />
+    </Suspense>
   );
 }
