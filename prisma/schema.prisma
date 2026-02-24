@@ -489,6 +489,34 @@ enum ServiceOfferStatus {
   ARCHIVED
 }
 
+enum BannerPlacement {
+  CATALOG_HERO
+}
+
+enum BannerTargetType {
+  TRACK
+  PLAYLIST
+  SOUND_KIT
+  SERVICE_OFFER
+  ARTIST
+  EXTERNAL_URL
+}
+
+enum PromotionSlotFormat {
+  HERO
+  SLIDER
+  STRIP
+  GRID
+  BANNER
+}
+
+enum PromotionCampaignStatus {
+  DRAFT
+  LIVE
+  PAUSED
+  ARCHIVED
+}
+
 enum ServiceCategory {
   MIX_MASTER
   PRODUCTION
@@ -660,6 +688,83 @@ model ServiceOffer {
   @@index([status, updatedAt])
   @@index([category, status, updatedAt])
   @@index([ownerUserId, updatedAt])
+}
+
+model PromotionSlot {
+  id          String             @id @default(cuid())
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  key         String             @unique
+  name        String
+  format      PromotionSlotFormat @default(HERO)
+  description String?
+  isEnabled   Boolean            @default(true)
+  settings    Json?
+  campaigns   BannerPromotion[]
+
+  @@index([isEnabled, updatedAt])
+  @@index([format, updatedAt])
+}
+
+model BannerPromotion {
+  id        String          @id @default(cuid())
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  name      String
+  placement BannerPlacement?
+  slotId    String?
+  slot      PromotionSlot?  @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  status    PromotionCampaignStatus @default(DRAFT)
+  priority  Int             @default(0)
+  isActive  Boolean         @default(false)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  notes     String?
+  items     BannerPromotionItem[]
+
+  @@index([placement, isActive, startsAt, endsAt, updatedAt])
+  @@index([slotId, status, startsAt, endsAt, updatedAt])
+  @@index([slotId, priority, updatedAt])
+}
+
+model BannerPromotionItem {
+  id               String           @id @default(cuid())
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  promotionId      String
+  promotion        BannerPromotion  @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  targetType       BannerTargetType
+  targetId         String?
+  titleOverride    String?
+  subtitleOverride String?
+  imageUrlOverride String?
+  ctaLabel         String?
+  ctaHrefOverride  String?
+  sortOrder        Int              @default(0)
+  isEnabled        Boolean          @default(true)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  durationMs       Int              @default(5000)
+
+  @@index([promotionId, sortOrder])
+  @@index([isEnabled, startsAt, endsAt, sortOrder])
+  @@index([targetType, targetId])
+}
+
+model BannerPromotionEvent {
+  id        String          @id @default(cuid())
+  createdAt DateTime        @default(now())
+  placement BannerPlacement
+  itemId    String?
+  eventType String
+  sessionId String?
+  path      String?
+  userAgent String?
+  ip        String?
+
+  @@index([placement, createdAt])
+  @@index([itemId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 model ContractRecord {

@@ -1,13 +1,8 @@
 import CatalogClient from "@/app/catalog/CatalogClient";
 import CatalogView from "@/components/catalog/CatalogView";
-import {
-  AdminListHeader,
-  AdminListShell,
-  AdminStatusBadge,
-} from "@/components/admin/list-kit";
-import { ListMusic } from "lucide-react";
 import { getMainCatalogPlaylist } from "@/lib/playlists/service";
 import { fetchPlaylistCatalogTracks } from "@/lib/catalog/fetchPlaylistTracks";
+import { resolveShowcaseSlides } from "@/lib/banner-promotions/service";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +36,7 @@ export default async function CatalogPage({
       <CatalogView
         catalogSlug={categories[0] ?? null}
         filters={{ moods, uses, artist: artist || undefined, q: q || undefined }}
-        eyebrow="Catálogo legacy"
+        eyebrow="ODR Records"
         title="Catálogo público (legacy)"
         subtitle="Modo compatibilidad temporal activado por CATALOG_USE_LEGACY=1."
       />
@@ -53,13 +48,11 @@ export default async function CatalogPage({
   if (!playlist) {
     return (
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-10">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Catalog
-        </p>
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Catalog</p>
         <h1 className="text-2xl font-semibold">Catálogo sin playlist principal</h1>
         <p className="text-sm text-muted-foreground">
-          Define una playlist como principal desde el dashboard (`/admin/playlists`)
-          para publicar el catálogo en esta ruta.
+          Define una playlist como principal desde el dashboard (`/admin/playlists`) para publicar
+          el catálogo en esta ruta.
         </p>
       </section>
     );
@@ -68,15 +61,11 @@ export default async function CatalogPage({
   if (playlist.visibility !== "PUBLIC" || playlist.status !== "PUBLISHED") {
     return (
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-10">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          Catalog
-        </p>
-        <h1 className="text-2xl font-semibold">
-          El catálogo principal no está publicado
-        </h1>
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Catalog</p>
+        <h1 className="text-2xl font-semibold">El catálogo principal no está publicado</h1>
         <p className="text-sm text-muted-foreground">
-          Publica la playlist principal (estado PUBLISHED + visibilidad PUBLIC)
-          desde `/admin/playlists`.
+          Publica la playlist principal (estado PUBLISHED + visibilidad PUBLIC) desde
+          `/admin/playlists`.
         </p>
       </section>
     );
@@ -89,27 +78,24 @@ export default async function CatalogPage({
     limit: 220,
   });
 
+  const heroSlides = await resolveShowcaseSlides({
+    slotKey: "catalog.hero.main",
+    limit: 12,
+  });
+
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <AdminListShell className="bg-background/40">
-        <AdminListHeader
-          icon={<ListMusic className="text-muted-foreground h-4 w-4" aria-hidden="true" />}
-          title={playlist.name}
-          subtitle="playlist principal"
-          count={<AdminStatusBadge>{tracks.length} tracks</AdminStatusBadge>}
-        />
-        <CatalogClient
-          tracks={tracks}
-          title={playlist.name}
-          subtitle={
-            playlist.description ||
-            "Catálogo principal gestionado desde playlists."
-          }
-          eyebrow="Catálogo"
-          hideHeader
-          categories={[]}
-        />
-      </AdminListShell>
+    <section className="w-full bg-[var(--lm-bg-deep)] py-4 sm:py-6">
+      <CatalogClient
+        tracks={tracks}
+        heroSlides={heroSlides}
+        title={playlist.name || "ODR Records Catalog"}
+        subtitle={
+          playlist.description ||
+          "Catálogo principal de ODR Records para revisar tracks y licenciamiento."
+        }
+        eyebrow="ODR Records"
+        categories={[]}
+      />
     </section>
   );
 }
