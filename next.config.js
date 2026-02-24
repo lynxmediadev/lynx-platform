@@ -21,6 +21,15 @@ import "./src/env.js";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: { ignoreDuringBuilds: true }, // desactiva lint en build (solo temporal)
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "picsum.photos" },
+      { protocol: "https", hostname: "loremflickr.com" },
+      { protocol: "https", hostname: "placecats.com" },
+      { protocol: "https", hostname: "www.placecats.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+    ],
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       const externals = config.externals ?? [];
