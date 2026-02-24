@@ -19,7 +19,7 @@
 @theme {
   /* Colores “legacy” mínimos (por si algún componente antiguo los usa) */
   --color-light: #f3f1ea;
-  --color-dark: #141414;
+  --color-dark: #0b0b0b;
 
   /* Tipografías (inyectadas por next/font en <html>) */
   --font-inter: var(--font-inter);
@@ -43,7 +43,7 @@
   --lm-radius: 4px;
 
   /* Core brand */
-  --lm-ink: #141414;
+  --lm-ink: var(--color-dark);
   --lm-paper: #f3f1ea;
   --lm-white-bg: #f5f5f5;
 
@@ -53,7 +53,7 @@
   --lm-accent-outline: #6366f1;
 
   /* DARK surfaces */
-  --lm-bg-deep: #141414;
+  --lm-bg-deep: var(--color-dark);
   --lm-bg-main: #161616;
   --lm-bg-alt: #1a1a1c;
 
@@ -246,6 +246,15 @@ body {
 }
 .table-scroll > table {
   min-width: 640px;
+}
+
+@keyframes lm-loop-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(var(--lm-loop-distance, -50%), 0, 0);
+  }
 }
 
 /* Padding/gap aumentado para touch en pantallas pequeñas */

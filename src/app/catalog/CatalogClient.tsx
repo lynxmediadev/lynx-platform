@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Heart, Pause, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, LayoutGrid, List, Pause, Play } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import LoopingText from "@/components/common/LoopingText";
 import { cn } from "@/lib/utils";
 import type { Track } from "@/lib/catalog/types";
 import type { CatalogHeroSlide } from "@/lib/banner-promotions/types";
@@ -48,6 +57,13 @@ const FALLBACK_BANNER_IMAGES = [
   "/images/hero/hero-bg-4.png",
 ];
 const MIN_BANNER_SLIDES = 10;
+const VIEW_MODE_STORAGE_KEY = "catalog:view-mode";
+
+type CatalogViewMode = "grid" | "list";
+
+function isCatalogViewMode(value: unknown): value is CatalogViewMode {
+  return value === "grid" || value === "list";
+}
 
 function parseDurationSeconds(value?: string | null): number {
   if (!value) return 0;
@@ -103,6 +119,206 @@ function isExternalHref(href: string) {
   return /^https?:\/\//i.test(href.trim());
 }
 
+function getTrackDurationLabel(track: CatalogTrack): string {
+  if (track.duration && track.duration !== "—") return track.duration;
+  const durationSec = resolveDuration(track);
+  return durationSec > 0 ? formatTime(durationSec) : "—";
+}
+
+function formatLicenseTypeLabel(value?: string | null): string | null {
+  if (!value) return null;
+  switch (value) {
+    case "NON_EXCLUSIVE":
+      return "No exclusiva";
+    case "EXCLUSIVE":
+      return "Exclusiva";
+    case "LIMITED_EXCLUSIVE":
+      return "Exclusiva limitada";
+    case "BUYOUT":
+      return "Buyout";
+    default:
+      return value;
+  }
+}
+
+function formatPricingTierLabel(value?: string | null): string | null {
+  if (!value) return null;
+  switch (value) {
+    case "LOW":
+      return "Low";
+    case "MID":
+      return "Mid";
+    case "HIGH":
+      return "High";
+    case "BESPOKE":
+      return "Bespoke";
+    default:
+      return value;
+  }
+}
+
+function formatCurrencyAmount(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
+): string | null {
+  if (typeof amount !== "number" || !Number.isFinite(amount)) return null;
+  const code = (currency ?? "USD").toUpperCase();
+  try {
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: code,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${code} ${Math.round(amount)}`;
+  }
+}
+
+type CatalogLicenseCard = {
+  id: string;
+  title: string;
+  price: string;
+  formats: string;
+  note: string;
+};
+
+function deriveCatalogLicenseCards(track: CatalogTrack): CatalogLicenseCard[] {
+  const min =
+    typeof track.budgetMin === "number" && Number.isFinite(track.budgetMin) ? track.budgetMin : null;
+  const max =
+    typeof track.budgetMax === "number" && Number.isFinite(track.budgetMax) ? track.budgetMax : null;
+
+  let standard = min;
+  let premium: number | null = null;
+  let exclusive = max;
+
+  if (min !== null && max !== null) {
+    premium = Math.round(min + (max - min) * 0.45);
+  } else if (min !== null) {
+    premium = Math.round(min * 1.6);
+    exclusive = Math.round(min * 2.4);
+  } else if (max !== null) {
+    standard = Math.round(max * 0.45);
+    premium = Math.round(max * 0.7);
+    exclusive = max;
+  }
+
+  const price = (amount: number | null) =>
+    formatCurrencyAmount(amount, track.budgetCurrency) ?? "A cotizar";
+  const tierLabel = formatPricingTierLabel(track.pricingTier);
+  const licenseType = (track.licenseType ?? "").toUpperCase();
+
+  const standardCard: CatalogLicenseCard = {
+    id: "standard",
+    title: "Licencia estándar",
+    price: price(standard),
+    formats: "MP3",
+    note: "Uso digital base",
+  };
+  const premiumCard: CatalogLicenseCard = {
+    id: "premium",
+    title: "Licencia ampliada",
+    price: price(premium),
+    formats: "MP3, WAV",
+    note: "Mayor flexibilidad de uso",
+  };
+  const exclusiveCard: CatalogLicenseCard = {
+    id: "exclusive",
+    title: "Licencia exclusiva",
+    price: price(exclusive),
+    formats: "MP3, WAV, STEMS",
+    note: tierLabel ? `Tier ${tierLabel}` : "Asignación exclusiva del asset",
+  };
+
+  if (licenseType === "EXCLUSIVE" || licenseType === "BUYOUT") {
+    return [exclusiveCard];
+  }
+  if (licenseType === "NON_EXCLUSIVE") {
+    return [standardCard, premiumCard];
+  }
+  return [standardCard, premiumCard, exclusiveCard];
+}
+
+function normalizeTags(values?: string[] | null, max = 8): string[] {
+  if (!Array.isArray(values) || values.length === 0) return [];
+  return values
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, max);
+}
+
+function DetailMetaCell({
+  label,
+  value,
+  forceLoopOnMobile = false,
+}: {
+  label: string;
+  value: string;
+  forceLoopOnMobile?: boolean;
+}) {
+  return (
+    <div className="flex min-h-[48px] flex-col items-center justify-center px-2 py-1.5 text-center">
+      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-500">{label}</dt>
+      <dd className="mt-0.5 w-full">
+        <LoopingText
+          text={value}
+          className="text-[13px] font-semibold leading-tight text-neutral-100"
+          speedPxPerSecond={32}
+          forceLoopOnMobile={forceLoopOnMobile}
+        />
+      </dd>
+    </div>
+  );
+}
+
+type DetailTagTone = "mood" | "use" | "genre";
+
+function DetailTagPill({
+  value,
+  tone,
+}: {
+  value: string;
+  tone: DetailTagTone;
+}) {
+  const toneClass =
+    tone === "mood"
+      ? "border-sky-400/35 bg-sky-500/10 text-sky-100"
+      : tone === "use"
+        ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100"
+        : "border-neutral-600/90 bg-neutral-800/70 text-neutral-100";
+
+  return (
+    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", toneClass)}>
+      {value}
+    </span>
+  );
+}
+
+function DetailTagColumn({
+  label,
+  values,
+  tone,
+}: {
+  label: string;
+  values: string[];
+  tone: DetailTagTone;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500">{label}</p>
+      {values.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {values.map((value) => (
+            <DetailTagPill key={`${label}-${value}`} value={value} tone={tone} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-neutral-500">—</p>
+      )}
+    </div>
+  );
+}
+
 export default function CatalogClient({
   tracks,
   heroSlides,
@@ -139,8 +355,10 @@ export default function CatalogClient({
   const [bpmMin, setBpmMin] = useState("");
   const [bpmMax, setBpmMax] = useState("");
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<CatalogViewMode>("grid");
 
   const shouldShowFilteringControls = showFilteringControls ?? !compact;
+  const effectiveViewMode: CatalogViewMode = compact ? "grid" : viewMode;
 
   const moodOptions = useMemo(() => {
     const set = new Set<string>();
@@ -367,6 +585,18 @@ export default function CatalogClient({
   }, [catalogSlug]);
 
   useEffect(() => {
+    if (compact || typeof window === "undefined") return;
+    try {
+      const storedValue = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+      if (isCatalogViewMode(storedValue)) {
+        setViewMode(storedValue);
+      }
+    } catch {
+      // ignore storage access issues
+    }
+  }, [compact]);
+
+  useEffect(() => {
     if (bannerSlides.length === 0) {
       setActiveSlideIndex(0);
       return;
@@ -506,6 +736,16 @@ export default function CatalogClient({
     router.refresh();
   };
 
+  const handleViewModeChange = (nextMode: CatalogViewMode) => {
+    setViewMode(nextMode);
+    if (compact || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, nextMode);
+    } catch {
+      // ignore storage access issues
+    }
+  };
+
   const trackHeroEvent = (eventType: "VIEW" | "CLICK_CTA" | "CLICK_PLAY", slide: BannerSlideView | null) => {
     if (!slide?.promotionItemId) return;
     const payload = {
@@ -566,6 +806,21 @@ export default function CatalogClient({
   const panelProgress = selectedTrack ? progressMap[selectedTrack.id] ?? 0 : 0;
   const panelCurrentSec = panelDuration * panelProgress;
   const panelTrackIsPlaying = !!selectedTrack && selectedTrack.id === currentTrackId && isPlaying;
+  const selectedTrackGenres = normalizeTags(selectedTrack?.genres ?? [], 4);
+  const selectedTrackMoods = normalizeTags(selectedTrack?.moods ?? [], 5);
+  const selectedTrackUses = normalizeTags(selectedTrack?.uses ?? [], 5);
+  const selectedTrackGenreLabel =
+    selectedTrackGenres.length > 0 ? selectedTrackGenres.join(" · ") : "—";
+  const selectedTrackBpmValue =
+    typeof selectedTrack?.bpm === "number" && Number.isFinite(selectedTrack.bpm)
+      ? Math.round(selectedTrack.bpm)
+      : null;
+  const selectedTrackBpmBadge = selectedTrackBpmValue ? `BPM: ${selectedTrackBpmValue}` : "BPM: —";
+  const selectedTrackLicenseLabel =
+    formatLicenseTypeLabel(selectedTrack?.licenseType) ?? "No definida";
+  const selectedTrackSyncLabel =
+    selectedTrack?.clearedForSync === false ? "Sync bajo revisión" : "Sync disponible";
+  const selectedTrackLicenseCards = selectedTrack ? deriveCatalogLicenseCards(selectedTrack) : [];
   const activeSlideIsExternal = !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
 
   return (
@@ -574,7 +829,7 @@ export default function CatalogClient({
 
       <div
         className={cn(
-          "mx-auto w-[80vw] max-w-[1440px] min-w-0",
+          "mx-auto w-[90vw] max-w-[1700px] min-w-0",
           compact ? "py-4" : "py-6 sm:py-8",
         )}
       >
@@ -820,6 +1075,40 @@ export default function CatalogClient({
                 <span className="inline-flex h-7 items-center rounded border border-neutral-700 px-2 text-xs text-neutral-300">
                   {visibleTracks.length}/{tracks.length}
                 </span>
+                {!compact && (
+                  <div className="inline-flex h-7 overflow-hidden rounded border border-neutral-700">
+                    <button
+                      type="button"
+                      onClick={() => handleViewModeChange("grid")}
+                      aria-label="Vista grid"
+                      aria-pressed={effectiveViewMode === "grid"}
+                      title="Vista grid"
+                      className={cn(
+                        "inline-flex w-8 items-center justify-center transition",
+                        effectiveViewMode === "grid"
+                          ? "bg-neutral-100 text-neutral-950"
+                          : "text-neutral-300 hover:bg-neutral-800",
+                      )}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleViewModeChange("list")}
+                      aria-label="Vista lista"
+                      aria-pressed={effectiveViewMode === "list"}
+                      title="Vista lista"
+                      className={cn(
+                        "inline-flex w-8 items-center justify-center border-l border-neutral-700 transition",
+                        effectiveViewMode === "list"
+                          ? "bg-neutral-100 text-neutral-950"
+                          : "text-neutral-300 hover:bg-neutral-800",
+                      )}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => clearTrackFilters()}
@@ -841,7 +1130,9 @@ export default function CatalogClient({
         <div
           className={cn(
             "grid gap-6 xl:gap-8",
-            showDetailPanel ? "lg:grid-cols-[minmax(0,1fr)_360px]" : "grid-cols-1",
+            showDetailPanel
+              ? "lg:grid-cols-[minmax(0,1fr)_450px] xl:grid-cols-[minmax(0,1fr)_520px]"
+              : "grid-cols-1",
           )}
         >
           <section>
@@ -862,8 +1153,8 @@ export default function CatalogClient({
                   </button>
                 )}
               </div>
-            ) : (
-              <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            ) : effectiveViewMode === "grid" ? (
+              <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
                 {visibleTracks.map((track) => {
                   const isSelected = track.id === selectedTrack?.id;
                   const isActive = track.id === currentTrackId;
@@ -937,63 +1228,151 @@ export default function CatalogClient({
                   );
                 })}
               </ul>
+            ) : (
+              <ul className="space-y-2">
+                {visibleTracks.map((track) => {
+                  const isSelected = track.id === selectedTrack?.id;
+                  const isActive = track.id === currentTrackId;
+                  const showPause = isActive && isPlaying;
+                  const durationLabel = getTrackDurationLabel(track);
+
+                  return (
+                    <li key={track.id}>
+                      <article
+                        className={cn(
+                          "relative overflow-hidden rounded-md border bg-neutral-900/80 transition",
+                          isSelected
+                            ? "border-neutral-100 shadow-[0_0_0_1px_rgba(243,241,234,0.28)]"
+                            : "border-neutral-800 hover:border-neutral-600",
+                        )}
+                      >
+                        <div className="flex items-center gap-2 p-2 sm:gap-3">
+                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded border border-neutral-800 bg-neutral-900 sm:h-20 sm:w-20">
+                            <img
+                              src={resolveCatalogCoverUrl(track)}
+                              alt={`Cover de ${track.title}`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTrackId(track.id)}
+                              className="absolute inset-0"
+                              aria-label={`Seleccionar ${track.title}`}
+                              aria-pressed={isSelected}
+                            />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTrackId(track.id)}
+                            className="min-w-0 flex-1 text-left"
+                            aria-label={`Ver detalle de ${track.title}`}
+                            aria-pressed={isSelected}
+                          >
+                            <h3 className="line-clamp-1 text-sm font-semibold text-neutral-100 sm:text-[15px]">
+                              {track.title}
+                            </h3>
+                            <p className="line-clamp-1 text-xs text-neutral-400 sm:text-sm">
+                              {track.artist || "Artista"}
+                            </p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
+                              <span>{durationLabel}</span>
+                              {track.bpm ? <span>{Math.round(track.bpm)} BPM</span> : null}
+                              {track.key ? <span>{track.key}</span> : null}
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => playTrack(track)}
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition",
+                              isActive
+                                ? "border-neutral-100 bg-neutral-100 text-neutral-950"
+                                : "border-neutral-300/70 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
+                            )}
+                            aria-label={showPause ? `Pausar ${track.title}` : `Reproducir ${track.title}`}
+                          >
+                            {showPause ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                          </button>
+                        </div>
+
+                        {isActive && (
+                          <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
+                            <div
+                              className="h-full bg-neutral-100 transition-[width]"
+                              style={{ width: `${Math.round((progressMap[track.id] ?? 0) * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                      </article>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </section>
 
           {showDetailPanel && (
             <aside className="self-start lg:sticky lg:top-[calc(var(--header-h)+1rem)]">
-              <section className="max-h-[calc(100dvh-var(--header-h)-2rem)] overflow-y-auto rounded-md border border-neutral-800 bg-neutral-950/90 p-4 sm:p-5">
+              <section className="rounded-md border border-neutral-800 bg-neutral-950/90 p-4 sm:p-5">
                 {selectedTrack ? (
                   <div className="space-y-4">
                     <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900">
                       <img
                         src={resolveCatalogCoverUrl(selectedTrack)}
                         alt={`Cover grande de ${selectedTrack.title}`}
-                        className="aspect-square w-full object-cover"
+                        className="aspect-[2/1] w-full object-cover"
                       />
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => playTrack(selectedTrack)}
-                        className={cn(
-                          "flex h-12 w-12 items-center justify-center rounded-full border transition",
-                          panelTrackIsPlaying
-                            ? "border-neutral-100 bg-neutral-100 text-neutral-950"
-                            : "border-neutral-100 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
-                        )}
-                        aria-label={panelTrackIsPlaying ? "Pausar track" : "Reproducir track"}
-                      >
-                        {panelTrackIsPlaying ? (
-                          <Pause className="h-5 w-5" />
-                        ) : (
-                          <Play className="ml-0.5 h-5 w-5" />
-                        )}
-                      </button>
+                    <div className="space-y-2 rounded-md border border-neutral-800 bg-neutral-900/45 p-3">
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => playTrack(selectedTrack)}
+                          className={cn(
+                            "flex h-11 w-11 items-center justify-center rounded-full border transition",
+                            panelTrackIsPlaying
+                              ? "border-neutral-100 bg-neutral-100 text-neutral-950"
+                              : "border-neutral-100 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
+                          )}
+                          aria-label={panelTrackIsPlaying ? "Pausar track" : "Reproducir track"}
+                        >
+                          {panelTrackIsPlaying ? (
+                            <Pause className="h-5 w-5" />
+                          ) : (
+                            <Play className="ml-0.5 h-5 w-5" />
+                          )}
+                        </button>
 
-                      <div className="min-w-0">
-                        <p className="line-clamp-1 text-lg font-semibold leading-tight">{selectedTrack.title}</p>
-                        <p className="line-clamp-1 text-sm text-neutral-400">de {selectedTrack.artist}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-1 text-lg font-semibold leading-tight">{selectedTrack.title}</p>
+                          <p className="line-clamp-1 text-sm text-neutral-400">de {selectedTrack.artist}</p>
+                        </div>
+                        <span className="rounded border border-neutral-700 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-neutral-300">
+                          {selectedTrackBpmBadge}
+                        </span>
                       </div>
-                    </div>
 
-                    <div className="space-y-1">
-                      <input
-                        type="range"
-                        min={0}
-                        max={1000}
-                        value={Math.round(panelProgress * 1000)}
-                        onChange={(event) => {
-                          if (!selectedTrack) return;
-                          seekTrack(selectedTrack, Number(event.target.value) / 1000);
-                        }}
-                        className="h-2 w-full cursor-pointer accent-neutral-100"
-                        aria-label="Progreso de reproducción"
-                      />
-                      <div className="flex items-center justify-between text-xs text-neutral-400">
-                        <span>{formatTime(panelCurrentSec)}</span>
-                        <span>{formatTime(panelDuration)}</span>
+                      <div className="space-y-1">
+                        <input
+                          type="range"
+                          min={0}
+                          max={1000}
+                          value={Math.round(panelProgress * 1000)}
+                          onChange={(event) => {
+                            if (!selectedTrack) return;
+                            seekTrack(selectedTrack, Number(event.target.value) / 1000);
+                          }}
+                          className="h-2 w-full cursor-pointer accent-neutral-100"
+                          aria-label="Progreso de reproducción"
+                        />
+                        <div className="flex items-center justify-between text-xs text-neutral-400">
+                          <span>{formatTime(panelCurrentSec)}</span>
+                          <span>{formatTime(panelDuration)}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -1002,66 +1381,85 @@ export default function CatalogClient({
                         href={`/track/${selectedTrack.id}`}
                         className="inline-flex items-center justify-center rounded border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:opacity-90"
                       >
-                        Ir al album
+                        Ver detalles
                       </Link>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center gap-2 rounded border border-neutral-300/70 px-3 py-2 text-sm font-semibold text-neutral-100 transition hover:border-neutral-100"
-                      >
-                        <Heart className="h-4 w-4" />
-                        Lista de deseos
-                      </button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center gap-2 rounded border border-neutral-300/70 px-3 py-2 text-sm font-semibold text-neutral-100 transition hover:border-neutral-100"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Licencias
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="border-neutral-800 bg-neutral-950 text-neutral-100 sm:max-w-xl">
+                          <DialogHeader>
+                            <DialogTitle>Licencias disponibles</DialogTitle>
+                            <DialogDescription className="text-neutral-400">
+                              {selectedTrack.title} · {selectedTrack.artist}
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {selectedTrackLicenseCards.map((card) => (
+                              <article
+                                key={card.id}
+                                className="rounded border border-neutral-800 bg-neutral-900/60 p-3"
+                              >
+                                <p className="text-sm font-semibold text-neutral-100">{card.title}</p>
+                                <p className="mt-2 text-xl font-semibold leading-none text-neutral-100">
+                                  {card.price}
+                                </p>
+                                <p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-neutral-400">
+                                  {card.formats}
+                                </p>
+                                <p className="mt-1 text-xs text-neutral-400">{card.note}</p>
+                              </article>
+                            ))}
+                          </div>
+                          <div className="flex items-center justify-between gap-2 text-xs text-neutral-400">
+                            <p>Valores referenciales sujetos al uso final.</p>
+                            <Link
+                              href={`/track/${selectedTrack.id}`}
+                              className="inline-flex items-center rounded border border-neutral-300/70 px-2.5 py-1.5 font-semibold text-neutral-100 transition hover:border-neutral-100"
+                            >
+                              Ver ficha completa
+                            </Link>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
 
-                    <div className="space-y-1 text-sm text-neutral-200">
-                      <p>
-                        {(selectedTrack.uses.length ||
-                          selectedTrack.moods.length ||
-                          (selectedTrack.genres?.length ?? 0))
-                          ? `${selectedTrack.uses.length + selectedTrack.moods.length + (selectedTrack.genres?.length ?? 0)} etiquetas curadas`
-                          : "Track listo para licenciamiento"}
-                      </p>
-                      <p>{selectedTrack.duration || formatTime(panelDuration)} de duración</p>
-                      {(selectedTrack.bpm || selectedTrack.key) && (
-                        <p>
-                          {selectedTrack.bpm ? `${selectedTrack.bpm} BPM` : ""}
-                          {selectedTrack.bpm && selectedTrack.key ? " · " : ""}
-                          {selectedTrack.key ?? ""}
-                        </p>
-                      )}
-                      {(selectedTrack.genres?.length ?? 0) > 0 && (
-                        <p>{selectedTrack.genres?.join(" · ")}</p>
-                      )}
+                    <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900/30">
+                      <dl className="grid grid-cols-3 divide-x divide-neutral-800/80 border-b border-neutral-800/80">
+                        <DetailMetaCell label="BPM" value={selectedTrackBpmValue ? String(selectedTrackBpmValue) : "—"} />
+                        <DetailMetaCell label="Tonalidad" value={selectedTrack.key ?? "—"} />
+                        <DetailMetaCell label="Género" value={selectedTrackGenreLabel} />
+                      </dl>
+                      <dl className="grid grid-cols-3 divide-x divide-neutral-800/80">
+                        <DetailMetaCell
+                          label="Duración"
+                          value={selectedTrack.duration || formatTime(panelDuration)}
+                        />
+                        <DetailMetaCell label="Licencia" value={selectedTrackLicenseLabel} />
+                        <DetailMetaCell
+                          label="Estado sync"
+                          value={selectedTrackSyncLabel}
+                          forceLoopOnMobile
+                        />
+                      </dl>
                     </div>
 
-                    {(selectedTrack.moods.length > 0 ||
-                      selectedTrack.uses.length > 0 ||
-                      (selectedTrack.genres?.length ?? 0) > 0) && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {(selectedTrack.genres ?? []).map((genre) => (
-                          <span
-                            key={`g-${selectedTrack.id}-${genre}`}
-                            className="rounded-full border border-neutral-600 px-2 py-0.5 text-xs text-neutral-200"
-                          >
-                            {genre}
-                          </span>
-                        ))}
-                        {selectedTrack.moods.map((mood) => (
-                          <span
-                            key={`m-${selectedTrack.id}-${mood}`}
-                            className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
-                          >
-                            {mood}
-                          </span>
-                        ))}
-                        {selectedTrack.uses.map((use) => (
-                          <span
-                            key={`u-${selectedTrack.id}-${use}`}
-                            className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
-                          >
-                            {use}
-                          </span>
-                        ))}
+                    {(selectedTrackMoods.length > 0 || selectedTrackUses.length > 0) && (
+                      <div className="rounded-md border border-neutral-800 bg-neutral-900/30 p-2.5">
+                        <div className="grid grid-cols-2 divide-x divide-neutral-800/80">
+                          <div className="pr-2.5">
+                            <DetailTagColumn label="Moods" values={selectedTrackMoods} tone="mood" />
+                          </div>
+                          <div className="pl-2.5">
+                            <DetailTagColumn label="Usos" values={selectedTrackUses} tone="use" />
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

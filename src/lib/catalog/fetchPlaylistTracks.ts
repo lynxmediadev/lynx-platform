@@ -22,9 +22,17 @@ function mapTrackToCatalogTrack(track: {
   id: string;
   title: string;
   artist: string;
+  genres: string[];
   bpm: number | null;
   key: string | null;
+  licenseType: string | null;
+  pricingTier: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  budgetCurrency: string | null;
+  clearedForSync: boolean | null;
   audioUrl: string;
+  coverUrl: string | null;
   durationSec: number | null;
   waveform?: Buffer | Uint8Array | null;
   tags: Array<{ tag: { name: string; type: string } | null }>;
@@ -41,11 +49,21 @@ function mapTrackToCatalogTrack(track: {
       .filter((tagLink) => tagLink.tag?.type === "USE")
       .map((tagLink) => tagLink.tag?.name || "")
       .filter(Boolean),
+    genres: track.genres
+      .map((genre) => genre.trim())
+      .filter(Boolean),
     bpm: track.bpm ?? undefined,
     key: track.key ?? undefined,
+    licenseType: track.licenseType,
+    pricingTier: track.pricingTier,
+    budgetMin: track.budgetMin,
+    budgetMax: track.budgetMax,
+    budgetCurrency: track.budgetCurrency,
+    clearedForSync: track.clearedForSync,
     durationSec: track.durationSec ?? null,
     duration: formatDurationSec(track.durationSec),
     audioUrl: track.audioUrl,
+    coverUrl: track.coverUrl,
     waveformB64: bytesToBase64((track.waveform as Buffer | null) ?? null),
   };
 }
@@ -67,9 +85,17 @@ export async function fetchPlaylistCatalogTracks(params: {
         id: true,
         title: true,
         artist: true,
+        genres: true,
         bpm: true,
         key: true,
+        licenseType: true,
+        pricingTier: true,
+        budgetMin: true,
+        budgetMax: true,
+        budgetCurrency: true,
+        clearedForSync: true,
         audioUrl: true,
+        coverUrl: true,
         durationSec: true,
         waveform: true,
         tags: {
@@ -91,9 +117,17 @@ export async function fetchPlaylistCatalogTracks(params: {
           id: true,
           title: true,
           artist: true,
+          genres: true,
           bpm: true,
           key: true,
+          licenseType: true,
+          pricingTier: true,
+          budgetMin: true,
+          budgetMax: true,
+          budgetCurrency: true,
+          clearedForSync: true,
           audioUrl: true,
+          coverUrl: true,
           durationSec: true,
           waveform: true,
           tags: {
