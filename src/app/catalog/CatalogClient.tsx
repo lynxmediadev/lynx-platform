@@ -267,11 +267,11 @@ function DetailMetaCell({
 }) {
   return (
     <div className="flex min-h-[48px] min-w-0 flex-col items-center justify-center px-2 py-1.5 text-center">
-      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-500">{label}</dt>
+      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">{label}</dt>
       <dd className="mt-0.5 w-full">
         <LoopingText
           text={value}
-          className="text-center text-[13px] font-semibold leading-tight text-neutral-100"
+          className="text-center text-[13px] font-semibold leading-tight text-foreground"
           speedPxPerSecond={32}
           forceLoopOnMobile={forceLoopOnMobile}
         />
@@ -291,10 +291,10 @@ function DetailTagPill({
 }) {
   const toneClass =
     tone === "mood"
-      ? "border-sky-400/35 bg-sky-500/10 text-sky-100"
+      ? "catalog-tag-mood"
       : tone === "use"
-        ? "border-emerald-400/35 bg-emerald-500/10 text-emerald-100"
-        : "border-neutral-600/90 bg-neutral-800/70 text-neutral-100";
+        ? "catalog-tag-use"
+        : "border-border bg-muted/70 text-foreground";
 
   return (
     <span className={cn("max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-medium", toneClass)}>
@@ -314,7 +314,7 @@ function DetailTagColumn({
 }) {
   return (
     <div className="space-y-1">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/90">{label}</p>
       {values.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {values.map((value) => (
@@ -322,7 +322,7 @@ function DetailTagColumn({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-neutral-500">—</p>
+        <p className="text-xs text-muted-foreground/90">—</p>
       )}
     </div>
   );
@@ -849,10 +849,10 @@ export default function CatalogClient({
   const selectedTrackLicenseCards = selectedTrack ? deriveCatalogLicenseCards(selectedTrack) : [];
   const activeSlideIsExternal = !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
   const filterSelectClass =
-    "h-7 w-full appearance-none rounded border border-neutral-700 bg-neutral-950 px-2 pr-9 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none";
+    "h-7 w-full appearance-none rounded border border-border bg-background px-2 pr-9 text-xs text-foreground focus:border-foreground focus:outline-none";
 
   return (
-    <div className="overflow-x-clip bg-[var(--lm-bg-deep)] text-[var(--lm-text-main)]">
+    <div className="overflow-x-clip bg-background text-foreground">
       <audio ref={audioRef} preload="metadata" />
 
       <div
@@ -863,7 +863,7 @@ export default function CatalogClient({
       >
         {!hideHeader && activeBannerSlide && (
           <header className="mb-2.5 min-w-0">
-            <div className="relative overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+            <div className="relative overflow-hidden rounded-lg border border-border bg-background">
               <img
                 src={activeBannerSlide.imageUrl}
                 alt={`Banner ${activeBannerSlide.title}`}
@@ -874,13 +874,13 @@ export default function CatalogClient({
 
               <div className="absolute inset-0 flex items-end">
                 <div className="w-full max-w-3xl px-4 py-3 sm:px-5 sm:py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-300">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">
                     {eyebrow}
                   </p>
-                  <h1 className="mt-1 line-clamp-2 text-xl font-semibold leading-tight text-neutral-100 sm:text-2xl">
+                  <h1 className="mt-1 line-clamp-2 text-xl font-semibold leading-tight text-white sm:text-2xl">
                     {activeBannerSlide.title}
                   </h1>
-                  <p className="mt-1 line-clamp-2 text-xs text-neutral-200 sm:text-sm">
+                  <p className="mt-1 line-clamp-2 text-xs text-white/90 sm:text-sm">
                     {activeBannerSlide.subtitle}
                   </p>
 
@@ -897,8 +897,8 @@ export default function CatalogClient({
                       className={cn(
                         "inline-flex h-9 w-9 items-center justify-center rounded-full border transition",
                         activeBannerSlide.track
-                          ? "border-neutral-100 bg-neutral-100 text-neutral-950 hover:opacity-90"
-                          : "cursor-not-allowed border-neutral-700 text-neutral-600",
+                          ? "border-white bg-white text-black hover:bg-white/90"
+                          : "cursor-not-allowed border-white/35 bg-black/20 text-white/45",
                       )}
                       aria-label={
                         activeBannerSlide.track
@@ -915,7 +915,7 @@ export default function CatalogClient({
                         target="_blank"
                         rel="noreferrer"
                         onClick={() => trackHeroEvent("CLICK_CTA", activeBannerSlide)}
-                        className="inline-flex h-9 items-center rounded border border-neutral-100 px-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-100 hover:text-neutral-950"
+                        className="inline-flex h-9 items-center rounded border border-white/90 bg-black/20 px-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white hover:text-black"
                       >
                         {activeBannerSlide.ctaLabel}
                       </a>
@@ -923,7 +923,7 @@ export default function CatalogClient({
                       <Link
                         href={activeBannerSlide.ctaHref}
                         onClick={() => trackHeroEvent("CLICK_CTA", activeBannerSlide)}
-                        className="inline-flex h-9 items-center rounded border border-neutral-100 px-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-100 hover:text-neutral-950"
+                        className="inline-flex h-9 items-center rounded border border-white/90 bg-black/20 px-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white hover:text-black"
                       >
                         {activeBannerSlide.ctaLabel}
                       </Link>
@@ -942,8 +942,8 @@ export default function CatalogClient({
                   className={cn(
                     "h-1 flex-1 rounded-full transition",
                     index === activeSlideIndex
-                      ? "bg-neutral-100"
-                      : "bg-neutral-800 hover:bg-neutral-600",
+                      ? "bg-foreground"
+                      : "bg-border hover:bg-foreground/40",
                   )}
                   aria-label={`Ir al slide ${index + 1}`}
                   aria-pressed={index === activeSlideIndex}
@@ -955,7 +955,7 @@ export default function CatalogClient({
                   <button
                     type="button"
                     onClick={goPrevSlide}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-neutral-700 text-neutral-300 transition hover:border-neutral-400 hover:text-neutral-100"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground transition hover:border-foreground/70 hover:text-foreground"
                     aria-label="Slide anterior"
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
@@ -963,7 +963,7 @@ export default function CatalogClient({
                   <button
                     type="button"
                     onClick={goNextSlide}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-neutral-700 text-neutral-300 transition hover:border-neutral-400 hover:text-neutral-100"
+                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground transition hover:border-foreground/70 hover:text-foreground"
                     aria-label="Siguiente slide"
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
@@ -982,8 +982,8 @@ export default function CatalogClient({
               className={cn(
                 "h-7 rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition",
                 !activeCat
-                  ? "border-neutral-100 bg-neutral-100 text-neutral-950"
-                  : "border-neutral-700 text-neutral-100 hover:border-neutral-400",
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border text-foreground hover:border-foreground/70",
               )}
             >
               Todo
@@ -996,8 +996,8 @@ export default function CatalogClient({
                 className={cn(
                   "h-7 rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition",
                   activeCat === category.slug
-                    ? "border-neutral-100 bg-neutral-100 text-neutral-950"
-                    : "border-neutral-700 text-neutral-100 hover:border-neutral-400",
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border text-foreground hover:border-foreground/70",
                 )}
               >
                 {category.name}
@@ -1007,15 +1007,15 @@ export default function CatalogClient({
         )}
 
         {shouldShowFilteringControls && tracks.length > 0 && (
-          <section className="mb-2 overflow-x-clip rounded border border-neutral-800 bg-neutral-900/40 p-2">
+          <section className="mb-2 overflow-x-clip rounded border border-border bg-card/40 p-2">
             <div className="sm:hidden">
               <div className="flex items-center gap-1">
-                <span className="inline-flex h-7 items-center rounded border border-neutral-700 px-2 text-xs text-neutral-300">
+                <span className="inline-flex h-7 items-center rounded border border-border px-2 text-xs text-muted-foreground">
                   {visibleTracks.length}/{tracks.length}
                 </span>
 
                 {!compact && (
-                  <div className="inline-flex h-7 overflow-hidden rounded border border-neutral-700">
+                  <div className="inline-flex h-7 overflow-hidden rounded border border-border">
                     <button
                       type="button"
                       onClick={() => handleViewModeChange("grid")}
@@ -1025,8 +1025,8 @@ export default function CatalogClient({
                       className={cn(
                         "inline-flex w-8 items-center justify-center transition",
                         effectiveViewMode === "grid"
-                          ? "bg-neutral-100 text-neutral-950"
-                          : "text-neutral-300 hover:bg-neutral-800",
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:bg-muted",
                       )}
                     >
                       <LayoutGrid className="h-3.5 w-3.5" />
@@ -1038,10 +1038,10 @@ export default function CatalogClient({
                       aria-pressed={effectiveViewMode === "list"}
                       title="Vista lista"
                       className={cn(
-                        "inline-flex w-8 items-center justify-center border-l border-neutral-700 transition",
+                        "inline-flex w-8 items-center justify-center border-l border-border transition",
                         effectiveViewMode === "list"
-                          ? "bg-neutral-100 text-neutral-950"
-                          : "text-neutral-300 hover:bg-neutral-800",
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:bg-muted",
                       )}
                     >
                       <List className="h-3.5 w-3.5" />
@@ -1056,8 +1056,8 @@ export default function CatalogClient({
                   className={cn(
                     "ml-auto h-7 rounded border px-2 text-xs font-semibold transition",
                     hasActiveTrackFilters
-                      ? "border-neutral-300 text-neutral-100 hover:border-neutral-100"
-                      : "cursor-not-allowed border-neutral-700 text-neutral-600",
+                      ? "border-foreground/70 text-foreground hover:border-foreground"
+                      : "cursor-not-allowed border-border text-muted-foreground/70",
                   )}
                 >
                   Limpiar
@@ -1068,7 +1068,7 @@ export default function CatalogClient({
                   onClick={() => setMobileFiltersOpen((prev) => !prev)}
                   aria-expanded={mobileFiltersOpen}
                   aria-label={mobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
-                  className="inline-flex h-7 items-center gap-1 rounded border border-neutral-700 px-2 text-xs font-semibold text-neutral-200 transition hover:border-neutral-500"
+                  className="inline-flex h-7 items-center gap-1 rounded border border-border px-2 text-xs font-semibold text-foreground/90 transition hover:border-foreground/70"
                 >
                   {mobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
                   <ChevronDown
@@ -1089,7 +1089,7 @@ export default function CatalogClient({
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     placeholder="Buscar..."
-                    className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                    className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
                   />
                 </label>
 
@@ -1109,7 +1109,7 @@ export default function CatalogClient({
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
                     </div>
                   </label>
 
@@ -1128,7 +1128,7 @@ export default function CatalogClient({
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
                     </div>
                   </label>
                 </div>
@@ -1148,7 +1148,7 @@ export default function CatalogClient({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
                   </div>
                 </label>
 
@@ -1164,7 +1164,7 @@ export default function CatalogClient({
                       value={bpmMin}
                       onChange={(event) => setBpmMin(event.target.value)}
                       placeholder="Min"
-                      className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                      className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
                     />
                   </label>
 
@@ -1179,7 +1179,7 @@ export default function CatalogClient({
                       value={bpmMax}
                       onChange={(event) => setBpmMax(event.target.value)}
                       placeholder="Max"
-                      className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                      className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
                     />
                   </label>
                 </div>
@@ -1195,7 +1195,7 @@ export default function CatalogClient({
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Buscar..."
-                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                  className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
                 />
               </label>
 
@@ -1214,7 +1214,7 @@ export default function CatalogClient({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
                 </div>
               </label>
 
@@ -1233,7 +1233,7 @@ export default function CatalogClient({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
                 </div>
               </label>
 
@@ -1252,7 +1252,7 @@ export default function CatalogClient({
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
                 </div>
               </label>
 
@@ -1267,7 +1267,7 @@ export default function CatalogClient({
                   value={bpmMin}
                   onChange={(event) => setBpmMin(event.target.value)}
                   placeholder="Min"
-                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                  className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
                 />
               </label>
 
@@ -1282,16 +1282,16 @@ export default function CatalogClient({
                   value={bpmMax}
                   onChange={(event) => setBpmMax(event.target.value)}
                   placeholder="Max"
-                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                  className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
                 />
               </label>
 
               <div className="flex items-center justify-between gap-1 sm:col-span-2 sm:justify-end xl:col-span-1">
-                <span className="inline-flex h-7 items-center rounded border border-neutral-700 px-2 text-xs text-neutral-300">
+                <span className="inline-flex h-7 items-center rounded border border-border px-2 text-xs text-muted-foreground">
                   {visibleTracks.length}/{tracks.length}
                 </span>
                 {!compact && (
-                  <div className="inline-flex h-7 overflow-hidden rounded border border-neutral-700">
+                  <div className="inline-flex h-7 overflow-hidden rounded border border-border">
                     <button
                       type="button"
                       onClick={() => handleViewModeChange("grid")}
@@ -1301,8 +1301,8 @@ export default function CatalogClient({
                       className={cn(
                         "inline-flex w-8 items-center justify-center transition",
                         effectiveViewMode === "grid"
-                          ? "bg-neutral-100 text-neutral-950"
-                          : "text-neutral-300 hover:bg-neutral-800",
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:bg-muted",
                       )}
                     >
                       <LayoutGrid className="h-3.5 w-3.5" />
@@ -1314,10 +1314,10 @@ export default function CatalogClient({
                       aria-pressed={effectiveViewMode === "list"}
                       title="Vista lista"
                       className={cn(
-                        "inline-flex w-8 items-center justify-center border-l border-neutral-700 transition",
+                        "inline-flex w-8 items-center justify-center border-l border-border transition",
                         effectiveViewMode === "list"
-                          ? "bg-neutral-100 text-neutral-950"
-                          : "text-neutral-300 hover:bg-neutral-800",
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:bg-muted",
                       )}
                     >
                       <List className="h-3.5 w-3.5" />
@@ -1331,8 +1331,8 @@ export default function CatalogClient({
                   className={cn(
                     "h-7 rounded border px-2 text-xs font-semibold transition",
                     hasActiveTrackFilters
-                      ? "border-neutral-300 text-neutral-100 hover:border-neutral-100"
-                      : "cursor-not-allowed border-neutral-700 text-neutral-600",
+                      ? "border-foreground/70 text-foreground hover:border-foreground"
+                      : "cursor-not-allowed border-border text-muted-foreground/70",
                   )}
                 >
                   Limpiar
@@ -1352,17 +1352,17 @@ export default function CatalogClient({
         >
           <section className="min-w-0">
             {tracks.length === 0 ? (
-              <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 px-5 py-8 text-sm text-neutral-300">
+              <div className="rounded-2xl border border-border bg-background/70 px-5 py-8 text-sm text-muted-foreground">
                 No hay tracks disponibles en este catálogo.
               </div>
             ) : visibleTracks.length === 0 ? (
-              <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/60 px-5 py-8 text-sm text-neutral-300">
+              <div className="space-y-3 rounded-2xl border border-border bg-background/70 px-5 py-8 text-sm text-muted-foreground">
                 <p>No encontramos tracks con esos filtros.</p>
                 {hasActiveTrackFilters && (
                   <button
                     type="button"
                     onClick={() => clearTrackFilters({ focusSearch: true })}
-                    className="rounded border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-100 transition hover:border-neutral-100"
+                    className="rounded border border-foreground/70 px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-foreground"
                   >
                     Limpiar filtros
                   </button>
@@ -1379,13 +1379,13 @@ export default function CatalogClient({
                     <li key={track.id}>
                       <article
                         className={cn(
-                          "group overflow-hidden rounded-md border bg-neutral-900/80 transition",
+                          "group overflow-hidden rounded-md border bg-card/80 transition",
                           isSelected
-                            ? "border-neutral-100 shadow-[0_0_0_1px_rgba(243,241,234,0.35)]"
-                            : "border-neutral-800 hover:border-neutral-600",
+                            ? "border-foreground shadow-[0_0_0_1px_rgba(243,241,234,0.35)]"
+                            : "border-border hover:border-foreground/60",
                         )}
                       >
-                        <div className="relative aspect-square w-full overflow-hidden bg-neutral-900">
+                        <div className="relative aspect-square w-full overflow-hidden bg-card">
                           <img
                             src={resolveCatalogCoverUrl(track)}
                             alt={`Cover de ${track.title}`}
@@ -1407,8 +1407,8 @@ export default function CatalogClient({
                             className={cn(
                               "absolute bottom-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition",
                               isActive
-                                ? "border-neutral-100 bg-neutral-100 text-neutral-950"
-                                : "border-neutral-300/70 bg-black/40 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
+                                ? "border-foreground bg-foreground text-background"
+                                : "border-foreground/50 bg-black/40 text-foreground hover:bg-foreground hover:text-background",
                             )}
                             aria-label={showPause ? `Pausar ${track.title}` : `Reproducir ${track.title}`}
                           >
@@ -1418,7 +1418,7 @@ export default function CatalogClient({
                           {isActive && (
                             <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-black/60">
                               <div
-                                className="h-full bg-neutral-100 transition-[width]"
+                                className="h-full bg-foreground transition-[width]"
                                 style={{ width: `${Math.round((progressMap[track.id] ?? 0) * 100)}%` }}
                               />
                             </div>
@@ -1435,12 +1435,12 @@ export default function CatalogClient({
                             {isMobileViewport ? (
                               <LoopingText
                                 text={track.title}
-                                className="text-left text-sm font-semibold leading-tight text-neutral-100"
+                                className="text-left text-sm font-semibold leading-tight text-foreground"
                                 speedPxPerSecond={32}
                                 forceLoopOnMobile
                               />
                             ) : (
-                              <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight text-neutral-100">
+                              <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight text-foreground">
                                 {track.title}
                               </h3>
                             )}
@@ -1448,12 +1448,12 @@ export default function CatalogClient({
                             {isMobileViewport ? (
                               <LoopingText
                                 text={track.artist || "Artista"}
-                                className="text-left text-sm text-neutral-400"
+                                className="text-left text-sm text-muted-foreground"
                                 speedPxPerSecond={30}
                                 forceLoopOnMobile
                               />
                             ) : (
-                              <p className="truncate text-sm text-neutral-400">{track.artist || "Artista"}</p>
+                              <p className="truncate text-sm text-muted-foreground">{track.artist || "Artista"}</p>
                             )}
                           </div>
                         </button>
@@ -1474,14 +1474,14 @@ export default function CatalogClient({
                     <li key={track.id}>
                       <article
                         className={cn(
-                          "relative overflow-hidden rounded-md border bg-neutral-900/80 transition",
+                          "relative overflow-hidden rounded-md border bg-card/80 transition",
                           isSelected
-                            ? "border-neutral-100 shadow-[0_0_0_1px_rgba(243,241,234,0.28)]"
-                            : "border-neutral-800 hover:border-neutral-600",
+                            ? "border-foreground shadow-[0_0_0_1px_rgba(243,241,234,0.28)]"
+                            : "border-border hover:border-foreground/60",
                         )}
                       >
                         <div className="flex min-w-0 items-center gap-2 p-2 sm:gap-3">
-                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded border border-neutral-800 bg-neutral-900 sm:h-20 sm:w-20">
+                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded border border-border bg-card sm:h-20 sm:w-20">
                             <img
                               src={resolveCatalogCoverUrl(track)}
                               alt={`Cover de ${track.title}`}
@@ -1507,12 +1507,12 @@ export default function CatalogClient({
                             {isMobileViewport ? (
                               <LoopingText
                                 text={track.title}
-                                className="text-left text-sm font-semibold text-neutral-100"
+                                className="text-left text-sm font-semibold text-foreground"
                                 speedPxPerSecond={32}
                                 forceLoopOnMobile
                               />
                             ) : (
-                              <h3 className="truncate text-sm font-semibold text-neutral-100 sm:text-[15px]">
+                              <h3 className="truncate text-sm font-semibold text-foreground sm:text-[15px]">
                                 {track.title}
                               </h3>
                             )}
@@ -1520,16 +1520,16 @@ export default function CatalogClient({
                             {isMobileViewport ? (
                               <LoopingText
                                 text={track.artist || "Artista"}
-                                className="text-left text-xs text-neutral-400"
+                                className="text-left text-xs text-muted-foreground"
                                 speedPxPerSecond={30}
                                 forceLoopOnMobile
                               />
                             ) : (
-                              <p className="truncate text-xs text-neutral-400 sm:text-sm">
+                              <p className="truncate text-xs text-muted-foreground sm:text-sm">
                                 {track.artist || "Artista"}
                               </p>
                             )}
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                               <span>{durationLabel}</span>
                               {track.bpm ? <span>{Math.round(track.bpm)} BPM</span> : null}
                               {track.key ? <span>{track.key}</span> : null}
@@ -1542,8 +1542,8 @@ export default function CatalogClient({
                             className={cn(
                               "mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition sm:mr-3",
                               isActive
-                                ? "border-neutral-100 bg-neutral-100 text-neutral-950"
-                                : "border-neutral-300/70 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
+                                ? "border-foreground bg-foreground text-background"
+                                : "border-foreground/50 text-foreground hover:bg-foreground hover:text-background",
                             )}
                             aria-label={showPause ? `Pausar ${track.title}` : `Reproducir ${track.title}`}
                           >
@@ -1554,7 +1554,7 @@ export default function CatalogClient({
                         {isActive && (
                           <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
                             <div
-                              className="h-full bg-neutral-100 transition-[width]"
+                              className="h-full bg-foreground transition-[width]"
                               style={{ width: `${Math.round((progressMap[track.id] ?? 0) * 100)}%` }}
                             />
                           </div>
@@ -1569,18 +1569,18 @@ export default function CatalogClient({
 
           {showDetailPanel && (
             <aside className="min-w-0 self-start lg:sticky lg:top-[calc(var(--header-h)+1rem)]">
-              <section className="rounded-md border border-neutral-800 bg-neutral-950/90 p-4 sm:p-5">
-                <header className="mb-3 border-b border-neutral-800/80 pb-2.5">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200">
+              <section className="rounded-md border border-border bg-background/95 p-4 sm:p-5">
+                <header className="mb-3 border-b border-border/80 pb-2.5">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/90">
                     Detalle del track
                   </h2>
-                  <p className="mt-0.5 text-xs text-neutral-500">
+                  <p className="mt-0.5 text-xs text-muted-foreground/90">
                     {selectedTrack ? "Selección actual" : "Sin selección"}
                   </p>
                 </header>
                 {selectedTrack ? (
                   <div className="space-y-4">
-                    <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900">
+                    <div className="overflow-hidden rounded-md border border-border bg-card">
                       <img
                         src={resolveCatalogCoverUrl(selectedTrack)}
                         alt={`Cover grande de ${selectedTrack.title}`}
@@ -1588,7 +1588,7 @@ export default function CatalogClient({
                       />
                     </div>
 
-                    <div className="space-y-2 rounded-md border border-neutral-800 bg-neutral-900/45 p-3">
+                    <div className="space-y-2 rounded-md border border-border bg-card/45 p-3">
                       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5">
                         <button
                           type="button"
@@ -1596,8 +1596,8 @@ export default function CatalogClient({
                           className={cn(
                             "flex h-11 w-11 items-center justify-center rounded-full border transition",
                             panelTrackIsPlaying
-                              ? "border-neutral-100 bg-neutral-100 text-neutral-950"
-                              : "border-neutral-100 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
+                              ? "border-foreground bg-foreground text-background"
+                              : "border-foreground text-foreground hover:bg-foreground hover:text-background",
                           )}
                           aria-label={panelTrackIsPlaying ? "Pausar track" : "Reproducir track"}
                         >
@@ -1611,13 +1611,13 @@ export default function CatalogClient({
                         <div className="min-w-0 flex-1">
                           <LoopingText
                             text={selectedTrack.title}
-                            className="text-left text-lg font-semibold leading-tight text-neutral-100"
+                            className="text-left text-lg font-semibold leading-tight text-foreground"
                             speedPxPerSecond={34}
                             forceLoopOnMobile
                           />
-                          <p className="truncate text-sm text-neutral-400">de {selectedTrack.artist}</p>
+                          <p className="truncate text-sm text-muted-foreground">de {selectedTrack.artist}</p>
                         </div>
-                        <span className="justify-self-end whitespace-nowrap rounded border border-neutral-700 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-neutral-300">
+                        <span className="justify-self-end whitespace-nowrap rounded border border-border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                           {selectedTrackBpmBadge}
                         </span>
                       </div>
@@ -1632,10 +1632,10 @@ export default function CatalogClient({
                             if (!selectedTrack) return;
                             seekTrack(selectedTrack, Number(event.target.value) / 1000);
                           }}
-                          className="h-2 w-full cursor-pointer accent-neutral-100"
+                          className="h-2 w-full cursor-pointer accent-foreground"
                           aria-label="Progreso de reproducción"
                         />
-                        <div className="flex items-center justify-between text-xs text-neutral-400">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>{formatTime(panelCurrentSec)}</span>
                           <span>{formatTime(panelDuration)}</span>
                         </div>
@@ -1645,7 +1645,7 @@ export default function CatalogClient({
                     <div className="grid grid-cols-2 gap-2">
                       <Link
                         href={`/track/${selectedTrack.id}`}
-                        className="inline-flex items-center justify-center rounded border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:opacity-90"
+                        className="inline-flex items-center justify-center rounded border border-foreground bg-foreground px-3 py-2 text-sm font-semibold text-background transition hover:opacity-90"
                       >
                         Ver detalles
                       </Link>
@@ -1653,16 +1653,16 @@ export default function CatalogClient({
                         <DialogTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center gap-2 rounded border border-neutral-300/70 px-3 py-2 text-sm font-semibold text-neutral-100 transition hover:border-neutral-100"
+                            className="inline-flex items-center justify-center gap-2 rounded border border-foreground/50 px-3 py-2 text-sm font-semibold text-foreground transition hover:border-foreground"
                           >
                             <FileText className="h-4 w-4" />
                             Licencias
                           </button>
                         </DialogTrigger>
-                        <DialogContent className="border-neutral-800 bg-neutral-950 text-neutral-100 sm:max-w-xl">
+                        <DialogContent className="border-border bg-background text-foreground sm:max-w-xl">
                           <DialogHeader>
                             <DialogTitle>Licencias disponibles</DialogTitle>
-                            <DialogDescription className="text-neutral-400">
+                            <DialogDescription className="text-muted-foreground">
                               {selectedTrack.title} · {selectedTrack.artist}
                             </DialogDescription>
                           </DialogHeader>
@@ -1670,24 +1670,24 @@ export default function CatalogClient({
                             {selectedTrackLicenseCards.map((card) => (
                               <article
                                 key={card.id}
-                                className="rounded border border-neutral-800 bg-neutral-900/60 p-3"
+                                className="rounded border border-border bg-card/60 p-3"
                               >
-                                <p className="text-sm font-semibold text-neutral-100">{card.title}</p>
-                                <p className="mt-2 text-xl font-semibold leading-none text-neutral-100">
+                                <p className="text-sm font-semibold text-foreground">{card.title}</p>
+                                <p className="mt-2 text-xl font-semibold leading-none text-foreground">
                                   {card.price}
                                 </p>
-                                <p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-neutral-400">
+                                <p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                                   {card.formats}
                                 </p>
-                                <p className="mt-1 text-xs text-neutral-400">{card.note}</p>
+                                <p className="mt-1 text-xs text-muted-foreground">{card.note}</p>
                               </article>
                             ))}
                           </div>
-                          <div className="flex flex-col items-start justify-between gap-2 text-xs text-neutral-400 sm:flex-row sm:items-center">
+                          <div className="flex flex-col items-start justify-between gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center">
                             <p>Valores referenciales sujetos al uso final.</p>
                             <Link
                               href={`/track/${selectedTrack.id}`}
-                              className="inline-flex items-center rounded border border-neutral-300/70 px-2.5 py-1.5 font-semibold text-neutral-100 transition hover:border-neutral-100"
+                              className="inline-flex items-center rounded border border-foreground/50 px-2.5 py-1.5 font-semibold text-foreground transition hover:border-foreground"
                             >
                               Ver ficha completa
                             </Link>
@@ -1696,13 +1696,13 @@ export default function CatalogClient({
                       </Dialog>
                     </div>
 
-                    <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900/30">
-                      <dl className="grid grid-cols-3 divide-x divide-neutral-800/80 border-b border-neutral-800/80">
+                    <div className="overflow-hidden rounded-md border border-border bg-card/30">
+                      <dl className="grid grid-cols-3 divide-x divide-border/80 border-b border-border/80">
                         <DetailMetaCell label="BPM" value={selectedTrackBpmValue ? String(selectedTrackBpmValue) : "—"} />
                         <DetailMetaCell label="Tonalidad" value={selectedTrack.key ?? "—"} />
                         <DetailMetaCell label="Género" value={selectedTrackGenreLabel} />
                       </dl>
-                      <dl className="grid grid-cols-3 divide-x divide-neutral-800/80">
+                      <dl className="grid grid-cols-3 divide-x divide-border/80">
                         <DetailMetaCell
                           label="Duración"
                           value={selectedTrack.duration || formatTime(panelDuration)}
@@ -1717,8 +1717,8 @@ export default function CatalogClient({
                     </div>
 
                     {(selectedTrackMoods.length > 0 || selectedTrackUses.length > 0) && (
-                      <div className="rounded-md border border-neutral-800 bg-neutral-900/30 p-2.5">
-                        <div className="grid grid-cols-1 divide-y divide-neutral-800/80 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                      <div className="rounded-md border border-border bg-card/30 p-2.5">
+                        <div className="grid grid-cols-1 divide-y divide-border/80 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
                           <div className="pb-2.5 sm:pb-0 sm:pr-2.5">
                             <DetailTagColumn label="Moods" values={selectedTrackMoods} tone="mood" />
                           </div>
@@ -1730,7 +1730,7 @@ export default function CatalogClient({
                     )}
                   </div>
                 ) : (
-                  <p className="text-sm text-neutral-400">Selecciona un track para ver detalles.</p>
+                  <p className="text-sm text-muted-foreground">Selecciona un track para ver detalles.</p>
                 )}
               </section>
             </aside>

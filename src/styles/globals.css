@@ -347,6 +347,33 @@ html.light .admin-badge-role-creator {
 }
 
 /* =========================================================
+   Catalog tags (theme-aware)
+   ======================================================= */
+.catalog-tag-mood {
+  border-color: rgb(56 189 248 / 0.45);
+  background-color: rgb(56 189 248 / 0.16);
+  color: rgb(224 242 254);
+}
+
+.catalog-tag-use {
+  border-color: rgb(16 185 129 / 0.45);
+  background-color: rgb(16 185 129 / 0.16);
+  color: rgb(209 250 229);
+}
+
+html.light .catalog-tag-mood {
+  border-color: rgb(2 132 199 / 0.42);
+  background-color: rgb(14 165 233 / 0.12);
+  color: rgb(12 74 110);
+}
+
+html.light .catalog-tag-use {
+  border-color: rgb(5 150 105 / 0.42);
+  background-color: rgb(16 185 129 / 0.12);
+  color: rgb(6 78 59);
+}
+
+/* =========================================================
    Base layer
    ======================================================= */
 @layer base {
