@@ -562,22 +562,12 @@ export default function CatalogClient({
 
   useEffect(() => {
     if (!visibleTracks.length) {
-      setSelectedTrackId(null);
-
       if (currentTrackId) {
         audioRef.current?.pause();
         setCurrentTrackId(null);
         setIsPlaying(false);
       }
       return;
-    }
-
-    if (
-      !selectedTrackId ||
-      !visibleTracks.some((track) => track.id === selectedTrackId)
-    ) {
-      const firstTrackId = visibleTracks[0]?.id ?? null;
-      setSelectedTrackId(firstTrackId);
     }
 
     if (
@@ -588,7 +578,7 @@ export default function CatalogClient({
       setCurrentTrackId(null);
       setIsPlaying(false);
     }
-  }, [visibleTracks, selectedTrackId, currentTrackId]);
+  }, [visibleTracks, currentTrackId]);
 
   useEffect(() => {
     setActiveCat(catalogSlug ?? null);
@@ -1432,29 +1422,19 @@ export default function CatalogClient({
                           aria-pressed={isSelected}
                         >
                           <div className="space-y-1 px-2.5 py-2.5">
-                            {isMobileViewport ? (
-                              <LoopingText
-                                text={track.title}
-                                className="text-left text-sm font-semibold leading-tight text-foreground"
-                                speedPxPerSecond={32}
-                                forceLoopOnMobile
-                              />
-                            ) : (
-                              <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight text-foreground">
-                                {track.title}
-                              </h3>
-                            )}
+                            <LoopingText
+                              text={track.title}
+                              className="text-left text-[15px] font-semibold leading-tight text-foreground"
+                              speedPxPerSecond={32}
+                              forceLoopOnMobile
+                            />
 
-                            {isMobileViewport ? (
-                              <LoopingText
-                                text={track.artist || "Artista"}
-                                className="text-left text-sm text-muted-foreground"
-                                speedPxPerSecond={30}
-                                forceLoopOnMobile
-                              />
-                            ) : (
-                              <p className="truncate text-sm text-muted-foreground">{track.artist || "Artista"}</p>
-                            )}
+                            <LoopingText
+                              text={track.artist || "Artista"}
+                              className="text-left text-sm text-muted-foreground"
+                              speedPxPerSecond={30}
+                              forceLoopOnMobile
+                            />
                           </div>
                         </button>
                       </article>
@@ -1474,11 +1454,22 @@ export default function CatalogClient({
                     <li key={track.id}>
                       <article
                         className={cn(
-                          "relative overflow-hidden rounded-md border bg-card/80 transition",
+                          "relative cursor-pointer overflow-hidden rounded-md border bg-card/80 transition focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/60",
                           isSelected
                             ? "border-foreground shadow-[0_0_0_1px_rgba(243,241,234,0.28)]"
                             : "border-border hover:border-foreground/60",
                         )}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Seleccionar ${track.title}`}
+                        aria-pressed={isSelected}
+                        onClick={() => setSelectedTrackId(track.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedTrackId(track.id);
+                          }
+                        }}
                       >
                         <div className="flex min-w-0 items-center gap-2 p-2 sm:gap-3">
                           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded border border-border bg-card sm:h-20 sm:w-20">
@@ -1488,22 +1479,9 @@ export default function CatalogClient({
                               className="h-full w-full object-cover"
                               loading="lazy"
                             />
-                            <button
-                              type="button"
-                              onClick={() => setSelectedTrackId(track.id)}
-                              className="absolute inset-0"
-                              aria-label={`Seleccionar ${track.title}`}
-                              aria-pressed={isSelected}
-                            />
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setSelectedTrackId(track.id)}
-                            className="min-w-0 flex-1 text-left"
-                            aria-label={`Ver detalle de ${track.title}`}
-                            aria-pressed={isSelected}
-                          >
+                          <div className="min-w-0 flex-1 text-left">
                             {isMobileViewport ? (
                               <LoopingText
                                 text={track.title}
@@ -1534,11 +1512,14 @@ export default function CatalogClient({
                               {track.bpm ? <span>{Math.round(track.bpm)} BPM</span> : null}
                               {track.key ? <span>{track.key}</span> : null}
                             </div>
-                          </button>
+                          </div>
 
                           <button
                             type="button"
-                            onClick={() => playTrack(track)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              playTrack(track);
+                            }}
                             className={cn(
                               "mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition sm:mr-3",
                               isActive
@@ -1615,7 +1596,12 @@ export default function CatalogClient({
                             speedPxPerSecond={34}
                             forceLoopOnMobile
                           />
-                          <p className="truncate text-sm text-muted-foreground">de {selectedTrack.artist}</p>
+                          <LoopingText
+                            text={`de ${selectedTrack.artist || "Artista"}`}
+                            className="text-left text-sm text-muted-foreground"
+                            speedPxPerSecond={30}
+                            forceLoopOnMobile
+                          />
                         </div>
                         <span className="justify-self-end whitespace-nowrap rounded border border-border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                           {selectedTrackBpmBadge}
