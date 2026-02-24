@@ -1,124 +1,412 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import {
-  Clapperboard,
-  Download,
-  Eye,
-  FileText,
-  Layers,
-  Link as LinkIcon,
-  MoreVertical,
-  Pause,
-  Play,
-  X,
-} from "lucide-react";
-import Sparkline from "@/components/audio/Sparkline";
-import WaveformScrubber from "@/components/public/WaveformScrubber";
-import type { Track } from "@/lib/catalog/types";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CopyIconButton } from "@/components/ui/CopyIconButton";
-import { cn } from "@/lib/utils";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-type ProgressMap = Record<string, number>;
-
-const STEMS_MOCK = ["Drums", "Bass", "Keys", "Guitars", "Percussion", "Vocals"];
+import { ChevronLeft, ChevronRight, Heart, Pause, Play } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Track } from "@/lib/catalog/types";
+import type { CatalogHeroSlide } from "@/lib/banner-promotions/types";
 
 type CatalogTrack = Track & {
   waveformB64?: string | null;
   durationSec?: number | null;
 };
 
+type ProgressMap = Record<string, number>;
+
 type Props = {
   tracks: CatalogTrack[];
+  heroSlides?: CatalogHeroSlide[];
   title?: string;
   subtitle?: string;
   eyebrow?: string;
   compact?: boolean;
+  hideHeader?: boolean;
+  showDetailPanel?: boolean;
+  showFilteringControls?: boolean;
   catalogSlug?: string;
   categories?: { slug: string; name: string }[];
 };
 
-/**
- * Catálogo público – tabla compacta inspirada en TableView original:
- * - Columnas: arte/play + título/subtítulo, waveform técnico, duración/BPM, acciones.
- * - Acciones: licencia (card), stems (card), probar video (placeholder), copiar enlace, menú.
- * - Waveform reutiliza Sparkline (mismo estilo que ficha técnica).
- */
+type BannerSlideView = {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  ctaHref: string;
+  ctaLabel: string;
+  durationMs: number;
+  track: CatalogTrack | null;
+  promotionItemId: string | null;
+};
+
+const FALLBACK_BANNER_IMAGES = [
+  "/images/hero/hero-bg-1.png",
+  "/images/hero/hero-bg-2.png",
+  "/images/hero/hero-bg-3.png",
+  "/images/hero/hero-bg-4.png",
+];
+const MIN_BANNER_SLIDES = 10;
+
+function parseDurationSeconds(value?: string | null): number {
+  if (!value) return 0;
+  const parts = value.trim().split(":");
+  if (parts.length === 2) {
+    const minutes = Number(parts[0]);
+    const seconds = Number(parts[1]);
+    if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) return 0;
+    return Math.max(0, minutes * 60 + seconds);
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+}
+
+function formatTime(seconds: number): string {
+  const normalized = Math.max(0, Math.floor(seconds));
+  const mins = Math.floor(normalized / 60);
+  const secs = normalized % 60;
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function parseOptionalNumber(value: string): number | null {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function resolveDuration(track: CatalogTrack | null): number {
+  if (!track) return 0;
+  if (track.durationSec && Number.isFinite(track.durationSec) && track.durationSec > 0) {
+    return Math.floor(track.durationSec);
+  }
+  return parseDurationSeconds(track.duration);
+}
+
+function hashToPositiveInt(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function resolveCatalogCoverUrl(track: CatalogTrack): string {
+  const cleanCover = track.coverUrl?.trim();
+  if (cleanCover) return cleanCover;
+  return `https://loremflickr.com/640/640/kitten?lock=${hashToPositiveInt(track.id)}`;
+}
+
+function isExternalHref(href: string) {
+  return /^https?:\/\//i.test(href.trim());
+}
+
 export default function CatalogClient({
   tracks,
-  title = "Catálogo",
-  subtitle = "Lista compacta con reproductor y acciones rápidas.",
-  eyebrow = "Catálogo",
+  heroSlides,
+  title = "ODR Records Catalog",
+  subtitle = "Explora el catálogo por carátula y revisa el detalle del track seleccionado.",
+  eyebrow = "ODR Records",
   hideHeader = false,
   compact = false,
+  showDetailPanel = true,
+  showFilteringControls,
   catalogSlug,
   categories = [],
-}: Props & { hideHeader?: boolean }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const pendingSeekRef = useRef<number | null>(null);
+}: Props) {
   const router = useRouter();
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const pendingSeekRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const bannerSessionIdRef = useRef<string>(
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `banner-${Date.now()}`,
+  );
+
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(tracks[0]?.id ?? null);
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progressMap, setProgressMap] = useState<ProgressMap>({});
-  const [licenseTrack, setLicenseTrack] = useState<CatalogTrack | null>(null);
-  const [stemsTrack, setStemsTrack] = useState<CatalogTrack | null>(null);
-  const [menuTrackId, setMenuTrackId] = useState<string | null>(null);
+  const [activeCat, setActiveCat] = useState<string | null>(catalogSlug ?? null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeMood, setActiveMood] = useState("all");
+  const [activeUse, setActiveUse] = useState("all");
+  const [activeGenre, setActiveGenre] = useState("all");
+  const [bpmMin, setBpmMin] = useState("");
+  const [bpmMax, setBpmMax] = useState("");
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
 
-  // Prepara waveform base64 por track (usa real si existe, fallback si no)
-  const waveformMap = useMemo(() => {
-    const map: Record<string, string> = {};
+  const shouldShowFilteringControls = showFilteringControls ?? !compact;
+
+  const moodOptions = useMemo(() => {
+    const set = new Set<string>();
     for (const track of tracks) {
-      if (track.waveformB64) {
-        map[track.id] = track.waveformB64;
-        continue;
+      for (const mood of track.moods) {
+        const cleanMood = mood.trim();
+        if (cleanMood) set.add(cleanMood);
       }
-      map[track.id] = makeBase64Wave(track.id, 256);
     }
-    return map;
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" }),
+    );
   }, [tracks]);
 
+  const useOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const track of tracks) {
+      for (const use of track.uses) {
+        const cleanUse = use.trim();
+        if (cleanUse) set.add(cleanUse);
+      }
+    }
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" }),
+    );
+  }, [tracks]);
+
+  const genreOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const track of tracks) {
+      for (const genre of track.genres ?? []) {
+        const cleanGenre = genre.trim();
+        if (cleanGenre) set.add(cleanGenre);
+      }
+    }
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, "es", { sensitivity: "base" }),
+    );
+  }, [tracks]);
+
+  const visibleTracks = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const rawMin = parseOptionalNumber(bpmMin);
+    const rawMax = parseOptionalNumber(bpmMax);
+    const minBpm = rawMin !== null && rawMax !== null ? Math.min(rawMin, rawMax) : rawMin;
+    const maxBpm = rawMin !== null && rawMax !== null ? Math.max(rawMin, rawMax) : rawMax;
+
+    return tracks.filter((track) => {
+      const matchesMood =
+        activeMood === "all" ||
+        track.moods.some((mood) => mood.toLowerCase() === activeMood.toLowerCase());
+      if (!matchesMood) return false;
+
+      const matchesUse =
+        activeUse === "all" ||
+        track.uses.some((use) => use.toLowerCase() === activeUse.toLowerCase());
+      if (!matchesUse) return false;
+
+      const trackGenres = track.genres ?? [];
+      const matchesGenre =
+        activeGenre === "all" ||
+        trackGenres.some((genre) => genre.toLowerCase() === activeGenre.toLowerCase());
+      if (!matchesGenre) return false;
+
+      if (minBpm !== null || maxBpm !== null) {
+        if (typeof track.bpm !== "number" || !Number.isFinite(track.bpm)) return false;
+        if (minBpm !== null && track.bpm < minBpm) return false;
+        if (maxBpm !== null && track.bpm > maxBpm) return false;
+      }
+
+      if (!query) return true;
+      const haystack = `${track.title} ${track.artist} ${track.moods.join(" ")} ${track.uses.join(
+        " ",
+      )} ${trackGenres.join(" ")} ${track.bpm ?? ""}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [tracks, searchTerm, activeMood, activeUse, activeGenre, bpmMin, bpmMax]);
+
+  const bannerSourceTracks = useMemo(
+    () => (visibleTracks.length > 0 ? visibleTracks : tracks),
+    [visibleTracks, tracks],
+  );
+
+  const trackById = useMemo(
+    () => new Map(tracks.map((track) => [track.id, track])),
+    [tracks],
+  );
+
+  const bannerSlides = useMemo<BannerSlideView[]>(() => {
+    const slides: BannerSlideView[] = [];
+
+    if (heroSlides && heroSlides.length > 0) {
+      slides.push(
+        ...heroSlides.map((slide) => ({
+          id: slide.id,
+          title: slide.title,
+          subtitle: slide.subtitle,
+          imageUrl: slide.imageUrl,
+          ctaHref: slide.ctaHref,
+          ctaLabel: slide.ctaLabel,
+          durationMs: slide.durationMs,
+          track: slide.playableTrackId ? trackById.get(slide.playableTrackId) ?? null : null,
+          promotionItemId: slide.promotionItemId ?? null,
+        })),
+      );
+    } else if (bannerSourceTracks.length > 0) {
+      slides.push(
+        ...bannerSourceTracks.slice(0, MIN_BANNER_SLIDES).map((track) => ({
+          id: track.id,
+          title: track.title,
+          subtitle: track.artist
+            ? `${track.artist}${track.bpm ? ` · ${Math.round(track.bpm)} BPM` : ""}`
+            : subtitle,
+          imageUrl: resolveCatalogCoverUrl(track),
+          ctaHref: `/track/${track.id}`,
+          ctaLabel: "Ir al track",
+          durationMs: 5000,
+          track,
+          promotionItemId: null,
+        })),
+      );
+    }
+
+    if (slides.length < MIN_BANNER_SLIDES) {
+      const usedTrackIds = new Set(
+        slides
+          .map((slide) => slide.track?.id)
+          .filter((trackId): trackId is string => typeof trackId === "string" && trackId.length > 0),
+      );
+
+      for (const track of bannerSourceTracks) {
+        if (slides.length >= MIN_BANNER_SLIDES) break;
+        if (usedTrackIds.has(track.id)) continue;
+
+        usedTrackIds.add(track.id);
+        slides.push({
+          id: `autofill-track-${track.id}`,
+          title: track.title,
+          subtitle: track.artist
+            ? `${track.artist}${track.bpm ? ` · ${Math.round(track.bpm)} BPM` : ""}`
+            : subtitle,
+          imageUrl: resolveCatalogCoverUrl(track),
+          ctaHref: `/track/${track.id}`,
+          ctaLabel: "Ir al track",
+          durationMs: 5000,
+          track,
+          promotionItemId: null,
+        });
+      }
+    }
+
+    if (slides.length < MIN_BANNER_SLIDES) {
+      let fallbackIndex = 0;
+      while (slides.length < MIN_BANNER_SLIDES) {
+        const imageUrl =
+          FALLBACK_BANNER_IMAGES[fallbackIndex % FALLBACK_BANNER_IMAGES.length] ??
+          FALLBACK_BANNER_IMAGES[0]!;
+        const nextIndex = slides.length + 1;
+        slides.push({
+          id: `autofill-fallback-${nextIndex}`,
+          title,
+          subtitle,
+          imageUrl,
+          ctaHref: "/catalog",
+          ctaLabel: "Explorar catálogo",
+          durationMs: 5000,
+          track: null,
+          promotionItemId: null,
+        });
+        fallbackIndex += 1;
+      }
+    }
+
+    return slides;
+  }, [heroSlides, trackById, bannerSourceTracks, title, subtitle]);
+
+  const activeBannerSlide = bannerSlides[activeSlideIndex] ?? bannerSlides[0] ?? null;
+
+  const selectedTrack = useMemo(
+    () =>
+      visibleTracks.find((track) => track.id === selectedTrackId) ??
+      visibleTracks[0] ??
+      null,
+    [selectedTrackId, visibleTracks],
+  );
+
   const currentTrack = useMemo(
-    () => tracks.find((t) => t.id === currentTrackId) ?? null,
+    () => tracks.find((track) => track.id === currentTrackId) ?? null,
     [currentTrackId, tracks],
   );
 
-  const [activeCat, setActiveCat] = useState<string | null>(catalogSlug ?? null);
+  useEffect(() => {
+    if (!visibleTracks.length) {
+      setSelectedTrackId(null);
 
-  // Mantener estado sincronizado si viene un cambio desde el servidor
+      if (currentTrackId) {
+        audioRef.current?.pause();
+        setCurrentTrackId(null);
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    if (
+      !selectedTrackId ||
+      !visibleTracks.some((track) => track.id === selectedTrackId)
+    ) {
+      const firstTrackId = visibleTracks[0]?.id ?? null;
+      setSelectedTrackId(firstTrackId);
+    }
+
+    if (
+      currentTrackId &&
+      !visibleTracks.some((track) => track.id === currentTrackId)
+    ) {
+      audioRef.current?.pause();
+      setCurrentTrackId(null);
+      setIsPlaying(false);
+    }
+  }, [visibleTracks, selectedTrackId, currentTrackId]);
+
   useEffect(() => {
     setActiveCat(catalogSlug ?? null);
   }, [catalogSlug]);
 
-  const handleCategoryChange = (slug: string | null) => {
-    const next = slug === activeCat ? null : slug;
-    setActiveCat(next);
-    const url = next ? `/catalog?cat=${encodeURIComponent(next)}` : "/catalog";
-    router.replace(url);
-    router.refresh();
-  };
+  useEffect(() => {
+    if (bannerSlides.length === 0) {
+      setActiveSlideIndex(0);
+      return;
+    }
+    setActiveSlideIndex((prev) => Math.min(prev, bannerSlides.length - 1));
+  }, [bannerSlides.length]);
+
+  useEffect(() => {
+    if (hideHeader || bannerSlides.length <= 1) return;
+
+    const activeDuration =
+      activeBannerSlide && Number.isFinite(activeBannerSlide.durationMs)
+        ? Math.max(2000, activeBannerSlide.durationMs)
+        : 5000;
+
+    const timerId = window.setTimeout(() => {
+      setActiveSlideIndex((prev) => (prev + 1) % bannerSlides.length);
+    }, activeDuration);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [hideHeader, bannerSlides.length, activeSlideIndex, activeBannerSlide]);
+
+  useEffect(() => {
+    if (!activeBannerSlide) return;
+    trackHeroEvent("VIEW", activeBannerSlide);
+  }, [activeBannerSlide?.id]);
 
   useEffect(() => {
     const audioEl = audioRef.current;
     if (!audioEl) return;
 
-    const onTime = () => {
+    const onTimeUpdate = () => {
       if (!currentTrackId) return;
       const duration =
-        audioEl.duration && !Number.isNaN(audioEl.duration)
-          ? audioEl.duration
-          : currentTrack?.durationSec ?? parseDurationSeconds(currentTrack?.duration);
-      if (!duration || Number.isNaN(duration)) return;
-
+        audioEl.duration && Number.isFinite(audioEl.duration)
+          ? Math.floor(audioEl.duration)
+          : resolveDuration(currentTrack);
+      if (!duration) return;
       setProgressMap((prev) => ({
         ...prev,
         [currentTrackId]: Math.min(1, audioEl.currentTime / duration),
@@ -127,35 +415,31 @@ export default function CatalogClient({
 
     const onEnded = () => {
       setIsPlaying(false);
-      if (currentTrackId) {
-        setProgressMap((prev) => ({ ...prev, [currentTrackId]: 0 }));
-      }
+      if (!currentTrackId) return;
+      setProgressMap((prev) => ({ ...prev, [currentTrackId]: 0 }));
     };
 
-    const onLoaded = () => {
-      if (
-        pendingSeekRef.current !== null &&
-        audioEl.duration &&
-        !Number.isNaN(audioEl.duration)
-      ) {
-        audioEl.currentTime = audioEl.duration * pendingSeekRef.current;
-        pendingSeekRef.current = null;
-      }
+    const onLoadedMetadata = () => {
+      if (pendingSeekRef.current === null) return;
+      if (!audioEl.duration || !Number.isFinite(audioEl.duration)) return;
+      audioEl.currentTime = audioEl.duration * pendingSeekRef.current;
+      pendingSeekRef.current = null;
     };
 
-    audioEl.addEventListener("timeupdate", onTime);
+    audioEl.addEventListener("timeupdate", onTimeUpdate);
     audioEl.addEventListener("ended", onEnded);
-    audioEl.addEventListener("loadedmetadata", onLoaded);
+    audioEl.addEventListener("loadedmetadata", onLoadedMetadata);
+
     return () => {
-      audioEl.removeEventListener("timeupdate", onTime);
+      audioEl.removeEventListener("timeupdate", onTimeUpdate);
       audioEl.removeEventListener("ended", onEnded);
-      audioEl.removeEventListener("loadedmetadata", onLoaded);
+      audioEl.removeEventListener("loadedmetadata", onLoadedMetadata);
     };
   }, [currentTrackId, currentTrack]);
 
-  const handlePlayPause = (track: CatalogTrack) => {
+  const playTrack = (track: CatalogTrack) => {
     const audioEl = audioRef.current;
-    if (!audioEl) return;
+    if (!audioEl || !track.audioUrl) return;
 
     if (currentTrackId === track.id) {
       if (isPlaying) {
@@ -170,9 +454,11 @@ export default function CatalogClient({
       return;
     }
 
+    setSelectedTrackId(track.id);
     setCurrentTrackId(track.id);
     pendingSeekRef.current = null;
     setProgressMap((prev) => ({ ...prev, [track.id]: 0 }));
+
     audioEl.src = track.audioUrl;
     audioEl.currentTime = 0;
     audioEl
@@ -181,14 +467,15 @@ export default function CatalogClient({
       .catch(() => setIsPlaying(false));
   };
 
-  const handleSeek = (track: CatalogTrack, ratio: number) => {
+  const seekTrack = (track: CatalogTrack, ratio: number) => {
     const audioEl = audioRef.current;
-    if (!audioEl) return;
-    const clamped = Math.max(0, Math.min(1, ratio));
+    if (!audioEl || !track.audioUrl) return;
 
-    if (currentTrackId === track.id && audioEl.duration && !Number.isNaN(audioEl.duration)) {
-      audioEl.currentTime = audioEl.duration * clamped;
-      setProgressMap((prev) => ({ ...prev, [track.id]: clamped }));
+    const nextRatio = Math.max(0, Math.min(1, ratio));
+
+    if (currentTrackId === track.id && audioEl.duration && Number.isFinite(audioEl.duration)) {
+      audioEl.currentTime = audioEl.duration * nextRatio;
+      setProgressMap((prev) => ({ ...prev, [track.id]: nextRatio }));
       if (!isPlaying) {
         audioEl
           .play()
@@ -198,9 +485,11 @@ export default function CatalogClient({
       return;
     }
 
-    pendingSeekRef.current = clamped;
+    setSelectedTrackId(track.id);
     setCurrentTrackId(track.id);
-    setProgressMap((prev) => ({ ...prev, [track.id]: clamped }));
+    pendingSeekRef.current = nextRatio;
+    setProgressMap((prev) => ({ ...prev, [track.id]: nextRatio }));
+
     audioEl.src = track.audioUrl;
     audioEl
       .play()
@@ -208,605 +497,582 @@ export default function CatalogClient({
       .catch(() => setIsPlaying(false));
   };
 
-  const buildTrackHref = (trackId: string) =>
-    `/track/${trackId}`;
+  const handleCategoryChange = (slug: string | null) => {
+    const next = slug === activeCat ? null : slug;
+    setActiveCat(next);
 
-  const buildTrackUrl = (trackId: string) => {
-    const href = `/track/${trackId}`; // URL limpia sin query para copiar/SEO
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}${href}`;
-    }
-    return href;
+    const url = next ? `/catalog?cat=${encodeURIComponent(next)}` : "/catalog";
+    router.replace(url);
+    router.refresh();
   };
 
-  const handleCopyLink = (track: CatalogTrack) => {
-    const url = buildTrackUrl(track.id);
-    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(url).catch(() => {});
+  const trackHeroEvent = (eventType: "VIEW" | "CLICK_CTA" | "CLICK_PLAY", slide: BannerSlideView | null) => {
+    if (!slide?.promotionItemId) return;
+    const payload = {
+      placement: "CATALOG_HERO" as const,
+      itemId: slide.promotionItemId,
+      eventType,
+      sessionId: bannerSessionIdRef.current,
+      path: typeof window !== "undefined" ? window.location.pathname : "/catalog",
+    };
+
+    void fetch("/api/catalog/hero-events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => undefined);
+  };
+
+  const goToSlide = (index: number) => {
+    if (bannerSlides.length === 0) return;
+    setActiveSlideIndex(Math.max(0, Math.min(index, bannerSlides.length - 1)));
+  };
+
+  const goPrevSlide = () => {
+    if (bannerSlides.length <= 1) return;
+    setActiveSlideIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length);
+  };
+
+  const goNextSlide = () => {
+    if (bannerSlides.length <= 1) return;
+    setActiveSlideIndex((prev) => (prev + 1) % bannerSlides.length);
+  };
+
+  const hasActiveTrackFilters =
+    searchTerm.trim().length > 0 ||
+    activeMood !== "all" ||
+    activeUse !== "all" ||
+    activeGenre !== "all" ||
+    bpmMin.trim().length > 0 ||
+    bpmMax.trim().length > 0;
+
+  const clearTrackFilters = (options?: { focusSearch?: boolean }) => {
+    setSearchTerm("");
+    setActiveMood("all");
+    setActiveUse("all");
+    setActiveGenre("all");
+    setBpmMin("");
+    setBpmMax("");
+
+    if (options?.focusSearch) {
+      requestAnimationFrame(() => {
+        searchInputRef.current?.focus();
+      });
     }
   };
+
+  const panelDuration = resolveDuration(selectedTrack);
+  const panelProgress = selectedTrack ? progressMap[selectedTrack.id] ?? 0 : 0;
+  const panelCurrentSec = panelDuration * panelProgress;
+  const panelTrackIsPlaying = !!selectedTrack && selectedTrack.id === currentTrackId && isPlaying;
+  const activeSlideIsExternal = !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
 
   return (
-    <div className="bg-background text-foreground pb-0 flex flex-col min-h-0">
+    <div className="bg-[var(--lm-bg-deep)] text-[var(--lm-text-main)]">
+      <audio ref={audioRef} preload="metadata" />
+
       <div
         className={cn(
-          "mx-auto flex w-full max-w-7xl flex-col flex-1",
-          compact ? "gap-2 px-0 py-0" : "gap-4 px-4 py-6 sm:px-5 md:px-6 lg:px-8",
+          "mx-auto w-[80vw] max-w-[1440px] min-w-0",
+          compact ? "py-4" : "py-6 sm:py-8",
         )}
       >
-        {!hideHeader && (
-          <header className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex min-w-0 flex-col gap-1">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {eyebrow}
-                </p>
-                <h1 className="text-2xl font-semibold">{title}</h1>
-                <p className="max-w-3xl text-sm text-muted-foreground">{subtitle}</p>
+        {!hideHeader && activeBannerSlide && (
+          <header className="mb-2.5">
+            <div className="relative overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+              <img
+                src={activeBannerSlide.imageUrl}
+                alt={`Banner ${activeBannerSlide.title}`}
+                className="h-[170px] w-full object-cover sm:h-[185px] md:h-[205px]"
+                loading="eager"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/65 to-black/20" />
+
+              <div className="absolute inset-0 flex items-end">
+                <div className="w-full max-w-3xl px-4 py-3 sm:px-5 sm:py-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-300">
+                    {eyebrow}
+                  </p>
+                  <h1 className="mt-1 line-clamp-2 text-xl font-semibold leading-tight text-neutral-100 sm:text-2xl">
+                    {activeBannerSlide.title}
+                  </h1>
+                  <p className="mt-1 line-clamp-2 text-xs text-neutral-200 sm:text-sm">
+                    {activeBannerSlide.subtitle}
+                  </p>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeBannerSlide.track) {
+                          playTrack(activeBannerSlide.track);
+                          trackHeroEvent("CLICK_PLAY", activeBannerSlide);
+                        }
+                      }}
+                      disabled={!activeBannerSlide.track}
+                      className={cn(
+                        "inline-flex h-9 w-9 items-center justify-center rounded-full border transition",
+                        activeBannerSlide.track
+                          ? "border-neutral-100 bg-neutral-100 text-neutral-950 hover:opacity-90"
+                          : "cursor-not-allowed border-neutral-700 text-neutral-600",
+                      )}
+                      aria-label={
+                        activeBannerSlide.track
+                          ? `Reproducir ${activeBannerSlide.title}`
+                          : "Reproducción no disponible"
+                      }
+                    >
+                      <Play className="ml-0.5 h-4 w-4" />
+                    </button>
+
+                    {activeSlideIsExternal ? (
+                      <a
+                        href={activeBannerSlide.ctaHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => trackHeroEvent("CLICK_CTA", activeBannerSlide)}
+                        className="inline-flex h-9 items-center rounded border border-neutral-100 px-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-100 hover:text-neutral-950"
+                      >
+                        {activeBannerSlide.ctaLabel}
+                      </a>
+                    ) : (
+                      <Link
+                        href={activeBannerSlide.ctaHref}
+                        onClick={() => trackHeroEvent("CLICK_CTA", activeBannerSlide)}
+                        className="inline-flex h-9 items-center rounded border border-neutral-100 px-3 text-sm font-semibold text-neutral-100 transition hover:bg-neutral-100 hover:text-neutral-950"
+                      >
+                        {activeBannerSlide.ctaLabel}
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
-              {categories.length > 0 && (
-                <div className="flex w-full flex-wrap items-center gap-2 sm:justify-end">
+            </div>
+
+            <div className="mt-1.5 flex items-center gap-1">
+              {bannerSlides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => goToSlide(index)}
+                  className={cn(
+                    "h-1 flex-1 rounded-full transition",
+                    index === activeSlideIndex
+                      ? "bg-neutral-100"
+                      : "bg-neutral-800 hover:bg-neutral-600",
+                  )}
+                  aria-label={`Ir al slide ${index + 1}`}
+                  aria-pressed={index === activeSlideIndex}
+                />
+              ))}
+
+              {bannerSlides.length > 1 && (
+                <div className="ml-1 flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => handleCategoryChange(null)}
-                    className={cn(
-                      "rounded border px-3 py-1 text-xs font-semibold transition",
-                      !activeCat
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-card text-foreground hover:border-foreground/60",
-                    )}
+                    onClick={goPrevSlide}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-neutral-700 text-neutral-300 transition hover:border-neutral-400 hover:text-neutral-100"
+                    aria-label="Slide anterior"
                   >
-                    Todos
+                    <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
-                  {categories.map((cat) => (
-                    <button
-                      key={cat.slug}
-                      type="button"
-                      onClick={() => handleCategoryChange(cat.slug)}
-                      className={cn(
-                        "rounded border px-3 py-1 text-xs font-semibold transition",
-                        activeCat === cat.slug
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-card text-foreground hover:border-foreground/60",
-                      )}
-                    >
-                      {cat.name.toUpperCase()}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={goNextSlide}
+                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-neutral-700 text-neutral-300 transition hover:border-neutral-400 hover:text-neutral-100"
+                    aria-label="Siguiente slide"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
             </div>
           </header>
         )}
 
-        <section className="relative overflow-visible rounded-[2px] border border-border/70 bg-transparent shadow-sm table-scroll">
-          <table className="min-w-full table-auto">
-            <colgroup>
-              <col className="w-[260px]" />
-              <col className="w-[360px]" />
-              <col className="w-[120px]" />
-              <col className="w-[160px]" />
-            </colgroup>
-            <thead className="bg-transparent text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground border-b border-border/60">
-              <tr>
-                <th className="relative px-3 py-2 after:absolute after:right-0 after:top-[25%] after:bottom-[25%] after:w-px after:bg-border/70 last:after:hidden">
-                  Title
-                </th>
-                <th className="relative px-3 py-2 after:absolute after:right-0 after:top-[25%] after:bottom-[25%] after:w-px after:bg-border/70 last:after:hidden">
-                  Waveform
-                </th>
-                <th className="relative px-3 py-2 text-center after:absolute after:right-0 after:top-[25%] after:bottom-[25%] after:w-px after:bg-border/70 last:after:hidden">
-                  Length
-                </th>
-                <th className="px-3 py-2 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tracks.map((track) => (
-                <TrackRow
-                  key={track.id}
-                  track={track}
-                  isActive={currentTrackId === track.id}
-                  isPlaying={isPlaying}
-                  rowClass=""
-                  progress={progressMap[track.id] ?? 0}
-                  waveformB64={waveformMap[track.id] ?? ""}
-                  durationSec={track.durationSec ?? parseDurationSeconds(track.duration) ?? null}
-                  onPlayPause={() => handlePlayPause(track)}
-                  onSeek={(r) => handleSeek(track, r)}
-                  onOpenLicense={() => setLicenseTrack(track)}
-                  onOpenStems={() => setStemsTrack(track)}
-                  onCopy={() => handleCopyLink(track)}
-                  onView={(href) => router.push(href)}
-                  menuOpen={menuTrackId === track.id}
-                  onToggleMenu={() =>
-                    setMenuTrackId((prev) => (prev === track.id ? null : track.id))
-                  }
-                  closeMenu={() => setMenuTrackId(null)}
-                  buildTrackUrl={buildTrackUrl}
-                  buildTrackHref={buildTrackHref}
-                  catalogSlug={catalogSlug}
-                />
-              ))}
-            </tbody>
-          </table>
-        </section>
-      </div>
-
-      <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex flex-1 items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[2px] border border-border bg-card text-[11px] text-muted-foreground">
-              {currentTrack ? "Now" : "Idle"}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">
-                {currentTrack ? currentTrack.title : "Ningún track seleccionado"}
-              </span>
-              {currentTrack?.artist ? (
-                <Link
-                  href={buildCatalogHref("artist", currentTrack.artist)}
-                  className="text-xs text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  {currentTrack.artist}
-                </Link>
-              ) : (
-                <span className="text-xs text-muted-foreground">
-                  {currentTrack ? "Artista desconocido" : "Elige play en la tabla"}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {currentTrack ? (
+        {categories.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1.5">
             <button
               type="button"
-              onClick={() => handlePlayPause(currentTrack)}
-              className="hidden h-11 w-11 items-center justify-center rounded-[2px] border border-border text-foreground transition hover:border-border/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
-              aria-label={isPlaying ? "Pausar track" : "Reproducir track"}
+              onClick={() => handleCategoryChange(null)}
+              className={cn(
+                "h-7 rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition",
+                !activeCat
+                  ? "border-neutral-100 bg-neutral-100 text-neutral-950"
+                  : "border-neutral-700 text-neutral-100 hover:border-neutral-400",
+              )}
             >
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              Todo
             </button>
-          ) : null}
-
-          <div className="min-w-[260px] flex-1 sm:min-w-[320px]">
-            <audio
-              ref={audioRef}
-              className="w-full"
-              preload="none"
-              controls
-              aria-label="Reproductor del catálogo"
-            />
-          </div>
-        </div>
-      </footer>
-
-      <ModalCard track={licenseTrack} title="Licencia" onClose={() => setLicenseTrack(null)}>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse
-          lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum
-          ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <button className="rounded-[2px] border border-border/80 px-3 py-1">
-            Descargar PDF
-          </button>
-          <button className="rounded-[2px] border border-border/80 px-3 py-1">
-            Solicitar ajustes
-          </button>
-        </div>
-      </ModalCard>
-
-      <ModalCard track={stemsTrack} title="Stems" onClose={() => setStemsTrack(null)}>
-        <div className="space-y-2">
-          {STEMS_MOCK.map((stem) => (
-            <div
-              key={`${stemsTrack?.id ?? "stem"}-${stem}`}
-              className="flex items-center gap-3 rounded-[2px] border border-border/70 bg-card/80 px-3 py-2"
-            >
-              <span className="w-32 truncate text-sm font-medium">{stem}</span>
+            {categories.map((category) => (
               <button
+                key={category.slug}
                 type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[2px] border border-border/80 text-foreground transition hover:border-border/60"
-                aria-label={`Reproducir stem ${stem}`}
+                onClick={() => handleCategoryChange(category.slug)}
+                className={cn(
+                  "h-7 rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition",
+                  activeCat === category.slug
+                    ? "border-neutral-100 bg-neutral-100 text-neutral-950"
+                    : "border-neutral-700 text-neutral-100 hover:border-neutral-400",
+                )}
               >
-                <Play className="h-4 w-4" />
+                {category.name}
               </button>
-              <div className="flex min-w-0 flex-1 items-center">
-        <WaveformScrubber
-          waveformB64={makeBase64Wave(stem, 96)}
-          height={26}
-          durationSec={stemsTrack?.durationSec ?? undefined}
-          progress={0}
-          className="w-full bg-transparent ring-0 border-0 text-foreground"
-          frameClassName="relative select-none rounded-[2px] bg-transparent ring-0 border-0 text-foreground"
-                  smooth
-                  smoothWindow={5}
+            ))}
+          </div>
+        )}
+
+        {shouldShowFilteringControls && tracks.length > 0 && (
+          <section className="mb-2 rounded border border-neutral-800 bg-neutral-900/40 p-2">
+            <div className="grid items-end gap-1.5 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_130px_130px_130px_78px_78px_auto]">
+              <label className="min-w-0">
+                <span className="sr-only">Buscar</span>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Buscar..."
+                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
                 />
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <button className="rounded-[2px] border border-border/80 px-2 py-1">
-                  S
-                </button>
-                <button className="rounded-[2px] border border-border/80 px-2 py-1">
-                  M
-                </button>
+              </label>
+
+              <label className="min-w-0">
+                <span className="sr-only">Mood</span>
+                <select
+                  value={activeMood}
+                  onChange={(event) => setActiveMood(event.target.value)}
+                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none"
+                >
+                  <option value="all">Mood</option>
+                  {moodOptions.map((mood) => (
+                    <option key={mood} value={mood}>
+                      {mood}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="min-w-0">
+                <span className="sr-only">Uso</span>
+                <select
+                  value={activeUse}
+                  onChange={(event) => setActiveUse(event.target.value)}
+                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none"
+                >
+                  <option value="all">Uso</option>
+                  {useOptions.map((use) => (
+                    <option key={use} value={use}>
+                      {use}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="min-w-0">
+                <span className="sr-only">Género</span>
+                <select
+                  value={activeGenre}
+                  onChange={(event) => setActiveGenre(event.target.value)}
+                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none"
+                >
+                  <option value="all">Género</option>
+                  {genreOptions.map((genre) => (
+                    <option key={genre} value={genre}>
+                      {genre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="min-w-0">
+                <span className="sr-only">BPM mínimo</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={400}
+                  step={1}
+                  inputMode="numeric"
+                  value={bpmMin}
+                  onChange={(event) => setBpmMin(event.target.value)}
+                  placeholder="Min"
+                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                />
+              </label>
+
+              <label className="min-w-0">
+                <span className="sr-only">BPM máximo</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={400}
+                  step={1}
+                  inputMode="numeric"
+                  value={bpmMax}
+                  onChange={(event) => setBpmMax(event.target.value)}
+                  placeholder="Max"
+                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                />
+              </label>
+
+              <div className="flex items-center justify-end gap-1 sm:col-span-2 xl:col-span-1">
+                <span className="inline-flex h-7 items-center rounded border border-neutral-700 px-2 text-xs text-neutral-300">
+                  {visibleTracks.length}/{tracks.length}
+                </span>
                 <button
                   type="button"
-                  className="rounded-[2px] border border-border/80 p-2"
-                  aria-label="Descargar stem"
+                  onClick={() => clearTrackFilters()}
+                  disabled={!hasActiveTrackFilters}
+                  className={cn(
+                    "h-7 rounded border px-2 text-xs font-semibold transition",
+                    hasActiveTrackFilters
+                      ? "border-neutral-300 text-neutral-100 hover:border-neutral-100"
+                      : "cursor-not-allowed border-neutral-700 text-neutral-600",
+                  )}
                 >
-                  <Download className="h-4 w-4" />
+                  Limpiar
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      </ModalCard>
-    </div>
-  );
-}
+          </section>
+        )}
 
-interface TrackRowProps {
-  track: CatalogTrack;
-  isActive: boolean;
-  isPlaying: boolean;
-  progress: number;
-  durationSec: number | null;
-  rowClass: string;
-  waveformB64: string;
-  onPlayPause: () => void;
-  onSeek: (ratio: number) => void;
-  onOpenLicense: () => void;
-  onOpenStems: () => void;
-  onCopy: () => void;
-  onView: (href: string) => void;
-  menuOpen: boolean;
-  onToggleMenu: () => void;
-  closeMenu: () => void;
-  buildTrackUrl: (id: string) => string;
-  buildTrackHref: (id: string) => string;
-}
+        <div
+          className={cn(
+            "grid gap-6 xl:gap-8",
+            showDetailPanel ? "lg:grid-cols-[minmax(0,1fr)_360px]" : "grid-cols-1",
+          )}
+        >
+          <section>
+            {tracks.length === 0 ? (
+              <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 px-5 py-8 text-sm text-neutral-300">
+                No hay tracks disponibles en este catálogo.
+              </div>
+            ) : visibleTracks.length === 0 ? (
+              <div className="space-y-3 rounded-2xl border border-neutral-800 bg-neutral-950/60 px-5 py-8 text-sm text-neutral-300">
+                <p>No encontramos tracks con esos filtros.</p>
+                {hasActiveTrackFilters && (
+                  <button
+                    type="button"
+                    onClick={() => clearTrackFilters({ focusSearch: true })}
+                    className="rounded border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-100 transition hover:border-neutral-100"
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
+            ) : (
+              <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {visibleTracks.map((track) => {
+                  const isSelected = track.id === selectedTrack?.id;
+                  const isActive = track.id === currentTrackId;
+                  const showPause = isActive && isPlaying;
 
-function TrackRow({
-  track,
-  isActive,
-  isPlaying,
-  progress,
-  durationSec,
-  rowClass,
-  waveformB64,
-  onPlayPause,
-  onSeek,
-  onOpenLicense,
-  onOpenStems,
-  onCopy,
-  onView,
-  menuOpen,
-  onToggleMenu,
-  closeMenu,
-  buildTrackUrl,
-  buildTrackHref,
-  catalogSlug,
-}: TrackRowProps & { catalogSlug?: string }) {
-    const menuAreaRef = useRef<HTMLDivElement | null>(null);
+                  return (
+                    <li key={track.id}>
+                      <article
+                        className={cn(
+                          "group overflow-hidden rounded-md border bg-neutral-900/80 transition",
+                          isSelected
+                            ? "border-neutral-100 shadow-[0_0_0_1px_rgba(243,241,234,0.35)]"
+                            : "border-neutral-800 hover:border-neutral-600",
+                        )}
+                      >
+                        <div className="relative aspect-square w-full overflow-hidden bg-neutral-900">
+                          <img
+                            src={resolveCatalogCoverUrl(track)}
+                            alt={`Cover de ${track.title}`}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                            loading="lazy"
+                          />
 
-    useEffect(() => {
-      if (!menuOpen) return;
-      const handleClick = (event: globalThis.MouseEvent) => {
-        const target = event.target as Node;
-        if (menuAreaRef.current && !menuAreaRef.current.contains(target)) {
-          closeMenu();
-        }
-      };
-      document.addEventListener("mousedown", handleClick);
-      const handleKey = (event: KeyboardEvent) => {
-        if (event.key === "Escape") {
-          closeMenu();
-          const active = document.activeElement as HTMLElement | null;
-          if (active && menuAreaRef.current?.contains(active)) {
-            active.blur();
-          }
-        }
-      };
-      document.addEventListener("keydown", handleKey);
-      return () => {
-        document.removeEventListener("mousedown", handleClick);
-        document.removeEventListener("keydown", handleKey);
-      };
-    }, [menuOpen, closeMenu]);
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTrackId(track.id)}
+                            className="absolute inset-0 z-10"
+                            aria-pressed={isSelected}
+                            aria-label={`Seleccionar ${track.title}`}
+                          />
 
-  return (
-    <tr
-      className={`align-middle text-sm transition duration-150 hover:bg-border/20 hover:ring-1 hover:ring-border/70 border-b border-border/60 last:border-b-0 ${rowClass}`}
-    >
-      <td className="px-3 py-2">
-        <div className="flex flex-col gap-0.5">
-          <Link
-            href={buildTrackHref(track.id)}
-            className="text-[14px] font-semibold leading-tight hover:underline underline-offset-4"
-          >
-            {track.title}
-          </Link>
-          {track.artist ? (
-            <Link
-              href={buildCatalogHref("artist", track.artist)}
-              className="text-[11px] text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              {track.artist}
-            </Link>
-          ) : (
-            <span className="text-[11px] text-muted-foreground">Artista desconocido</span>
+                          <button
+                            type="button"
+                            onClick={() => playTrack(track)}
+                            className={cn(
+                              "absolute bottom-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition",
+                              isActive
+                                ? "border-neutral-100 bg-neutral-100 text-neutral-950"
+                                : "border-neutral-300/70 bg-black/40 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
+                            )}
+                            aria-label={showPause ? `Pausar ${track.title}` : `Reproducir ${track.title}`}
+                          >
+                            {showPause ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                          </button>
+
+                          {isActive && (
+                            <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-black/60">
+                              <div
+                                className="h-full bg-neutral-100 transition-[width]"
+                                style={{ width: `${Math.round((progressMap[track.id] ?? 0) * 100)}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTrackId(track.id)}
+                          className="block w-full text-left"
+                          aria-pressed={isSelected}
+                        >
+                          <div className="space-y-1 px-2.5 py-2.5">
+                            <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight text-neutral-100">
+                              {track.title}
+                            </h3>
+                            <p className="line-clamp-1 text-sm text-neutral-400">{track.artist || "Artista"}</p>
+                          </div>
+                        </button>
+                      </article>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          {showDetailPanel && (
+            <aside className="self-start lg:sticky lg:top-[calc(var(--header-h)+1rem)]">
+              <section className="max-h-[calc(100dvh-var(--header-h)-2rem)] overflow-y-auto rounded-md border border-neutral-800 bg-neutral-950/90 p-4 sm:p-5">
+                {selectedTrack ? (
+                  <div className="space-y-4">
+                    <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900">
+                      <img
+                        src={resolveCatalogCoverUrl(selectedTrack)}
+                        alt={`Cover grande de ${selectedTrack.title}`}
+                        className="aspect-square w-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => playTrack(selectedTrack)}
+                        className={cn(
+                          "flex h-12 w-12 items-center justify-center rounded-full border transition",
+                          panelTrackIsPlaying
+                            ? "border-neutral-100 bg-neutral-100 text-neutral-950"
+                            : "border-neutral-100 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
+                        )}
+                        aria-label={panelTrackIsPlaying ? "Pausar track" : "Reproducir track"}
+                      >
+                        {panelTrackIsPlaying ? (
+                          <Pause className="h-5 w-5" />
+                        ) : (
+                          <Play className="ml-0.5 h-5 w-5" />
+                        )}
+                      </button>
+
+                      <div className="min-w-0">
+                        <p className="line-clamp-1 text-lg font-semibold leading-tight">{selectedTrack.title}</p>
+                        <p className="line-clamp-1 text-sm text-neutral-400">de {selectedTrack.artist}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <input
+                        type="range"
+                        min={0}
+                        max={1000}
+                        value={Math.round(panelProgress * 1000)}
+                        onChange={(event) => {
+                          if (!selectedTrack) return;
+                          seekTrack(selectedTrack, Number(event.target.value) / 1000);
+                        }}
+                        className="h-2 w-full cursor-pointer accent-neutral-100"
+                        aria-label="Progreso de reproducción"
+                      />
+                      <div className="flex items-center justify-between text-xs text-neutral-400">
+                        <span>{formatTime(panelCurrentSec)}</span>
+                        <span>{formatTime(panelDuration)}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/track/${selectedTrack.id}`}
+                        className="inline-flex items-center justify-center rounded border border-neutral-100 bg-neutral-100 px-3 py-2 text-sm font-semibold text-neutral-950 transition hover:opacity-90"
+                      >
+                        Ir al album
+                      </Link>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center gap-2 rounded border border-neutral-300/70 px-3 py-2 text-sm font-semibold text-neutral-100 transition hover:border-neutral-100"
+                      >
+                        <Heart className="h-4 w-4" />
+                        Lista de deseos
+                      </button>
+                    </div>
+
+                    <div className="space-y-1 text-sm text-neutral-200">
+                      <p>
+                        {(selectedTrack.uses.length ||
+                          selectedTrack.moods.length ||
+                          (selectedTrack.genres?.length ?? 0))
+                          ? `${selectedTrack.uses.length + selectedTrack.moods.length + (selectedTrack.genres?.length ?? 0)} etiquetas curadas`
+                          : "Track listo para licenciamiento"}
+                      </p>
+                      <p>{selectedTrack.duration || formatTime(panelDuration)} de duración</p>
+                      {(selectedTrack.bpm || selectedTrack.key) && (
+                        <p>
+                          {selectedTrack.bpm ? `${selectedTrack.bpm} BPM` : ""}
+                          {selectedTrack.bpm && selectedTrack.key ? " · " : ""}
+                          {selectedTrack.key ?? ""}
+                        </p>
+                      )}
+                      {(selectedTrack.genres?.length ?? 0) > 0 && (
+                        <p>{selectedTrack.genres?.join(" · ")}</p>
+                      )}
+                    </div>
+
+                    {(selectedTrack.moods.length > 0 ||
+                      selectedTrack.uses.length > 0 ||
+                      (selectedTrack.genres?.length ?? 0) > 0) && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {(selectedTrack.genres ?? []).map((genre) => (
+                          <span
+                            key={`g-${selectedTrack.id}-${genre}`}
+                            className="rounded-full border border-neutral-600 px-2 py-0.5 text-xs text-neutral-200"
+                          >
+                            {genre}
+                          </span>
+                        ))}
+                        {selectedTrack.moods.map((mood) => (
+                          <span
+                            key={`m-${selectedTrack.id}-${mood}`}
+                            className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
+                          >
+                            {mood}
+                          </span>
+                        ))}
+                        {selectedTrack.uses.map((use) => (
+                          <span
+                            key={`u-${selectedTrack.id}-${use}`}
+                            className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
+                          >
+                            {use}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-neutral-400">Selecciona un track para ver detalles.</p>
+                )}
+              </section>
+            </aside>
           )}
         </div>
-      </td>
-
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onPlayPause}
-            className="relative h-8 w-8 overflow-hidden rounded-[2px] border border-border/80 bg-card/80"
-            aria-label={isActive && isPlaying ? "Pausar track" : "Reproducir track"}
-          >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(20,20,20,0.08),transparent_38%),radial-gradient(circle_at_80%_0%,rgba(20,20,20,0.04),transparent_42%)]" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              {isActive && isPlaying ? (
-                <Pause className="h-5 w-5 text-foreground" />
-              ) : (
-                <Play className="h-5 w-5 text-foreground" />
-              )}
-            </div>
-          </button>
-          <WaveCell
-            waveformB64={waveformB64}
-            filledRatio={progress}
-            durationSec={durationSec}
-            onSeek={onSeek}
-          />
-        </div>
-      </td>
-
-      <td className="px-3 py-2 text-center text-xs text-muted-foreground">
-        <div className="text-sm font-medium text-foreground">{track.duration}</div>
-        {track.bpm ? <div>{track.bpm} BPM</div> : null}
-      </td>
-
-      <td className="relative px-3 py-2">
-        <div
-          ref={menuAreaRef}
-          className="flex flex-nowrap items-center justify-center gap-2 text-muted-foreground"
-        >
-          <IconButton
-            label="Ver track"
-            icon={<Eye className="h-4 w-4" />}
-            tooltip="Ver track"
-            onClick={() => onView(buildTrackHref(track.id))}
-          />
-          <IconButton label="Ver licencia" icon={<FileText className="h-4 w-4" />} onClick={onOpenLicense} tooltip="Ver licencia" />
-          <IconButton label="Stems" icon={<Layers className="h-4 w-4" />} onClick={onOpenStems} tooltip="Ver stems" />
-          <IconButton label="Probar con video" icon={<Clapperboard className="h-4 w-4" />} tooltip="Probar video" />
-          <CopyIconButton
-            label="Copiar enlace"
-            icon={<LinkIcon className="h-4 w-4" />}
-            text={buildTrackUrl(track.id)}
-            tooltipLabel="Copiar link"
-          />
-          <IconButton label="Más acciones" icon={<MoreVertical className="h-4 w-4" />} onClick={onToggleMenu} tooltip="Más" />
-        </div>
-
-        {menuOpen ? (
-          <div
-            className="absolute right-4 top-12 z-50 w-44 rounded-[2px] border border-border/80 bg-card shadow-md"
-          >
-            <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-border/20"
-              onClick={closeMenu}
-            >
-              Guardar en playlist
-            </button>
-            <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-border/20"
-              onClick={closeMenu}
-            >
-              Descargar demo
-            </button>
-            <button
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-border/20"
-              onClick={closeMenu}
-            >
-              Compartir
-            </button>
-          </div>
-        ) : null}
-      </td>
-    </tr>
-  );
-}
-
-function IconButton({
-  label,
-  icon,
-  onClick,
-  tooltip,
-}: {
-  label: string;
-  icon: ReactNode;
-  onClick?: () => void;
-  tooltip?: string;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={onClick}
-          className="rounded-full border border-transparent p-2 transition hover:border-border/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          aria-label={label}
-        >
-          {icon}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        align="center"
-        sideOffset={4}
-        className="rounded-[2px] bg-card text-foreground border border-border shadow-sm"
-      >
-        {tooltip ?? label}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function WaveCell({
-  waveformB64,
-  filledRatio,
-  durationSec,
-  onSeek,
-}: {
-  waveformB64: string;
-  filledRatio: number;
-  durationSec: number | null;
-  onSeek: (ratio: number) => void;
-}) {
-  const handleSeekTime = (seconds: number) => {
-    if (!durationSec || durationSec <= 0 || Number.isNaN(durationSec)) return;
-    const ratio = Math.max(0, Math.min(1, seconds / durationSec));
-    onSeek(ratio);
-  };
-
-  return (
-    <div className="flex min-w-0 flex-1 items-center rounded-[2px] bg-transparent px-1 py-0.5 text-foreground">
-      <WaveformScrubber
-        waveformB64={waveformB64}
-        height={22}
-        durationSec={durationSec ?? undefined}
-        progress={filledRatio}
-        onSeek={durationSec ? handleSeekTime : undefined}
-        className="w-full bg-transparent ring-0 border-0 text-foreground"
-        frameClassName="relative select-none rounded-[2px] bg-transparent ring-0 border-0 text-foreground"
-        smooth
-        smoothWindow={5}
-      />
-    </div>
-  );
-}
-
-function ModalCard({
-  track,
-  title,
-  children,
-  onClose,
-}: {
-  track: CatalogTrack | null;
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  if (!track) return null;
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-40 flex items-center justify-center bg-[rgba(0,0,0,0.55)] px-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-[2px] border border-border bg-card p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              {title}
-            </p>
-            <h3 className="text-lg font-semibold text-foreground">{track.title}</h3>
-            {track.artist ? (
-              <Link
-                href={buildCatalogHref("artist", track.artist)}
-                className="text-sm text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                {track.artist}
-              </Link>
-            ) : (
-              <p className="text-sm text-muted-foreground">Artista desconocido</p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-[2px] border border-border text-muted-foreground transition hover:border-border/80"
-            aria-label="Cerrar"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-4 max-h-[70vh] overflow-y-auto pr-1">{children}</div>
       </div>
     </div>
   );
-}
-
-function makeBase64Wave(seed: string, pts: number): string {
-  const rand = seededRandom(seed);
-  const arr = new Float32Array(pts);
-  for (let i = 0; i < pts; i++) {
-    const base = 0.15 + rand() * 0.85;
-    arr[i] = Math.min(1, Math.max(0, base));
-  }
-  return float32ToBase64(arr);
-}
-
-function float32ToBase64(arr: Float32Array): string {
-  if (typeof window === "undefined") {
-    const buf = (globalThis as any).Buffer;
-    if (buf) return buf.from(arr.buffer).toString("base64");
-    return "";
-  }
-  let binary = "";
-  const bytes = new Uint8Array(arr.buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i] ?? 0);
-  }
-  return btoa(binary);
-}
-
-function seededRandom(seed: string) {
-  let h = 2166136261 >>> 0;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return () => {
-    h += h << 13;
-    h ^= h >>> 7;
-    h += h << 3;
-    h ^= h >>> 17;
-    h += h << 5;
-    return ((h >>> 0) % 1000) / 1000;
-  };
-}
-
-function parseDurationSeconds(duration?: string): number | null {
-  if (!duration) return null;
-  const parts = duration.split(":").map((p) => Number.parseInt(p, 10));
-  if (parts.some((n) => Number.isNaN(n))) return null;
-  if (parts.length === 2) {
-    const [m, s] = parts as [number, number];
-    return m * 60 + s;
-  }
-  if (parts.length === 3) {
-    const [h, m, s] = parts as [number, number, number];
-    return h * 3600 + m * 60 + s;
-  }
-  return null;
-}
-
-function buildCatalogHref(param: "artist", value: string) {
-  const qs = new URLSearchParams({ [param]: value });
-  return `/catalog?${qs.toString()}`;
 }
