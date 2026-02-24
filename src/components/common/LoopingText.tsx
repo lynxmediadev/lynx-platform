@@ -117,7 +117,7 @@ export default function LoopingText({
           </span>
         </div>
       ) : (
-        <span className={cn("block truncate whitespace-nowrap text-center", className)}>
+        <span className={cn("block truncate whitespace-nowrap", className)}>
           {text}
         </span>
       )}

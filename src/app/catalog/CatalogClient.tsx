@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, FileText, LayoutGrid, List, Pause, Play } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  LayoutGrid,
+  List,
+  Pause,
+  Play,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -257,12 +266,12 @@ function DetailMetaCell({
   forceLoopOnMobile?: boolean;
 }) {
   return (
-    <div className="flex min-h-[48px] flex-col items-center justify-center px-2 py-1.5 text-center">
+    <div className="flex min-h-[48px] min-w-0 flex-col items-center justify-center px-2 py-1.5 text-center">
       <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-neutral-500">{label}</dt>
       <dd className="mt-0.5 w-full">
         <LoopingText
           text={value}
-          className="text-[13px] font-semibold leading-tight text-neutral-100"
+          className="text-center text-[13px] font-semibold leading-tight text-neutral-100"
           speedPxPerSecond={32}
           forceLoopOnMobile={forceLoopOnMobile}
         />
@@ -288,7 +297,7 @@ function DetailTagPill({
         : "border-neutral-600/90 bg-neutral-800/70 text-neutral-100";
 
   return (
-    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", toneClass)}>
+    <span className={cn("max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-medium", toneClass)}>
       {value}
     </span>
   );
@@ -336,7 +345,6 @@ export default function CatalogClient({
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pendingSeekRef = useRef<number | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const bannerSessionIdRef = useRef<string>(
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -354,6 +362,8 @@ export default function CatalogClient({
   const [activeGenre, setActiveGenre] = useState("all");
   const [bpmMin, setBpmMin] = useState("");
   const [bpmMax, setBpmMax] = useState("");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState<CatalogViewMode>("grid");
 
@@ -597,6 +607,15 @@ export default function CatalogClient({
   }, [compact]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobileViewport(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
     if (bannerSlides.length === 0) {
       setActiveSlideIndex(0);
       return;
@@ -796,8 +815,15 @@ export default function CatalogClient({
     setBpmMax("");
 
     if (options?.focusSearch) {
+      setMobileFiltersOpen(true);
       requestAnimationFrame(() => {
-        searchInputRef.current?.focus();
+        const searchInputs = Array.from(
+          document.querySelectorAll<HTMLInputElement>('input[data-catalog-search="true"]'),
+        );
+        const visibleSearchInput = searchInputs.find(
+          (input) => input.offsetParent !== null && !input.disabled,
+        );
+        (visibleSearchInput ?? searchInputs[0])?.focus();
       });
     }
   };
@@ -822,19 +848,21 @@ export default function CatalogClient({
     selectedTrack?.clearedForSync === false ? "Sync bajo revisión" : "Sync disponible";
   const selectedTrackLicenseCards = selectedTrack ? deriveCatalogLicenseCards(selectedTrack) : [];
   const activeSlideIsExternal = !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
+  const filterSelectClass =
+    "h-7 w-full appearance-none rounded border border-neutral-700 bg-neutral-950 px-2 pr-9 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none";
 
   return (
-    <div className="bg-[var(--lm-bg-deep)] text-[var(--lm-text-main)]">
+    <div className="overflow-x-clip bg-[var(--lm-bg-deep)] text-[var(--lm-text-main)]">
       <audio ref={audioRef} preload="metadata" />
 
       <div
         className={cn(
-          "mx-auto w-[90vw] max-w-[1700px] min-w-0",
+          "mx-auto w-[90vw] max-w-[1700px] min-w-0 overflow-x-clip",
           compact ? "py-4" : "py-6 sm:py-8",
         )}
       >
         {!hideHeader && activeBannerSlide && (
-          <header className="mb-2.5">
+          <header className="mb-2.5 min-w-0">
             <div className="relative overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
               <img
                 src={activeBannerSlide.imageUrl}
@@ -979,12 +1007,190 @@ export default function CatalogClient({
         )}
 
         {shouldShowFilteringControls && tracks.length > 0 && (
-          <section className="mb-2 rounded border border-neutral-800 bg-neutral-900/40 p-2">
-            <div className="grid items-end gap-1.5 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_130px_130px_130px_78px_78px_auto]">
+          <section className="mb-2 overflow-x-clip rounded border border-neutral-800 bg-neutral-900/40 p-2">
+            <div className="sm:hidden">
+              <div className="flex items-center gap-1">
+                <span className="inline-flex h-7 items-center rounded border border-neutral-700 px-2 text-xs text-neutral-300">
+                  {visibleTracks.length}/{tracks.length}
+                </span>
+
+                {!compact && (
+                  <div className="inline-flex h-7 overflow-hidden rounded border border-neutral-700">
+                    <button
+                      type="button"
+                      onClick={() => handleViewModeChange("grid")}
+                      aria-label="Vista grid"
+                      aria-pressed={effectiveViewMode === "grid"}
+                      title="Vista grid"
+                      className={cn(
+                        "inline-flex w-8 items-center justify-center transition",
+                        effectiveViewMode === "grid"
+                          ? "bg-neutral-100 text-neutral-950"
+                          : "text-neutral-300 hover:bg-neutral-800",
+                      )}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleViewModeChange("list")}
+                      aria-label="Vista lista"
+                      aria-pressed={effectiveViewMode === "list"}
+                      title="Vista lista"
+                      className={cn(
+                        "inline-flex w-8 items-center justify-center border-l border-neutral-700 transition",
+                        effectiveViewMode === "list"
+                          ? "bg-neutral-100 text-neutral-950"
+                          : "text-neutral-300 hover:bg-neutral-800",
+                      )}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => clearTrackFilters()}
+                  disabled={!hasActiveTrackFilters}
+                  className={cn(
+                    "ml-auto h-7 rounded border px-2 text-xs font-semibold transition",
+                    hasActiveTrackFilters
+                      ? "border-neutral-300 text-neutral-100 hover:border-neutral-100"
+                      : "cursor-not-allowed border-neutral-700 text-neutral-600",
+                  )}
+                >
+                  Limpiar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileFiltersOpen((prev) => !prev)}
+                  aria-expanded={mobileFiltersOpen}
+                  aria-label={mobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
+                  className="inline-flex h-7 items-center gap-1 rounded border border-neutral-700 px-2 text-xs font-semibold text-neutral-200 transition hover:border-neutral-500"
+                >
+                  {mobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
+                  <ChevronDown
+                    className={cn(
+                      "h-3.5 w-3.5 transition-transform",
+                      mobileFiltersOpen ? "rotate-180" : "",
+                    )}
+                  />
+                </button>
+              </div>
+
+              <div className={cn("mt-2.5", mobileFiltersOpen ? "block" : "hidden")}>
+                <label className="min-w-0">
+                  <span className="sr-only">Buscar</span>
+                  <input
+                    data-catalog-search="true"
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Buscar..."
+                    className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                  />
+                </label>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="min-w-0">
+                    <span className="sr-only">Mood</span>
+                    <div className="relative">
+                      <select
+                        value={activeMood}
+                        onChange={(event) => setActiveMood(event.target.value)}
+                        className={filterSelectClass}
+                      >
+                        <option value="all">Mood</option>
+                        {moodOptions.map((mood) => (
+                          <option key={mood} value={mood}>
+                            {mood}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                    </div>
+                  </label>
+
+                  <label className="min-w-0">
+                    <span className="sr-only">Uso</span>
+                    <div className="relative">
+                      <select
+                        value={activeUse}
+                        onChange={(event) => setActiveUse(event.target.value)}
+                        className={filterSelectClass}
+                      >
+                        <option value="all">Uso</option>
+                        {useOptions.map((use) => (
+                          <option key={use} value={use}>
+                            {use}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                    </div>
+                  </label>
+                </div>
+
+                <label className="mt-3 block min-w-0">
+                  <span className="sr-only">Género</span>
+                  <div className="relative">
+                    <select
+                      value={activeGenre}
+                      onChange={(event) => setActiveGenre(event.target.value)}
+                      className={filterSelectClass}
+                    >
+                      <option value="all">Género</option>
+                      {genreOptions.map((genre) => (
+                        <option key={genre} value={genre}>
+                          {genre}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                  </div>
+                </label>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="min-w-0">
+                    <span className="sr-only">BPM mínimo</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={400}
+                      step={1}
+                      inputMode="numeric"
+                      value={bpmMin}
+                      onChange={(event) => setBpmMin(event.target.value)}
+                      placeholder="Min"
+                      className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                    />
+                  </label>
+
+                  <label className="min-w-0">
+                    <span className="sr-only">BPM máximo</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={400}
+                      step={1}
+                      inputMode="numeric"
+                      value={bpmMax}
+                      onChange={(event) => setBpmMax(event.target.value)}
+                      placeholder="Max"
+                      className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-100 focus:outline-none"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden items-end gap-1.5 sm:grid sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_130px_130px_130px_78px_78px_auto]">
               <label className="min-w-0">
                 <span className="sr-only">Buscar</span>
                 <input
-                  ref={searchInputRef}
+                  data-catalog-search="true"
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
@@ -995,50 +1201,59 @@ export default function CatalogClient({
 
               <label className="min-w-0">
                 <span className="sr-only">Mood</span>
-                <select
-                  value={activeMood}
-                  onChange={(event) => setActiveMood(event.target.value)}
-                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none"
-                >
-                  <option value="all">Mood</option>
-                  {moodOptions.map((mood) => (
-                    <option key={mood} value={mood}>
-                      {mood}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={activeMood}
+                    onChange={(event) => setActiveMood(event.target.value)}
+                    className={filterSelectClass}
+                  >
+                    <option value="all">Mood</option>
+                    {moodOptions.map((mood) => (
+                      <option key={mood} value={mood}>
+                        {mood}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                </div>
               </label>
 
               <label className="min-w-0">
                 <span className="sr-only">Uso</span>
-                <select
-                  value={activeUse}
-                  onChange={(event) => setActiveUse(event.target.value)}
-                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none"
-                >
-                  <option value="all">Uso</option>
-                  {useOptions.map((use) => (
-                    <option key={use} value={use}>
-                      {use}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={activeUse}
+                    onChange={(event) => setActiveUse(event.target.value)}
+                    className={filterSelectClass}
+                  >
+                    <option value="all">Uso</option>
+                    {useOptions.map((use) => (
+                      <option key={use} value={use}>
+                        {use}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                </div>
               </label>
 
               <label className="min-w-0">
                 <span className="sr-only">Género</span>
-                <select
-                  value={activeGenre}
-                  onChange={(event) => setActiveGenre(event.target.value)}
-                  className="h-7 w-full rounded border border-neutral-700 bg-neutral-950 px-2 text-xs text-neutral-100 focus:border-neutral-100 focus:outline-none"
-                >
-                  <option value="all">Género</option>
-                  {genreOptions.map((genre) => (
-                    <option key={genre} value={genre}>
-                      {genre}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={activeGenre}
+                    onChange={(event) => setActiveGenre(event.target.value)}
+                    className={filterSelectClass}
+                  >
+                    <option value="all">Género</option>
+                    {genreOptions.map((genre) => (
+                      <option key={genre} value={genre}>
+                        {genre}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+                </div>
               </label>
 
               <label className="min-w-0">
@@ -1071,7 +1286,7 @@ export default function CatalogClient({
                 />
               </label>
 
-              <div className="flex items-center justify-end gap-1 sm:col-span-2 xl:col-span-1">
+              <div className="flex items-center justify-between gap-1 sm:col-span-2 sm:justify-end xl:col-span-1">
                 <span className="inline-flex h-7 items-center rounded border border-neutral-700 px-2 text-xs text-neutral-300">
                   {visibleTracks.length}/{tracks.length}
                 </span>
@@ -1129,13 +1344,13 @@ export default function CatalogClient({
 
         <div
           className={cn(
-            "grid gap-6 xl:gap-8",
+            "grid min-w-0 gap-2 xl:gap-3",
             showDetailPanel
-              ? "lg:grid-cols-[minmax(0,1fr)_450px] xl:grid-cols-[minmax(0,1fr)_520px]"
+              ? "lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_480px]"
               : "grid-cols-1",
           )}
         >
-          <section>
+          <section className="min-w-0">
             {tracks.length === 0 ? (
               <div className="rounded-2xl border border-neutral-800 bg-neutral-950/60 px-5 py-8 text-sm text-neutral-300">
                 No hay tracks disponibles en este catálogo.
@@ -1154,7 +1369,7 @@ export default function CatalogClient({
                 )}
               </div>
             ) : effectiveViewMode === "grid" ? (
-              <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+              <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
                 {visibleTracks.map((track) => {
                   const isSelected = track.id === selectedTrack?.id;
                   const isActive = track.id === currentTrackId;
@@ -1217,10 +1432,29 @@ export default function CatalogClient({
                           aria-pressed={isSelected}
                         >
                           <div className="space-y-1 px-2.5 py-2.5">
-                            <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight text-neutral-100">
-                              {track.title}
-                            </h3>
-                            <p className="line-clamp-1 text-sm text-neutral-400">{track.artist || "Artista"}</p>
+                            {isMobileViewport ? (
+                              <LoopingText
+                                text={track.title}
+                                className="text-left text-sm font-semibold leading-tight text-neutral-100"
+                                speedPxPerSecond={32}
+                                forceLoopOnMobile
+                              />
+                            ) : (
+                              <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight text-neutral-100">
+                                {track.title}
+                              </h3>
+                            )}
+
+                            {isMobileViewport ? (
+                              <LoopingText
+                                text={track.artist || "Artista"}
+                                className="text-left text-sm text-neutral-400"
+                                speedPxPerSecond={30}
+                                forceLoopOnMobile
+                              />
+                            ) : (
+                              <p className="truncate text-sm text-neutral-400">{track.artist || "Artista"}</p>
+                            )}
                           </div>
                         </button>
                       </article>
@@ -1246,7 +1480,7 @@ export default function CatalogClient({
                             : "border-neutral-800 hover:border-neutral-600",
                         )}
                       >
-                        <div className="flex items-center gap-2 p-2 sm:gap-3">
+                        <div className="flex min-w-0 items-center gap-2 p-2 sm:gap-3">
                           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded border border-neutral-800 bg-neutral-900 sm:h-20 sm:w-20">
                             <img
                               src={resolveCatalogCoverUrl(track)}
@@ -1270,12 +1504,31 @@ export default function CatalogClient({
                             aria-label={`Ver detalle de ${track.title}`}
                             aria-pressed={isSelected}
                           >
-                            <h3 className="line-clamp-1 text-sm font-semibold text-neutral-100 sm:text-[15px]">
-                              {track.title}
-                            </h3>
-                            <p className="line-clamp-1 text-xs text-neutral-400 sm:text-sm">
-                              {track.artist || "Artista"}
-                            </p>
+                            {isMobileViewport ? (
+                              <LoopingText
+                                text={track.title}
+                                className="text-left text-sm font-semibold text-neutral-100"
+                                speedPxPerSecond={32}
+                                forceLoopOnMobile
+                              />
+                            ) : (
+                              <h3 className="truncate text-sm font-semibold text-neutral-100 sm:text-[15px]">
+                                {track.title}
+                              </h3>
+                            )}
+
+                            {isMobileViewport ? (
+                              <LoopingText
+                                text={track.artist || "Artista"}
+                                className="text-left text-xs text-neutral-400"
+                                speedPxPerSecond={30}
+                                forceLoopOnMobile
+                              />
+                            ) : (
+                              <p className="truncate text-xs text-neutral-400 sm:text-sm">
+                                {track.artist || "Artista"}
+                              </p>
+                            )}
                             <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
                               <span>{durationLabel}</span>
                               {track.bpm ? <span>{Math.round(track.bpm)} BPM</span> : null}
@@ -1287,7 +1540,7 @@ export default function CatalogClient({
                             type="button"
                             onClick={() => playTrack(track)}
                             className={cn(
-                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition",
+                              "mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition sm:mr-3",
                               isActive
                                 ? "border-neutral-100 bg-neutral-100 text-neutral-950"
                                 : "border-neutral-300/70 text-neutral-100 hover:bg-neutral-100 hover:text-neutral-950",
@@ -1315,8 +1568,16 @@ export default function CatalogClient({
           </section>
 
           {showDetailPanel && (
-            <aside className="self-start lg:sticky lg:top-[calc(var(--header-h)+1rem)]">
+            <aside className="min-w-0 self-start lg:sticky lg:top-[calc(var(--header-h)+1rem)]">
               <section className="rounded-md border border-neutral-800 bg-neutral-950/90 p-4 sm:p-5">
+                <header className="mb-3 border-b border-neutral-800/80 pb-2.5">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-200">
+                    Detalle del track
+                  </h2>
+                  <p className="mt-0.5 text-xs text-neutral-500">
+                    {selectedTrack ? "Selección actual" : "Sin selección"}
+                  </p>
+                </header>
                 {selectedTrack ? (
                   <div className="space-y-4">
                     <div className="overflow-hidden rounded-md border border-neutral-800 bg-neutral-900">
@@ -1328,7 +1589,7 @@ export default function CatalogClient({
                     </div>
 
                     <div className="space-y-2 rounded-md border border-neutral-800 bg-neutral-900/45 p-3">
-                      <div className="flex items-center gap-2.5">
+                      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5">
                         <button
                           type="button"
                           onClick={() => playTrack(selectedTrack)}
@@ -1348,10 +1609,15 @@ export default function CatalogClient({
                         </button>
 
                         <div className="min-w-0 flex-1">
-                          <p className="line-clamp-1 text-lg font-semibold leading-tight">{selectedTrack.title}</p>
-                          <p className="line-clamp-1 text-sm text-neutral-400">de {selectedTrack.artist}</p>
+                          <LoopingText
+                            text={selectedTrack.title}
+                            className="text-left text-lg font-semibold leading-tight text-neutral-100"
+                            speedPxPerSecond={34}
+                            forceLoopOnMobile
+                          />
+                          <p className="truncate text-sm text-neutral-400">de {selectedTrack.artist}</p>
                         </div>
-                        <span className="rounded border border-neutral-700 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-neutral-300">
+                        <span className="justify-self-end whitespace-nowrap rounded border border-neutral-700 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-neutral-300">
                           {selectedTrackBpmBadge}
                         </span>
                       </div>
@@ -1417,7 +1683,7 @@ export default function CatalogClient({
                               </article>
                             ))}
                           </div>
-                          <div className="flex items-center justify-between gap-2 text-xs text-neutral-400">
+                          <div className="flex flex-col items-start justify-between gap-2 text-xs text-neutral-400 sm:flex-row sm:items-center">
                             <p>Valores referenciales sujetos al uso final.</p>
                             <Link
                               href={`/track/${selectedTrack.id}`}
@@ -1452,11 +1718,11 @@ export default function CatalogClient({
 
                     {(selectedTrackMoods.length > 0 || selectedTrackUses.length > 0) && (
                       <div className="rounded-md border border-neutral-800 bg-neutral-900/30 p-2.5">
-                        <div className="grid grid-cols-2 divide-x divide-neutral-800/80">
-                          <div className="pr-2.5">
+                        <div className="grid grid-cols-1 divide-y divide-neutral-800/80 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                          <div className="pb-2.5 sm:pb-0 sm:pr-2.5">
                             <DetailTagColumn label="Moods" values={selectedTrackMoods} tone="mood" />
                           </div>
-                          <div className="pl-2.5">
+                          <div className="pt-2.5 sm:pt-0 sm:pl-2.5">
                             <DetailTagColumn label="Usos" values={selectedTrackUses} tone="use" />
                           </div>
                         </div>
