@@ -104,7 +104,7 @@ const DETAILED_SERVICES: DetailedService[] = [
     id: 4,
     title: "Catálogo y Sync Licensing",
     description:
-      "Catálogo propio de obras listas para sincronizar, con gestión de metadata y derechos desde Lynx Media.",
+      "Catálogo propio de obras listas para sincronizar, con gestión de metadata y derechos desde ODR Records.",
     category: "Sync",
   },
   {
@@ -231,7 +231,7 @@ export default function HomePage() {
             </h1>
 
             <p className="lm-hero-lead">
-              Lynx Media integra producción sonora, postproducción, diseño
+              ODR Records integra producción sonora, postproducción, diseño
               sonoro y música original para proyectos audiovisuales, contenido
               de marca y lanzamientos musicales.
             </p>
@@ -279,7 +279,7 @@ export default function HomePage() {
                 <span className="text-foreground">para imagen y música</span>.
               </h2>
               <p className="lm-prose">
-                Lynx Media es un estudio de audio para imagen y música. Nos
+                ODR Records es un estudio de audio para imagen y música. Nos
                 enfocamos en criterio técnico, estética sonora y entregas
                 consistentes para equipos de post y marcas.
               </p>
@@ -388,7 +388,7 @@ export default function HomePage() {
         <SectionShell>
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.1fr)] lg:items-center">
             <div className="space-y-6">
-              <p className="lm-kicker lm-kicker-accent">Estudio · Lynx Media</p>
+              <p className="lm-kicker lm-kicker-accent">Estudio · ODR Records</p>
 
               <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
                 Estándar de entrega{" "}
@@ -537,7 +537,7 @@ export default function HomePage() {
               .
             </h2>
             <p className="text-sm leading-relaxed text-[var(--lm-text-muted)]">
-              Lynx Media nace desde la ingeniería en sonido, la producción
+              ODR Records nace desde la ingeniería en sonido, la producción
               musical y la experiencia trabajando junto a productoras, artistas
               y equipos de postproducción. El foco está en resolver proyectos
               con detalle y comunicación clara.
@@ -567,7 +567,7 @@ export default function HomePage() {
                   Dirección
                 </p>
                 <p className="text-base font-semibold">
-                  Diego Fernández · Lynx Media
+                  Diego Fernández · ODR Records
                 </p>
                 <p className="text-xs text-[var(--lm-text-muted)]">
                   Ingeniería en sonido, mezcla, diseño sonoro y producción
@@ -631,7 +631,7 @@ export default function HomePage() {
                   </div>
 
                   <p className="mt-4 text-xs font-medium text-[var(--lm-accent)]">
-                    Próximamente · Blog de Lynx Media
+                    Próximamente · Blog de ODR Records
                   </p>
                 </div>
               </article>
@@ -649,7 +649,7 @@ export default function HomePage() {
 
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             Únete a las novedades de{" "}
-            <span className="text-[var(--lm-accent)]">Lynx Media</span>.
+            <span className="text-[var(--lm-accent)]">ODR Records</span>.
           </h2>
 
           <p className="mx-auto max-w-2xl text-sm leading-relaxed text-[var(--lm-text-muted)]">
@@ -663,7 +663,7 @@ export default function HomePage() {
               href="mailto:contacto@lynxmedia.cl"
               className="lm-btn lm-btn-primary px-6 py-2.5"
             >
-              Escribir a Lynx Media
+              Escribir a ODR Records
               <ArrowRight className="h-4 w-4" />
             </Link>
 
@@ -680,7 +680,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-10 text-sm lg:flex-row lg:justify-between lg:px-6">
           <div className="space-y-3">
             <p className="text-xs font-semibold tracking-[0.22em] text-[var(--lm-accent)] uppercase">
-              Lynx Media
+              ODR Records
             </p>
             <p className="max-w-sm text-sm text-[color-mix(in_oklab,white_88%,transparent)]">
               Estudio de audio, diseño sonoro, música original y catálogo para
@@ -743,7 +743,7 @@ export default function HomePage() {
         <div className="border-t border-[color-mix(in_oklab,white_10%,transparent)]">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-4 text-[0.7rem] text-[color-mix(in_oklab,white_55%,transparent)] sm:flex-row lg:px-6">
             <p>
-              © {new Date().getFullYear()} Lynx Media. Todos los derechos
+              © {new Date().getFullYear()} ODR Records. Todos los derechos
               reservados.
             </p>
             <p>Audio · Música · Imagen · Sync Licensing.</p>

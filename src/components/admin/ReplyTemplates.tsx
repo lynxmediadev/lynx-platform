@@ -69,7 +69,7 @@ function buildBody(tpl: TemplateKey, r: RequestInfo) {
   const presupuesto = fmtMoney(r.budgetAmount, r.budgetCurrency);
   const track = r.trackTitle ? `“${r.trackTitle}”${r.trackArtist ? ` - ${r.trackArtist}` : ""}` : "el track consultado";
   const cabecera = `Hola ${r.name || "—"},\n`;
-  const firma = `\n\n— Equipo Lynx Media\n`;
+  const firma = `\n\n— Equipo ODR Records\n`;
 
   if (tpl === "ACK") {
     return nl(

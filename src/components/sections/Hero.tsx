@@ -21,7 +21,7 @@ const DEFAULTS: Required<HeroProps> = {
   slantRight: "of",
   headlineSub: "LYNX MUSIC",
   description:
-    "En Lynx Media concebimos la música como un lenguaje de emociones al servicio de la imagen. Cada proyecto es una oportunidad para trazar atmósferas únicas, donde la técnica y la sensibilidad convergen en un diálogo creativo con directores, agencias y marcas. Nuestro catálogo curado y la composición a medida buscan que cada nota encuentre su lugar exacto en la historia que quieres contar.",
+    "En ODR Records concebimos la música como un lenguaje de emociones al servicio de la imagen. Cada proyecto es una oportunidad para trazar atmósferas únicas, donde la técnica y la sensibilidad convergen en un diálogo creativo con directores, agencias y marcas. Nuestro catálogo curado y la composición a medida buscan que cada nota encuentre su lugar exacto en la historia que quieres contar.",
   projectTitle: "Featured Reel",
   projectCategory: "Film / TV / Ads",
   ctaText: "Explorar catálogo",
@@ -47,7 +47,7 @@ export default function Hero(props: HeroProps) {
   return (
     <section
       id="hero"
-      aria-label="Hero principal de Lynx Media"
+      aria-label="Hero principal de ODR Records"
       className="relative min-h-screen w-full overflow-hidden"
     >
       {/* Fondo + overlays (sin máscara) */}

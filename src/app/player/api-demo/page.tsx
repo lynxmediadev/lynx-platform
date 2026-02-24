@@ -10,7 +10,7 @@ import { headers } from "next/headers";
 import { AudioPlayer } from "@/components/ui/AudioPlayer";
 import { getJSON } from "@/lib/http";
 
-export const metadata: Metadata = { title: "Player API demo | Lynx Media" };
+export const metadata: Metadata = { title: "Player API demo | ODR Records" };
 
 type PlayerTrackDTO = {
   id: string; title: string; artist: string; audioUrl: string; coverUrl?: string;

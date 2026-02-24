@@ -30,7 +30,7 @@ export default function SiteHeader() {
       <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-2 md:flex-nowrap">
         {/* Branding */}
         <Link href="/" className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold tracking-wide">Lynx Media</span>
+          <span className="text-sm font-semibold tracking-wide">ODR Records</span>
           <span className="text-[11px] text-muted-foreground">
             Música · Sonido · Producción
           </span>

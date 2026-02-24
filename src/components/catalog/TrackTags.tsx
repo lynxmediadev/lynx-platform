@@ -11,7 +11,7 @@ interface TagListProps {
  * - Uses → neutro claro.
  *
  * Para cambiar colores globalmente, edita los tokens
- * en globals.css (bloque Lynx Media – catálogo público).
+ * en globals.css (bloque ODR Records – catálogo público).
  */
 export const TagList: FC<TagListProps> = ({ items, variant = "mood" }) => {
   if (!items || items.length === 0) return null;

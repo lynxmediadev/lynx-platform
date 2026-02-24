@@ -87,7 +87,7 @@ export function WhitelistDialog({ track }: { track: TrackBasics }) {
       `${notes || "(sin notas)"}`,
       ``,
       `Gracias,`,
-      `Equipo Lynx Media`,
+      `Equipo ODR Records`,
     ];
     const body = encodeURIComponent(lines.join("\n"));
     return `mailto:${track.mailto}?subject=${subject}&body=${body}`;

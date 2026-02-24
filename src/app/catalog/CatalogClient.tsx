@@ -848,7 +848,7 @@ export default function CatalogClient({
       <div
         className={cn(
           "mx-auto w-[90vw] max-w-[1700px] min-w-0 overflow-x-clip",
-          compact ? "py-4" : "py-6 sm:py-8",
+          compact ? "py-4" : "pt-2 pb-6 sm:pt-3 sm:pb-8",
         )}
       >
         {!hideHeader && activeBannerSlide && (
@@ -1369,7 +1369,7 @@ export default function CatalogClient({
                     <li key={track.id}>
                       <article
                         className={cn(
-                          "group overflow-hidden rounded-md border bg-card/80 transition",
+                          "group cursor-pointer overflow-hidden rounded-md border bg-card/80 transition",
                           isSelected
                             ? "border-foreground shadow-[0_0_0_1px_rgba(243,241,234,0.35)]"
                             : "border-border hover:border-foreground/60",
@@ -1386,7 +1386,7 @@ export default function CatalogClient({
                           <button
                             type="button"
                             onClick={() => setSelectedTrackId(track.id)}
-                            className="absolute inset-0 z-10"
+                            className="absolute inset-0 z-10 cursor-pointer"
                             aria-pressed={isSelected}
                             aria-label={`Seleccionar ${track.title}`}
                           />
@@ -1395,7 +1395,7 @@ export default function CatalogClient({
                             type="button"
                             onClick={() => playTrack(track)}
                             className={cn(
-                              "absolute bottom-2 left-2 z-20 flex h-8 w-8 items-center justify-center rounded-full border backdrop-blur transition",
+                              "absolute bottom-2 left-2 z-20 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border backdrop-blur transition",
                               isActive
                                 ? "border-foreground bg-foreground text-background"
                                 : "border-foreground/50 bg-black/40 text-foreground hover:bg-foreground hover:text-background",
@@ -1418,7 +1418,7 @@ export default function CatalogClient({
                         <button
                           type="button"
                           onClick={() => setSelectedTrackId(track.id)}
-                          className="block w-full text-left"
+                          className="block w-full cursor-pointer text-left"
                           aria-pressed={isSelected}
                         >
                           <div className="space-y-1 px-2.5 py-2.5">

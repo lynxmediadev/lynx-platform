@@ -8,8 +8,8 @@ type BuildInviteEmailInput = {
 
 export function buildInviteEmail(input: BuildInviteEmailInput) {
   const expires = formatExpiry(input.expiresAt);
-  const subject = "Invitación de acceso · Lynx Media";
-  const intro = `Recibiste una invitación para crear tu cuenta (${input.role}) en Lynx Media.`;
+  const subject = "Invitación de acceso · ODR Records";
+  const intro = `Recibiste una invitación para crear tu cuenta (${input.role}) en ODR Records.`;
 
   const html = shellTemplate({
     title: "Invitación de acceso",
@@ -24,7 +24,7 @@ export function buildInviteEmail(input: BuildInviteEmailInput) {
   });
 
   const text = [
-    "Invitación de acceso · Lynx Media",
+    "Invitación de acceso · ODR Records",
     "",
     intro,
     `Rol asignado: ${input.role}`,

@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { AudioPlayerDemo } from "@/components/ui/AudioPlayerDemo";
 
 export const metadata: Metadata = {
-  title: "Player demo | Lynx Media",
+  title: "Player demo | ODR Records",
 };
 
 export default function Page() {
@@ -17,7 +17,7 @@ export default function Page() {
       </h1>
 
       <p className="mb-4 text-[14.5px] text-muted-foreground">
-        Este reproductor es reutilizable y seguirá la línea editorial de Lynx Media.
+        Este reproductor es reutilizable y seguirá la línea editorial de ODR Records.
         La fila inferior está reservada para la barra de progreso y los tags; la fila superior contiene controles y acciones.
       </p>
 

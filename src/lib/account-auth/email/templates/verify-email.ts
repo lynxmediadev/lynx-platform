@@ -7,7 +7,7 @@ type BuildVerifyEmailInput = {
 
 export function buildVerifyEmail(input: BuildVerifyEmailInput) {
   const expires = formatExpiry(input.expiresAt);
-  const subject = "Verifica tu email · Lynx Media";
+  const subject = "Verifica tu email · ODR Records";
   const intro = "Confirma tu email para completar la seguridad de tu cuenta.";
 
   const html = shellTemplate({
@@ -22,7 +22,7 @@ export function buildVerifyEmail(input: BuildVerifyEmailInput) {
   });
 
   const text = [
-    "Verifica tu email · Lynx Media",
+    "Verifica tu email · ODR Records",
     "",
     intro,
     `Este enlace expira: ${expires}`,

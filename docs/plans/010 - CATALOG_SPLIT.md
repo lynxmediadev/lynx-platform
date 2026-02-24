@@ -2,7 +2,7 @@
 
 ## A. OBJETIVO
 Mira, mi idea principal es la siguiente:
-Lynx Media ofrecerá dos tipos de catálogos musicales:
+ODR Records ofrecerá dos tipos de catálogos musicales:
 1. Catálogo 1: Beats/Instrumentales para artistas, para componer canciones sobre ellos.
 Alojado en /beats
 2. Catálogo 2: Música para Sync Licensing, para proyectos audiovisuales y comerciales.

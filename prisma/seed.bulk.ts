@@ -63,7 +63,7 @@ async function main() {
         artist: "Lynx Music Collective",
         audioUrl: AUDIO,
         coverUrl: COVER,
-        master: "Lynx Media (One-Stop)",
+        master: "ODR Records (One-Stop)",
         publishingSplit: "100% Lynx Music Collective",
         licenseType: "NON_EXCLUSIVE",
         exclusiveTerritories: ["WORLDWIDE"],

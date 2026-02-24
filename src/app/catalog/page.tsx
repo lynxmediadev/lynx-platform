@@ -84,7 +84,7 @@ export default async function CatalogPage({
   });
 
   return (
-    <section className="w-full bg-background py-4 sm:py-6">
+    <section className="w-full bg-background pt-1 pb-4 sm:pt-2 sm:pb-6">
       <CatalogClient
         tracks={tracks}
         heroSlides={heroSlides}

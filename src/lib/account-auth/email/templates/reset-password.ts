@@ -7,7 +7,7 @@ type BuildResetEmailInput = {
 
 export function buildResetPasswordEmail(input: BuildResetEmailInput) {
   const expires = formatExpiry(input.expiresAt);
-  const subject = "Restablecer password · Lynx Media";
+  const subject = "Restablecer password · ODR Records";
   const intro = "Recibimos una solicitud para restablecer tu password.";
 
   const html = shellTemplate({
@@ -22,7 +22,7 @@ export function buildResetPasswordEmail(input: BuildResetEmailInput) {
   });
 
   const text = [
-    "Restablecer password · Lynx Media",
+    "Restablecer password · ODR Records",
     "",
     intro,
     `Este enlace expira: ${expires}`,

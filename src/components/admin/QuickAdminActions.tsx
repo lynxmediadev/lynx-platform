@@ -129,7 +129,7 @@ export default function QuickAdminActions({ request }: { request: Req }) {
     `Cuéntame si necesitas una cotización formal o más alternativas del catálogo.`,
     ``,
     `Saludos,`,
-    `Lynx Media`,
+    `ODR Records`,
   ]
     .filter(Boolean)
     .join("\n");

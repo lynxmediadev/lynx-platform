@@ -1,6 +1,6 @@
-# Contexto de Lynx Media
+# Contexto de ODR Records
 
-## Que es Lynx Media
+## Que es ODR Records
 - Plataforma y estudio orientado a clientes audiovisuales y marcas.
 - Servicios principales:
   - Musica original para contenido audiovisual (sync licensing, composicion a medida, instrumentales, stems, alt mixes, cutdowns).

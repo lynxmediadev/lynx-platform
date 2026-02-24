@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 export const metadata: Metadata = {
   title: "Diseño Gráfico — Servicios",
   description:
-    "Branding, campañas, piezas para redes y presentaciones premium con el estilo cinematográfico de Lynx Media.",
+    "Branding, campañas, piezas para redes y presentaciones premium con el estilo cinematográfico de ODR Records.",
 };
 
 const services = [
@@ -40,7 +40,7 @@ export default function DesignPage() {
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Servicios</p>
             <h1 className="text-3xl font-semibold text-foreground">Diseño Gráfico</h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Sistemas visuales, campañas y piezas listas para publicar con la estética cinematográfica de Lynx Media.
+              Sistemas visuales, campañas y piezas listas para publicar con la estética cinematográfica de ODR Records.
               Procesos rápidos, entregables editables y consistentes en digital e impreso.
             </p>
           </div>

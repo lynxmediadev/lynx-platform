@@ -7,7 +7,7 @@ import { inter, lato, hankenGrotesk, dancingScript, anton } from "./fonts";
 import FrontendShell from "@/components/site/FrontendShell";
 
 export const metadata: Metadata = {
-  title: "Lynx Media — Sync Licensing",
+  title: "ODR Records — Sync Licensing",
   description: "Catálogo y servicios de música para cine/TV/publicidad.",
   icons: { icon: "/favicon.ico" },
 };

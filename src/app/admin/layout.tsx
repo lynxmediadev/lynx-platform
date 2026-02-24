@@ -4,7 +4,7 @@ import { AdminDashboardLayoutClient } from "@/components/admin/AdminDashboardLay
 import { getCurrentUser } from "@/lib/account-auth/guards";
 
 export const metadata: Metadata = {
-  title: "Panel admin — Lynx Media",
+  title: "Panel admin — ODR Records",
 };
 
 export default async function AdminLayout({

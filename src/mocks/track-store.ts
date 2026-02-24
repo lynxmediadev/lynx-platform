@@ -36,7 +36,7 @@ const base: Omit<PlayerTrackDTO, "id" | "title"> = {
   moods: ["Epic", "Emotional", "Elegant"],
   uses: ["TV", "Cine", "Publicidad", "Trailers", "Videojuegos"],
   rights: {
-    master: "Lynx Media (One-Stop)",
+    master: "ODR Records (One-Stop)",
     publishingSplit: "100% Lynx Music Collective",
     licenseType: "NON_EXCLUSIVE",
     exclusiveTerritories: ["WORLDWIDE"],

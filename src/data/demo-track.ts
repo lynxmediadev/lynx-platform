@@ -13,7 +13,7 @@ export const DEMO_TRACK: PlayerTrackDTO = {
   uses: ["TV", "Cine", "Publicidad", "Trailers", "Videojuegos"],
   identifiers: { isrc: "CL-XYZ-25-00001" },
   rights: {
-    master: "Lynx Media (One-Stop)",
+    master: "ODR Records (One-Stop)",
     publishingSplit: "100% Lynx Music Collective",
     licenseType: "No exclusiva",
     territories: "Worldwide",

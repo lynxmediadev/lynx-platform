@@ -83,6 +83,6 @@ Para el master:
 ---
 
 # One-Stop / facultad de licenciar
-- [ ] Confirmar que Lynx Media tenga facultad para licenciar master + publishing en cada track.
+- [ ] Confirmar que ODR Records tenga facultad para licenciar master + publishing en cada track.
 - [ ] Requerir autorización/cesión de todos los coautores para firmar por ambos derechos cuando se marque One-Stop.
 - [ ] Si no hay poder centralizado, marcar el track como no One-Stop (two-step / no cleared).

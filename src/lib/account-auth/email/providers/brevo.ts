@@ -40,7 +40,7 @@ export class BrevoEmailProvider implements EmailProvider {
           body: JSON.stringify({
             sender: {
               email: this.fromEmail,
-              name: "Lynx Media",
+              name: "ODR Records",
             },
             to: [{ email: payload.to }],
             subject: payload.subject,
