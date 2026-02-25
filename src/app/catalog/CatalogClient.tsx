@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import LoopingText from "@/components/common/LoopingText";
+import CatalogBottomPlayerV2 from "@/components/catalog/CatalogBottomPlayerV2";
 import { cn } from "@/lib/utils";
 import type { Track } from "@/lib/catalog/types";
 import type { CatalogHeroSlide } from "@/lib/banner-promotions/types";
@@ -67,6 +68,7 @@ const FALLBACK_BANNER_IMAGES = [
 ];
 const MIN_BANNER_SLIDES = 10;
 const VIEW_MODE_STORAGE_KEY = "catalog:view-mode";
+const PLAYER_VOLUME_STORAGE_KEY = "catalog:player-volume";
 
 type CatalogViewMode = "grid" | "list";
 
@@ -366,6 +368,8 @@ export default function CatalogClient({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState<CatalogViewMode>("grid");
+  const [playerVolume, setPlayerVolume] = useState(0.85);
+  const lastNonZeroVolumeRef = useRef(0.85);
 
   const shouldShowFilteringControls = showFilteringControls ?? !compact;
   const effectiveViewMode: CatalogViewMode = compact ? "grid" : viewMode;
@@ -559,6 +563,18 @@ export default function CatalogClient({
     () => tracks.find((track) => track.id === currentTrackId) ?? null,
     [currentTrackId, tracks],
   );
+  const playbackQueue = useMemo(
+    () => (visibleTracks.length > 0 ? visibleTracks : tracks),
+    [visibleTracks, tracks],
+  );
+  const currentQueueIndex = useMemo(() => {
+    if (!currentTrackId) return -1;
+    return playbackQueue.findIndex((track) => track.id === currentTrackId);
+  }, [playbackQueue, currentTrackId]);
+
+  const currentTrackDuration = resolveDuration(currentTrack);
+  const currentTrackProgress = currentTrack ? progressMap[currentTrack.id] ?? 0 : 0;
+  const currentTrackCurrentSec = currentTrackDuration * currentTrackProgress;
 
   useEffect(() => {
     if (!visibleTracks.length) {
@@ -595,6 +611,37 @@ export default function CatalogClient({
       // ignore storage access issues
     }
   }, [compact]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const storedValue = window.localStorage.getItem(PLAYER_VOLUME_STORAGE_KEY);
+      if (!storedValue) return;
+      const parsed = Number(storedValue);
+      if (!Number.isFinite(parsed)) return;
+      const normalized = Math.max(0, Math.min(1, parsed));
+      setPlayerVolume(normalized);
+      if (normalized > 0) lastNonZeroVolumeRef.current = normalized;
+    } catch {
+      // ignore storage access issues
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(PLAYER_VOLUME_STORAGE_KEY, String(playerVolume));
+      }
+    } catch {
+      // ignore storage access issues
+    }
+  }, [playerVolume]);
+
+  useEffect(() => {
+    const audioEl = audioRef.current;
+    if (!audioEl) return;
+    audioEl.volume = playerVolume;
+  }, [playerVolume, currentTrackId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -679,6 +726,7 @@ export default function CatalogClient({
   const playTrack = (track: CatalogTrack) => {
     const audioEl = audioRef.current;
     if (!audioEl || !track.audioUrl) return;
+    audioEl.volume = playerVolume;
 
     if (currentTrackId === track.id) {
       if (isPlaying) {
@@ -709,6 +757,7 @@ export default function CatalogClient({
   const seekTrack = (track: CatalogTrack, ratio: number) => {
     const audioEl = audioRef.current;
     if (!audioEl || !track.audioUrl) return;
+    audioEl.volume = playerVolume;
 
     const nextRatio = Math.max(0, Math.min(1, ratio));
 
@@ -734,6 +783,61 @@ export default function CatalogClient({
       .play()
       .then(() => setIsPlaying(true))
       .catch(() => setIsPlaying(false));
+  };
+
+  const seekTrackToTime = (track: CatalogTrack, timeSec: number) => {
+    const audioEl = audioRef.current;
+    const liveDuration =
+      currentTrackId === track.id && audioEl?.duration && Number.isFinite(audioEl.duration)
+        ? audioEl.duration
+        : resolveDuration(track);
+    if (!Number.isFinite(liveDuration) || liveDuration <= 0) return;
+    const ratio = Math.max(0, Math.min(1, timeSec / liveDuration));
+    seekTrack(track, ratio);
+  };
+
+  const setPlayerVolumeSafe = (value: number) => {
+    const normalized = Math.max(0, Math.min(1, value));
+    setPlayerVolume(normalized);
+    if (normalized > 0) {
+      lastNonZeroVolumeRef.current = normalized;
+    }
+  };
+
+  const togglePlayerMute = () => {
+    if (playerVolume > 0.001) {
+      setPlayerVolume(0);
+      return;
+    }
+    setPlayerVolume(Math.max(0.2, lastNonZeroVolumeRef.current || 0.85));
+  };
+
+  const playTrackAtQueueIndex = (index: number) => {
+    if (index < 0 || index >= playbackQueue.length) return;
+    const nextTrack = playbackQueue[index];
+    if (!nextTrack) return;
+    playTrack(nextTrack);
+  };
+
+  const playPrevTrack = () => {
+    if (currentQueueIndex <= 0) return;
+    playTrackAtQueueIndex(currentQueueIndex - 1);
+  };
+
+  const playNextTrack = () => {
+    if (currentQueueIndex < 0 || currentQueueIndex >= playbackQueue.length - 1) return;
+    playTrackAtQueueIndex(currentQueueIndex + 1);
+  };
+
+  const closeBottomPlayer = () => {
+    const audioEl = audioRef.current;
+    if (audioEl) {
+      audioEl.pause();
+      audioEl.removeAttribute("src");
+      audioEl.load();
+    }
+    setIsPlaying(false);
+    setCurrentTrackId(null);
   };
 
   const handleCategoryChange = (slug: string | null) => {
@@ -838,6 +942,11 @@ export default function CatalogClient({
     selectedTrack?.clearedForSync === false ? "Sync bajo revisión" : "Sync disponible";
   const selectedTrackLicenseCards = selectedTrack ? deriveCatalogLicenseCards(selectedTrack) : [];
   const activeSlideIsExternal = !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
+  const playerTrack = currentTrack ?? selectedTrack ?? tracks[0] ?? null;
+  const playerDuration = resolveDuration(playerTrack);
+  const playerProgress = playerTrack ? progressMap[playerTrack.id] ?? 0 : 0;
+  const playerCurrentSec = playerDuration * playerProgress;
+  const showBottomPlayer = !!playerTrack;
   const filterSelectClass =
     "h-7 w-full appearance-none rounded border border-border bg-background px-2 pr-9 text-xs text-foreground focus:border-foreground focus:outline-none";
 
@@ -849,6 +958,7 @@ export default function CatalogClient({
         className={cn(
           "mx-auto w-[90vw] max-w-[1700px] min-w-0 overflow-x-clip",
           compact ? "py-4" : "pt-2 pb-6 sm:pt-3 sm:pb-8",
+          showBottomPlayer ? "pb-[92px] sm:pb-[98px]" : "",
         )}
       >
         {!hideHeader && activeBannerSlide && (
@@ -1723,6 +1833,30 @@ export default function CatalogClient({
           )}
         </div>
       </div>
+
+      {playerTrack && (
+        <CatalogBottomPlayerV2
+          trackId={playerTrack.id}
+          title={playerTrack.title}
+          artist={playerTrack.artist || "Artista"}
+          coverUrl={resolveCatalogCoverUrl(playerTrack)}
+          waveformB64={playerTrack.waveformB64 ?? null}
+          isPlaying={isPlaying}
+          currentSec={playerCurrentSec}
+          durationSec={playerDuration}
+          progress={playerProgress}
+          volume={playerVolume}
+          hasPrev={currentQueueIndex > 0}
+          hasNext={currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1}
+          onTogglePlay={() => playTrack(playerTrack)}
+          onPrev={playPrevTrack}
+          onNext={playNextTrack}
+          onSeek={(timeSec) => seekTrackToTime(playerTrack, timeSec)}
+          onVolumeChange={setPlayerVolumeSafe}
+          onToggleMute={togglePlayerMute}
+          onClose={closeBottomPlayer}
+        />
+      )}
     </div>
   );
 }
