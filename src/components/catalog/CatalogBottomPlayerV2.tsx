@@ -71,7 +71,7 @@ export default function CatalogBottomPlayerV2({
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[90] w-full overflow-x-clip border-t border-border/90 bg-background/95 shadow-[0_-8px_30px_rgba(0,0,0,0.38)] backdrop-blur-md supports-[backdrop-filter]:bg-background/88">
-      <div className="mx-auto grid w-[90vw] max-w-[1700px] min-w-0 grid-cols-[auto_minmax(0,1fr)_110px_auto] items-center gap-2 py-2 sm:grid-cols-[76px_150px_minmax(140px,1fr)_auto] md:grid-cols-[84px_180px_minmax(180px,1fr)_auto] lg:grid-cols-[92px_210px_minmax(220px,1fr)_auto] xl:grid-cols-[96px_230px_minmax(240px,1fr)_auto]">
+      <div className="mx-auto grid w-[90vw] max-w-[1700px] min-w-0 grid-cols-[auto_minmax(0,1fr)_110px_auto] items-center gap-2 py-2 sm:grid-cols-[76px_170px_minmax(130px,1fr)_auto] md:grid-cols-[84px_200px_minmax(170px,1fr)_auto] lg:grid-cols-[92px_235px_minmax(205px,1fr)_auto] xl:grid-cols-[96px_255px_minmax(225px,1fr)_auto]">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             href={`/track/${trackId}`}
@@ -91,7 +91,7 @@ export default function CatalogBottomPlayerV2({
           </button>
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 sm:-ml-1">
           <Link
             href={`/track/${trackId}`}
             className="block min-w-0 hover:opacity-90"
@@ -119,7 +119,7 @@ export default function CatalogBottomPlayerV2({
         </div>
 
         <div className="flex min-w-0 items-center">
-          <div className="min-w-0 flex-1 px-16">
+          <div className="min-w-0 flex-1 px-8">
             <div className="flex min-w-0 items-center gap-2">
               <div className="min-w-0 flex-1">
                 <WaveformScrubber
