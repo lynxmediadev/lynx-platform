@@ -47,13 +47,20 @@ export default function TrackSimpleAudioPlayer({
 
   const isDisabled = !src;
   const isCurrentTrack = currentTrack?.id === trackId;
+  const hasCurrentSourceMismatch = Boolean(
+    isCurrentTrack &&
+      src &&
+      currentTrack?.audioUrl &&
+      currentTrack.audioUrl !== src,
+  );
+  const localCurrentSec = isCurrentTrack ? currentSec : 0;
   const safeDuration = Math.max(0, isCurrentTrack ? globalDurationSec || durationSec || 0 : durationSec || 0);
-  const ratio = safeDuration > 0 ? Math.max(0, Math.min(1, currentSec / safeDuration)) : 0;
+  const ratio = safeDuration > 0 ? Math.max(0, Math.min(1, localCurrentSec / safeDuration)) : 0;
   const isPlaying = isCurrentTrack && globalIsPlaying;
 
   const handleTogglePlay = React.useCallback(() => {
     if (!src) return;
-    if (isCurrentTrack) {
+    if (isCurrentTrack && !hasCurrentSourceMismatch) {
       toggleGlobalPlay();
       return;
     }
@@ -83,12 +90,13 @@ export default function TrackSimpleAudioPlayer({
     waveformB64,
     durationSec,
     toggleGlobalPlay,
+    hasCurrentSourceMismatch,
   ]);
 
   const onSeek = (nextRatio: number) => {
     if (!src || !safeDuration) return;
     const normalized = Math.max(0, Math.min(1, nextRatio));
-    if (isCurrentTrack) {
+    if (isCurrentTrack && !hasCurrentSourceMismatch) {
       seekGlobalByRatio(normalized);
       return;
     }
@@ -142,7 +150,7 @@ export default function TrackSimpleAudioPlayer({
             aria-label="Barra de progreso de audio"
           />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{formatTime(currentSec)}</span>
+            <span>{formatTime(localCurrentSec)}</span>
             <span>{formatTime(safeDuration)}</span>
           </div>
         </div>

@@ -12,7 +12,7 @@ import type {
   LicenseTermRow,
   TrackLicenseViewModel,
 } from "@/lib/licenses/types";
-import { getS3PublicUrl } from "@/lib/storage/s3";
+import { getS3PublicUrl, getUploadConfig } from "@/lib/storage/s3";
 import { db } from "@/server/db";
 
 type PageProps = {
@@ -179,8 +179,27 @@ function normalizeStrings(values?: string[] | null, limit = 8): string[] {
 }
 
 function publicAudioUrl(input: { assetKey: string | null; audioUrl: string | null }): string | null {
-  if (input.assetKey) return getS3PublicUrl(input.assetKey);
-  return input.audioUrl ?? null;
+  const directUrl = input.audioUrl?.trim() || null;
+  const rawAssetKey = input.assetKey?.trim() || null;
+
+  // Seeds/local fixtures can store a pseudo key like: external:///audio/demo.mp3
+  if (rawAssetKey?.startsWith("external:///")) {
+    return `/${rawAssetKey.replace(/^external:\/\/\//, "")}`;
+  }
+  if (rawAssetKey?.startsWith("external://")) {
+    const externalPath = rawAssetKey.replace(/^external:\/\//, "");
+    if (/^https?:\/\//i.test(externalPath)) return externalPath;
+    return externalPath.startsWith("/") ? externalPath : `/${externalPath}`;
+  }
+
+  if (rawAssetKey) {
+    const cfg = getUploadConfig();
+    if (cfg.publicBaseUrl) {
+      return getS3PublicUrl(rawAssetKey);
+    }
+  }
+
+  return directUrl;
 }
 
 function getBadgeTone(type: "mood" | "use") {
@@ -667,13 +686,13 @@ export default async function TrackPublicPage({ params }: PageProps) {
           </div>
         </header>
 
-        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_350px] xl:items-start">
-          <div className="space-y-3">
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_350px] xl:items-stretch">
+          <div className="space-y-3 xl:flex xl:h-full xl:flex-col">
             <article className="relative overflow-hidden rounded-md border border-border bg-card/30">
               <img
                 src={coverUrl}
                 alt={`Cover de ${track.title}`}
-                className="h-[260px] w-full object-cover sm:h-[320px] lg:h-[380px]"
+                className="h-[170px] w-full object-cover sm:h-[185px] md:h-[205px]"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
               <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
@@ -701,6 +720,37 @@ export default async function TrackPublicPage({ params }: PageProps) {
               </div>
             </article>
 
+            <TrackSimpleAudioPlayer
+              trackId={track.id}
+              title={track.title}
+              artist={track.artist}
+              src={audioSrc}
+              coverUrl={coverUrl}
+              durationSec={track.durationSec}
+            />
+
+            <section className="rounded-md border border-border bg-card/35 p-3 xl:flex-1">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
+                Licencias
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Este track tiene {licenseCards.length} opción{licenseCards.length === 1 ? "" : "es"} de licencia.
+              </p>
+              <div className="mt-2 space-y-1">
+                {licenseCards.slice(0, 3).map((license) => (
+                  <div
+                    key={license.id}
+                    className="flex items-center justify-between gap-2 rounded border border-border bg-background/70 px-2 py-1.5"
+                  >
+                    <p className="truncate text-xs font-medium text-foreground">{license.name}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {formatCurrencyAmount(license.priceAmount, license.currency) ?? "A cotizar"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <div className="grid gap-2 sm:grid-cols-2">
               <TrackLicensesDialog
                 trackTitle={track.title}
@@ -714,18 +764,9 @@ export default async function TrackPublicPage({ params }: PageProps) {
                 stems={track.stems}
               />
             </div>
-
-            <TrackSimpleAudioPlayer
-              trackId={track.id}
-              title={track.title}
-              artist={track.artist}
-              src={audioSrc}
-              coverUrl={coverUrl}
-              durationSec={track.durationSec}
-            />
           </div>
 
-          <aside className="space-y-3 xl:sticky xl:top-[calc(var(--header-h)+0.75rem)]">
+          <aside className="space-y-3 xl:self-start xl:sticky xl:top-[calc(var(--header-h)+0.75rem)]">
             <section className="rounded-md border border-border bg-card/35 p-3">
               <h2 className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
                 <SlidersHorizontal className="h-4 w-4" />
@@ -859,34 +900,6 @@ export default async function TrackPublicPage({ params }: PageProps) {
               </div>
             </section>
 
-            <section className="rounded-md border border-border bg-card/35 p-3">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
-                Licencias
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Este track tiene {licenseCards.length} opción{licenseCards.length === 1 ? "" : "es"} de licencia.
-              </p>
-              <div className="mt-2 space-y-1">
-                {licenseCards.slice(0, 3).map((license) => (
-                  <div
-                    key={license.id}
-                    className="flex items-center justify-between gap-2 rounded border border-border bg-background/70 px-2 py-1.5"
-                  >
-                    <p className="truncate text-xs font-medium text-foreground">{license.name}</p>
-                    <span className="text-xs text-muted-foreground">
-                      {formatCurrencyAmount(license.priceAmount, license.currency) ?? "A cotizar"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3">
-                <TrackLicensesDialog
-                  trackTitle={track.title}
-                  trackArtist={track.artist}
-                  licenses={licenseCards}
-                />
-              </div>
-            </section>
           </aside>
         </section>
 

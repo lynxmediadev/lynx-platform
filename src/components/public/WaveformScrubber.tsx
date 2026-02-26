@@ -83,6 +83,16 @@ function smoothBox(src: Float32Array, window = 3): Float32Array {
   return out;
 }
 
+function makeFallbackWaveform(samples = 2048): Float32Array {
+  const out = new Float32Array(samples);
+  for (let i = 0; i < samples; i += 1) {
+    const t = i / Math.max(1, samples - 1);
+    const envelope = 0.22 + 0.16 * Math.sin(t * Math.PI * 2.8) + 0.08 * Math.sin(t * Math.PI * 9.6);
+    out[i] = Math.max(0.04, Math.min(0.55, Math.abs(envelope)));
+  }
+  return out;
+}
+
 function isLightTheme(): boolean {
   const root = document.documentElement;
   if (root.classList.contains("light")) return true;
@@ -234,10 +244,11 @@ export default function WaveformScrubber({
   /** Cargar/decodificar waveform */
   React.useEffect(() => {
     if (!waveformB64) {
-      wfRef.current = null;
-      peaksRef.current = null;
-      const c = canvasRef.current;
-      c?.getContext("2d")?.clearRect(0, 0, c.width, c.height);
+      wfRef.current = makeFallbackWaveform();
+      requestAnimationFrame(() => {
+        recompute();
+        draw(progress);
+      });
       return;
     }
     try {
