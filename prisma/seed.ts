@@ -251,6 +251,160 @@ async function main() {
       if (tag?.id) await db.trackTag.create({ data: { trackId: t.id, tagId: tag.id } });
     }
   }
+
+  const licenseTemplateSeeds = [
+    {
+      slug: "sync-basic-mp3",
+      name: "Sync Basic MP3",
+      status: "ACTIVE" as const,
+      sortOrder: 10,
+      isPopular: false,
+      priceAmount: 49,
+      currency: "USD" as const,
+      formats: ["MP3"],
+      summaryJson: [
+        { label: "Distribución", value: "Hasta 5.000 copias" },
+        { label: "Audio streams", value: "Hasta 50.000" },
+        { label: "Videos", value: "1 video monetizable" },
+      ],
+      termsMatrixJson: [
+        { label: "MP3", value: "Incluido" },
+        { label: "WAV", value: "No incluido" },
+        { label: "Trackouts", value: "No incluido" },
+        { label: "Broadcasting", value: "No incluido" },
+      ],
+      agreementText:
+        "Licencia no exclusiva básica para uso digital. No transfiere titularidad ni derechos de master/publishing.",
+    },
+    {
+      slug: "sync-standard-wav",
+      name: "Sync Standard WAV",
+      status: "ACTIVE" as const,
+      sortOrder: 20,
+      isPopular: true,
+      priceAmount: 99,
+      currency: "USD" as const,
+      formats: ["MP3", "WAV"],
+      summaryJson: [
+        { label: "Distribución", value: "Hasta 20.000 copias" },
+        { label: "Audio streams", value: "Hasta 250.000" },
+        { label: "Videos", value: "Hasta 3 videos monetizables" },
+      ],
+      termsMatrixJson: [
+        { label: "MP3", value: "Incluido" },
+        { label: "WAV", value: "Incluido" },
+        { label: "Trackouts", value: "No incluido" },
+        { label: "Broadcasting", value: "2 estaciones de radio" },
+      ],
+      agreementText:
+        "Licencia no exclusiva estándar para campañas y contenido comercial medio. Requiere acreditación del productor.",
+    },
+    {
+      slug: "sync-premium-trackouts",
+      name: "Sync Premium Trackouts",
+      status: "ACTIVE" as const,
+      sortOrder: 30,
+      isPopular: false,
+      priceAmount: 199,
+      currency: "USD" as const,
+      formats: ["MP3", "WAV", "STEMS"],
+      summaryJson: [
+        { label: "Distribución", value: "Hasta 100.000 copias" },
+        { label: "Audio streams", value: "Hasta 1.000.000" },
+        { label: "Videos", value: "Uso ilimitado en redes" },
+      ],
+      termsMatrixJson: [
+        { label: "MP3", value: "Incluido" },
+        { label: "WAV", value: "Incluido" },
+        { label: "Trackouts", value: "Incluido" },
+        { label: "Broadcasting", value: "Ilimitado en digital" },
+      ],
+      agreementText:
+        "Licencia premium con acceso a stems/trackouts para producciones de alto alcance comercial.",
+    },
+    {
+      slug: "sync-exclusive-rights",
+      name: "Sync Exclusive Rights",
+      status: "ACTIVE" as const,
+      sortOrder: 40,
+      isPopular: false,
+      priceAmount: 499,
+      currency: "USD" as const,
+      formats: ["MP3", "WAV", "STEMS"],
+      summaryJson: [
+        { label: "Exclusividad", value: "Sí (según contrato)" },
+        { label: "Distribución", value: "Ilimitada" },
+        { label: "Broadcasting", value: "Ilimitado" },
+      ],
+      termsMatrixJson: [
+        { label: "MP3", value: "Incluido" },
+        { label: "WAV", value: "Incluido" },
+        { label: "Trackouts", value: "Incluido" },
+        { label: "Derechos", value: "Exclusivo por contrato" },
+      ],
+      agreementText:
+        "Licencia exclusiva sujeta a evaluación comercial. Requiere acuerdo contractual detallado por escrito.",
+    },
+  ];
+
+  const templateRows: Array<{ id: string }> = [];
+  for (const seed of licenseTemplateSeeds) {
+    const row = await db.licenseTemplate.upsert({
+      where: { slug: seed.slug },
+      update: {
+        name: seed.name,
+        status: seed.status,
+        sortOrder: seed.sortOrder,
+        isPopular: seed.isPopular,
+        priceAmount: seed.priceAmount,
+        currency: seed.currency,
+        formats: seed.formats,
+        summaryJson: seed.summaryJson,
+        termsMatrixJson: seed.termsMatrixJson,
+        agreementText: seed.agreementText,
+      },
+      create: {
+        slug: seed.slug,
+        name: seed.name,
+        status: seed.status,
+        sortOrder: seed.sortOrder,
+        isPopular: seed.isPopular,
+        priceAmount: seed.priceAmount,
+        currency: seed.currency,
+        formats: seed.formats,
+        summaryJson: seed.summaryJson,
+        termsMatrixJson: seed.termsMatrixJson,
+        agreementText: seed.agreementText,
+      },
+      select: { id: true },
+    });
+    templateRows.push(row);
+  }
+
+  for (let index = 0; index < seedTracks.length; index += 1) {
+    const track = seedTracks[index];
+    if (!track?.id) continue;
+
+    const amount = 2 + (index % 3); // 2..4 licencias por track
+    const selectedTemplates = Array.from({ length: amount }, (_, offset) => {
+      const slot = (index + offset) % templateRows.length;
+      return templateRows[slot];
+    }).filter((row): row is { id: string } => Boolean(row?.id));
+
+    await db.trackLicenseAssignment.deleteMany({ where: { trackId: track.id } });
+
+    if (selectedTemplates.length > 0) {
+      await db.trackLicenseAssignment.createMany({
+        data: selectedTemplates.map((template, slotIndex) => ({
+          trackId: track.id,
+          licenseTemplateId: template.id,
+          isEnabled: true,
+          sortOrder: slotIndex + 1,
+        })),
+        skipDuplicates: true,
+      });
+    }
+  }
 }
 
 main()

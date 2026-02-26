@@ -3,12 +3,15 @@ export const revalidate = 0;
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Prisma } from "@prisma/client";
+import prisma from "@/lib/prisma";
 
 import { Button } from "@/components/ui/button";
 import { TrackAnalyzeHeaderButtons } from "@/components/admin/AnalyzeActions";
 import { TrackEditShell } from "@/components/admin/track/edit/TrackEditShell";
 import { getTrackEditModuleNavItems } from "@/components/admin/track/edit/module-nav";
 import { MetadataModuleForm } from "@/components/admin/track/edit/MetadataModuleForm";
+import { TrackLicenseAssignmentsForm } from "@/components/admin/track/edit/TrackLicenseAssignmentsForm";
 import {
   getTrackMetadataPageData,
 } from "@/server/track-edit/queries";
@@ -25,6 +28,38 @@ export default async function AdminTrackEditMetadataPage({
   if (!metadataPageData) {
     notFound();
   }
+
+  const templateWhere: Prisma.LicenseTemplateWhereInput = metadataPageData.ownerUserId
+    ? {
+        OR: [{ ownerUserId: metadataPageData.ownerUserId }, { ownerUserId: null }],
+      }
+    : { ownerUserId: null };
+  const assignedTemplateIds = metadataPageData.licenseAssignments.map(
+    (assignment) => assignment.licenseTemplateId,
+  );
+
+  const combinedWhere: Prisma.LicenseTemplateWhereInput =
+    assignedTemplateIds.length > 0
+      ? {
+          OR: [templateWhere, { id: { in: assignedTemplateIds } }],
+        }
+      : templateWhere;
+
+  const licenseTemplates = await prisma.licenseTemplate.findMany({
+    where: combinedWhere,
+    orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      status: true,
+      sortOrder: true,
+      isPopular: true,
+      priceAmount: true,
+      currency: true,
+      formats: true,
+    },
+  });
 
   const modules = getTrackEditModuleNavItems(metadataPageData.id, { includeFull: true });
 
@@ -73,6 +108,12 @@ export default async function AdminTrackEditMetadataPage({
           budgetMax: metadataPageData.budgetMax,
           budgetCurrency: metadataPageData.budgetCurrency,
         }}
+      />
+
+      <TrackLicenseAssignmentsForm
+        trackId={metadataPageData.id}
+        templates={licenseTemplates}
+        assignments={metadataPageData.licenseAssignments}
       />
     </TrackEditShell>
   );

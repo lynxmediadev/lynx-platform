@@ -289,6 +289,7 @@ export const getTrackMetadataPageData = cache(async (id: string) => {
       audioUrl: true,
       coverUrl: true,
       assetKey: true,
+      ownerUserId: true,
       isrc: true,
       iswc: true,
       upc: true,
@@ -305,6 +306,18 @@ export const getTrackMetadataPageData = cache(async (id: string) => {
       budgetMin: true,
       budgetMax: true,
       budgetCurrency: true,
+      licenseAssignments: {
+        select: {
+          licenseTemplateId: true,
+          isEnabled: true,
+          sortOrder: true,
+          priceOverride: true,
+          summaryOverrideJson: true,
+          termsOverrideJson: true,
+          agreementOverrideText: true,
+        },
+        orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+      },
     },
   });
 });

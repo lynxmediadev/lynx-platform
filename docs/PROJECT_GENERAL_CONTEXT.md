@@ -92,6 +92,38 @@ Regla de habilitación:
 
 - No exponer botón de pago en producción hasta completar checklist y smoke end-to-end en staging.
 
+## VISIÓN y DIFERENCIACIÓN DE MERCADO
+
+Objetivo estratégico de ODR (SYNC LICENSING):
+
+- La página de track debe permitir una decisión de compra 100% informada.
+- El foco principal comercial es la licencia (no solo el precio).
+- La información crítica de términos, límites y condiciones debe estar disponible siempre, en múltiples niveles de lectura.
+
+Principios de producto:
+
+- Transparencia contractual por diseño:
+  - Vista resumida (rápida de entender).
+  - Vista completa tipo mapa/tabla (detallada y comparable).
+  - Vista de contrato (texto del acuerdo).
+- Escalabilidad por artista:
+  - Cada artista puede definir su propio set de plantillas.
+  - Cada track puede asignar una cantidad variable de licencias (operativamente hasta 6).
+- Claridad operativa:
+  - El usuario no debe adivinar qué incluye una licencia.
+  - El artista no debe perder control sobre condiciones específicas por track.
+
+Diferenciación frente a mercado (BeatStars / Airbit / Soundee / Tracktrain y similares):
+
+- En lugar de ocultar o simplificar en exceso condiciones relevantes, PLATFORM/ODR expone estructura completa de términos de forma ordenada y legible.
+- La experiencia prioriza sobriedad visual + profundidad informativa:
+  - UI minimal y compacta.
+  - Capas de detalle accesibles por modal/tabs, sin saturar la vista principal.
+- Resultado esperado:
+  - Menos fricción comercial por dudas legales.
+  - Mejor conversión por claridad.
+  - Menos conflictos post-compra por expectativas mal alineadas.
+
 ## POR HACER / TO-DO
 
 ### Página de venta de merchandising (nuevo pendiente)

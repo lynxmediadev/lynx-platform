@@ -49,6 +49,7 @@ model User {
 
   ownedTracks     Track[]            @relation("TrackOwner")
   ownedLicensing  LicensingRequest[] @relation("LicensingOwner")
+  ownedLicenseTemplates LicenseTemplate[] @relation("LicenseTemplateOwner")
   ownedPlaylists  Playlist[]         @relation("PlaylistOwner")
   sharedPlaylists PlaylistViewer[]   @relation("PlaylistViewerUser")
   ownedSoundKits  SoundKit[]         @relation("SoundKitOwner")
@@ -225,6 +226,7 @@ model Track {
   stems       TrackStem[]
   tags        TrackTag[]
   moodLinks   TrackMood[]
+  licenseAssignments TrackLicenseAssignment[]
   playlists   PlaylistTrack[]
   contracts   ContractRecord[]
   ownerUserId String?
@@ -532,6 +534,64 @@ enum ContractStatus {
   SIGNED
   EXPIRED
   CANCELED
+}
+
+enum LicenseTemplateStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model LicenseTemplate {
+  id        String               @id @default(cuid())
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  ownerUserId String?
+  owner       User?              @relation("LicenseTemplateOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  name      String
+  slug      String               @unique
+  status    LicenseTemplateStatus @default(DRAFT)
+  sortOrder Int                  @default(0)
+  isPopular Boolean              @default(false)
+
+  priceAmount Int?
+  currency   Currency            @default(USD)
+  formats    String[]            @default([])
+
+  summaryJson     Json?
+  termsMatrixJson Json?
+  agreementText   String         @db.Text
+  notes           String?        @db.Text
+
+  assignments TrackLicenseAssignment[]
+
+  @@index([status, sortOrder, updatedAt])
+  @@index([ownerUserId, status, sortOrder, updatedAt])
+}
+
+model TrackLicenseAssignment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trackId           String
+  licenseTemplateId String
+  track             Track           @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  licenseTemplate   LicenseTemplate @relation(fields: [licenseTemplateId], references: [id], onDelete: Cascade)
+
+  sortOrder Int     @default(0)
+  isEnabled Boolean @default(true)
+
+  priceOverride          Int?
+  summaryOverrideJson    Json?
+  termsOverrideJson      Json?
+  agreementOverrideText  String? @db.Text
+
+  @@unique([trackId, licenseTemplateId])
+  @@index([trackId, isEnabled, sortOrder])
+  @@index([licenseTemplateId, isEnabled])
 }
 
 // ───────────────────────────────────────────────────────────────────────────────

@@ -13,6 +13,11 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import GlobalPlayerHost from "@/components/player/GlobalPlayerHost";
+import {
+  GlobalPlayerProvider,
+  useGlobalPlayerState,
+} from "@/components/player/global-player-context";
 import SiteHeader from "@/components/site/SiteHeader";
 
 interface FrontendShellProps {
@@ -26,10 +31,35 @@ export default function FrontendShell({ children }: FrontendShellProps) {
     pathname.startsWith("/admin") || pathname.startsWith("/creator");
   const hideHeader = isDashboardRoute;
 
+  if (isDashboardRoute) {
+    return (
+      <div className="min-h-dvh">
+        <main>{children}</main>
+      </div>
+    );
+  }
+
+  return (
+    <GlobalPlayerProvider>
+      <PublicShellContent hideHeader={hideHeader}>{children}</PublicShellContent>
+    </GlobalPlayerProvider>
+  );
+}
+
+function PublicShellContent({
+  children,
+  hideHeader,
+}: {
+  children: ReactNode;
+  hideHeader: boolean;
+}) {
+  const { currentTrack } = useGlobalPlayerState();
+
   return (
     <div className="min-h-dvh">
       {!hideHeader && <SiteHeader />}
-      <main className={isDashboardRoute ? "" : "px-4 sm:px-6"}>{children}</main>
+      <main className={`px-4 sm:px-6 ${currentTrack ? "pb-[92px] sm:pb-[98px]" : ""}`}>{children}</main>
+      <GlobalPlayerHost />
     </div>
   );
 }

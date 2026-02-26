@@ -1,6 +1,7 @@
 import {
   BriefcaseBusiness,
   ClipboardList,
+  FileText,
   FolderKanban,
   Gavel,
   Home,
@@ -97,6 +98,13 @@ export const adminDashboardSections: DashboardSection[] = [
         label: "Licensing",
         href: "/admin/licensing",
         icon: ClipboardList,
+        section: "licensing",
+      },
+      {
+        id: "license-templates",
+        label: "License Templates",
+        href: "/admin/license-templates",
+        icon: FileText,
         section: "licensing",
       },
       {

@@ -4,35 +4,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FileText,
-  LayoutGrid,
-  List,
-  Pause,
   Play,
 } from "lucide-react";
+import { TrackCollectionBrowser, type CatalogTrack, type ProgressMap } from "@/components/catalog/adapters";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import LoopingText from "@/components/common/LoopingText";
-import CatalogBottomPlayerV2 from "@/components/catalog/CatalogBottomPlayerV2";
+  useGlobalPlayer,
+  useGlobalPlayerState,
+  type GlobalPlayerTrack,
+} from "@/components/player/global-player-context";
 import { cn } from "@/lib/utils";
 import type { Track } from "@/lib/catalog/types";
 import type { CatalogHeroSlide } from "@/lib/banner-promotions/types";
-
-type CatalogTrack = Track & {
-  waveformB64?: string | null;
-  durationSec?: number | null;
-};
-
-type ProgressMap = Record<string, number>;
 
 type Props = {
   tracks: CatalogTrack[];
@@ -40,6 +24,7 @@ type Props = {
   title?: string;
   subtitle?: string;
   eyebrow?: string;
+  embedded?: boolean;
   compact?: boolean;
   hideHeader?: boolean;
   showDetailPanel?: boolean;
@@ -68,7 +53,6 @@ const FALLBACK_BANNER_IMAGES = [
 ];
 const MIN_BANNER_SLIDES = 10;
 const VIEW_MODE_STORAGE_KEY = "catalog:view-mode";
-const PLAYER_VOLUME_STORAGE_KEY = "catalog:player-volume";
 
 type CatalogViewMode = "grid" | "list";
 
@@ -124,6 +108,18 @@ function resolveCatalogCoverUrl(track: CatalogTrack): string {
   const cleanCover = track.coverUrl?.trim();
   if (cleanCover) return cleanCover;
   return `https://loremflickr.com/640/640/kitten?lock=${hashToPositiveInt(track.id)}`;
+}
+
+function toGlobalPlayerTrack(track: CatalogTrack): GlobalPlayerTrack {
+  return {
+    id: track.id,
+    title: track.title,
+    artist: track.artist || "Artista",
+    audioUrl: track.audioUrl,
+    coverUrl: resolveCatalogCoverUrl(track),
+    waveformB64: track.waveformB64 ?? null,
+    durationSec: track.durationSec ?? null,
+  };
 }
 
 function isExternalHref(href: string) {
@@ -258,84 +254,13 @@ function normalizeTags(values?: string[] | null, max = 8): string[] {
     .slice(0, max);
 }
 
-function DetailMetaCell({
-  label,
-  value,
-  forceLoopOnMobile = false,
-}: {
-  label: string;
-  value: string;
-  forceLoopOnMobile?: boolean;
-}) {
-  return (
-    <div className="flex min-h-[48px] min-w-0 flex-col items-center justify-center px-2 py-1.5 text-center">
-      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/90">{label}</dt>
-      <dd className="mt-0.5 w-full">
-        <LoopingText
-          text={value}
-          className="text-center text-[13px] font-semibold leading-tight text-foreground"
-          speedPxPerSecond={32}
-          forceLoopOnMobile={forceLoopOnMobile}
-        />
-      </dd>
-    </div>
-  );
-}
-
-type DetailTagTone = "mood" | "use" | "genre";
-
-function DetailTagPill({
-  value,
-  tone,
-}: {
-  value: string;
-  tone: DetailTagTone;
-}) {
-  const toneClass =
-    tone === "mood"
-      ? "catalog-tag-mood"
-      : tone === "use"
-        ? "catalog-tag-use"
-        : "border-border bg-muted/70 text-foreground";
-
-  return (
-    <span className={cn("max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-medium", toneClass)}>
-      {value}
-    </span>
-  );
-}
-
-function DetailTagColumn({
-  label,
-  values,
-  tone,
-}: {
-  label: string;
-  values: string[];
-  tone: DetailTagTone;
-}) {
-  return (
-    <div className="space-y-1">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/90">{label}</p>
-      {values.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
-          {values.map((value) => (
-            <DetailTagPill key={`${label}-${value}`} value={value} tone={tone} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground/90">—</p>
-      )}
-    </div>
-  );
-}
-
 export default function CatalogClient({
   tracks,
   heroSlides,
   title = "ODR Records Catalog",
   subtitle = "Explora el catálogo por carátula y revisa el detalle del track seleccionado.",
   eyebrow = "ODR Records",
+  embedded = false,
   hideHeader = false,
   compact = false,
   showDetailPanel = true,
@@ -344,9 +269,14 @@ export default function CatalogClient({
   categories = [],
 }: Props) {
   const router = useRouter();
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const pendingSeekRef = useRef<number | null>(null);
+  const {
+    currentTrack: globalCurrentTrack,
+    isPlaying,
+    currentSec: globalCurrentSec,
+    durationSec: globalDurationSec,
+    progress: globalProgress,
+  } = useGlobalPlayerState();
+  const { playTrack: playGlobalTrack, togglePlay, seekByRatio } = useGlobalPlayer();
   const bannerSessionIdRef = useRef<string>(
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -354,9 +284,6 @@ export default function CatalogClient({
   );
 
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(tracks[0]?.id ?? null);
-  const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progressMap, setProgressMap] = useState<ProgressMap>({});
   const [activeCat, setActiveCat] = useState<string | null>(catalogSlug ?? null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeMood, setActiveMood] = useState("all");
@@ -368,8 +295,6 @@ export default function CatalogClient({
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState<CatalogViewMode>("grid");
-  const [playerVolume, setPlayerVolume] = useState(0.85);
-  const lastNonZeroVolumeRef = useRef(0.85);
 
   const shouldShowFilteringControls = showFilteringControls ?? !compact;
   const effectiveViewMode: CatalogViewMode = compact ? "grid" : viewMode;
@@ -559,42 +484,19 @@ export default function CatalogClient({
     [selectedTrackId, visibleTracks],
   );
 
-  const currentTrack = useMemo(
-    () => tracks.find((track) => track.id === currentTrackId) ?? null,
-    [currentTrackId, tracks],
-  );
   const playbackQueue = useMemo(
     () => (visibleTracks.length > 0 ? visibleTracks : tracks),
     [visibleTracks, tracks],
   );
-  const currentQueueIndex = useMemo(() => {
-    if (!currentTrackId) return -1;
-    return playbackQueue.findIndex((track) => track.id === currentTrackId);
-  }, [playbackQueue, currentTrackId]);
-
-  const currentTrackDuration = resolveDuration(currentTrack);
-  const currentTrackProgress = currentTrack ? progressMap[currentTrack.id] ?? 0 : 0;
-  const currentTrackCurrentSec = currentTrackDuration * currentTrackProgress;
-
-  useEffect(() => {
-    if (!visibleTracks.length) {
-      if (currentTrackId) {
-        audioRef.current?.pause();
-        setCurrentTrackId(null);
-        setIsPlaying(false);
-      }
-      return;
-    }
-
-    if (
-      currentTrackId &&
-      !visibleTracks.some((track) => track.id === currentTrackId)
-    ) {
-      audioRef.current?.pause();
-      setCurrentTrackId(null);
-      setIsPlaying(false);
-    }
-  }, [visibleTracks, currentTrackId]);
+  const playbackQueueGlobal = useMemo(
+    () => playbackQueue.map((track) => toGlobalPlayerTrack(track)),
+    [playbackQueue],
+  );
+  const currentTrackId = globalCurrentTrack?.id ?? null;
+  const progressMap = useMemo<ProgressMap>(() => {
+    if (!globalCurrentTrack) return {};
+    return { [globalCurrentTrack.id]: globalProgress };
+  }, [globalCurrentTrack, globalProgress]);
 
   useEffect(() => {
     setActiveCat(catalogSlug ?? null);
@@ -611,37 +513,6 @@ export default function CatalogClient({
       // ignore storage access issues
     }
   }, [compact]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const storedValue = window.localStorage.getItem(PLAYER_VOLUME_STORAGE_KEY);
-      if (!storedValue) return;
-      const parsed = Number(storedValue);
-      if (!Number.isFinite(parsed)) return;
-      const normalized = Math.max(0, Math.min(1, parsed));
-      setPlayerVolume(normalized);
-      if (normalized > 0) lastNonZeroVolumeRef.current = normalized;
-    } catch {
-      // ignore storage access issues
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(PLAYER_VOLUME_STORAGE_KEY, String(playerVolume));
-      }
-    } catch {
-      // ignore storage access issues
-    }
-  }, [playerVolume]);
-
-  useEffect(() => {
-    const audioEl = audioRef.current;
-    if (!audioEl) return;
-    audioEl.volume = playerVolume;
-  }, [playerVolume, currentTrackId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -682,162 +553,38 @@ export default function CatalogClient({
     trackHeroEvent("VIEW", activeBannerSlide);
   }, [activeBannerSlide?.id]);
 
-  useEffect(() => {
-    const audioEl = audioRef.current;
-    if (!audioEl) return;
-
-    const onTimeUpdate = () => {
-      if (!currentTrackId) return;
-      const duration =
-        audioEl.duration && Number.isFinite(audioEl.duration)
-          ? Math.floor(audioEl.duration)
-          : resolveDuration(currentTrack);
-      if (!duration) return;
-      setProgressMap((prev) => ({
-        ...prev,
-        [currentTrackId]: Math.min(1, audioEl.currentTime / duration),
-      }));
-    };
-
-    const onEnded = () => {
-      setIsPlaying(false);
-      if (!currentTrackId) return;
-      setProgressMap((prev) => ({ ...prev, [currentTrackId]: 0 }));
-    };
-
-    const onLoadedMetadata = () => {
-      if (pendingSeekRef.current === null) return;
-      if (!audioEl.duration || !Number.isFinite(audioEl.duration)) return;
-      audioEl.currentTime = audioEl.duration * pendingSeekRef.current;
-      pendingSeekRef.current = null;
-    };
-
-    audioEl.addEventListener("timeupdate", onTimeUpdate);
-    audioEl.addEventListener("ended", onEnded);
-    audioEl.addEventListener("loadedmetadata", onLoadedMetadata);
-
-    return () => {
-      audioEl.removeEventListener("timeupdate", onTimeUpdate);
-      audioEl.removeEventListener("ended", onEnded);
-      audioEl.removeEventListener("loadedmetadata", onLoadedMetadata);
-    };
-  }, [currentTrackId, currentTrack]);
-
   const playTrack = (track: CatalogTrack) => {
-    const audioEl = audioRef.current;
-    if (!audioEl || !track.audioUrl) return;
-    audioEl.volume = playerVolume;
-
     if (currentTrackId === track.id) {
-      if (isPlaying) {
-        audioEl.pause();
-        setIsPlaying(false);
-      } else {
-        audioEl
-          .play()
-          .then(() => setIsPlaying(true))
-          .catch(() => setIsPlaying(false));
-      }
+      togglePlay();
       return;
     }
 
     setSelectedTrackId(track.id);
-    setCurrentTrackId(track.id);
-    pendingSeekRef.current = null;
-    setProgressMap((prev) => ({ ...prev, [track.id]: 0 }));
-
-    audioEl.src = track.audioUrl;
-    audioEl.currentTime = 0;
-    audioEl
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => setIsPlaying(false));
+    playGlobalTrack(toGlobalPlayerTrack(track), {
+      queue: playbackQueueGlobal,
+      queuePolicy: "replace",
+      queueSource: "catalog",
+    });
   };
 
   const seekTrack = (track: CatalogTrack, ratio: number) => {
-    const audioEl = audioRef.current;
-    if (!audioEl || !track.audioUrl) return;
-    audioEl.volume = playerVolume;
-
     const nextRatio = Math.max(0, Math.min(1, ratio));
 
-    if (currentTrackId === track.id && audioEl.duration && Number.isFinite(audioEl.duration)) {
-      audioEl.currentTime = audioEl.duration * nextRatio;
-      setProgressMap((prev) => ({ ...prev, [track.id]: nextRatio }));
+    if (currentTrackId === track.id) {
+      seekByRatio(nextRatio);
       if (!isPlaying) {
-        audioEl
-          .play()
-          .then(() => setIsPlaying(true))
-          .catch(() => setIsPlaying(false));
+        togglePlay();
       }
       return;
     }
 
     setSelectedTrackId(track.id);
-    setCurrentTrackId(track.id);
-    pendingSeekRef.current = nextRatio;
-    setProgressMap((prev) => ({ ...prev, [track.id]: nextRatio }));
-
-    audioEl.src = track.audioUrl;
-    audioEl
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => setIsPlaying(false));
-  };
-
-  const seekTrackToTime = (track: CatalogTrack, timeSec: number) => {
-    const audioEl = audioRef.current;
-    const liveDuration =
-      currentTrackId === track.id && audioEl?.duration && Number.isFinite(audioEl.duration)
-        ? audioEl.duration
-        : resolveDuration(track);
-    if (!Number.isFinite(liveDuration) || liveDuration <= 0) return;
-    const ratio = Math.max(0, Math.min(1, timeSec / liveDuration));
-    seekTrack(track, ratio);
-  };
-
-  const setPlayerVolumeSafe = (value: number) => {
-    const normalized = Math.max(0, Math.min(1, value));
-    setPlayerVolume(normalized);
-    if (normalized > 0) {
-      lastNonZeroVolumeRef.current = normalized;
-    }
-  };
-
-  const togglePlayerMute = () => {
-    if (playerVolume > 0.001) {
-      setPlayerVolume(0);
-      return;
-    }
-    setPlayerVolume(Math.max(0.2, lastNonZeroVolumeRef.current || 0.85));
-  };
-
-  const playTrackAtQueueIndex = (index: number) => {
-    if (index < 0 || index >= playbackQueue.length) return;
-    const nextTrack = playbackQueue[index];
-    if (!nextTrack) return;
-    playTrack(nextTrack);
-  };
-
-  const playPrevTrack = () => {
-    if (currentQueueIndex <= 0) return;
-    playTrackAtQueueIndex(currentQueueIndex - 1);
-  };
-
-  const playNextTrack = () => {
-    if (currentQueueIndex < 0 || currentQueueIndex >= playbackQueue.length - 1) return;
-    playTrackAtQueueIndex(currentQueueIndex + 1);
-  };
-
-  const closeBottomPlayer = () => {
-    const audioEl = audioRef.current;
-    if (audioEl) {
-      audioEl.pause();
-      audioEl.removeAttribute("src");
-      audioEl.load();
-    }
-    setIsPlaying(false);
-    setCurrentTrackId(null);
+    playGlobalTrack(toGlobalPlayerTrack(track), {
+      queue: playbackQueueGlobal,
+      queuePolicy: "replace",
+      queueSource: "catalog",
+      seekRatio: nextRatio,
+    });
   };
 
   const handleCategoryChange = (slug: string | null) => {
@@ -922,9 +669,12 @@ export default function CatalogClient({
     }
   };
 
-  const panelDuration = resolveDuration(selectedTrack);
-  const panelProgress = selectedTrack ? progressMap[selectedTrack.id] ?? 0 : 0;
-  const panelCurrentSec = panelDuration * panelProgress;
+  const panelDuration =
+    selectedTrack && selectedTrack.id === currentTrackId
+      ? globalDurationSec || resolveDuration(selectedTrack)
+      : resolveDuration(selectedTrack);
+  const panelProgress = selectedTrack ? (selectedTrack.id === currentTrackId ? globalProgress : 0) : 0;
+  const panelCurrentSec = selectedTrack && selectedTrack.id === currentTrackId ? globalCurrentSec : 0;
   const panelTrackIsPlaying = !!selectedTrack && selectedTrack.id === currentTrackId && isPlaying;
   const selectedTrackGenres = normalizeTags(selectedTrack?.genres ?? [], 4);
   const selectedTrackMoods = normalizeTags(selectedTrack?.moods ?? [], 5);
@@ -942,23 +692,17 @@ export default function CatalogClient({
     selectedTrack?.clearedForSync === false ? "Sync bajo revisión" : "Sync disponible";
   const selectedTrackLicenseCards = selectedTrack ? deriveCatalogLicenseCards(selectedTrack) : [];
   const activeSlideIsExternal = !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
-  const playerTrack = currentTrack ?? selectedTrack ?? tracks[0] ?? null;
-  const playerDuration = resolveDuration(playerTrack);
-  const playerProgress = playerTrack ? progressMap[playerTrack.id] ?? 0 : 0;
-  const playerCurrentSec = playerDuration * playerProgress;
-  const showBottomPlayer = !!playerTrack;
   const filterSelectClass =
     "h-7 w-full appearance-none rounded border border-border bg-background px-2 pr-9 text-xs text-foreground focus:border-foreground focus:outline-none";
 
   return (
     <div className="overflow-x-clip bg-background text-foreground">
-      <audio ref={audioRef} preload="metadata" />
-
       <div
         className={cn(
-          "mx-auto w-[90vw] max-w-[1700px] min-w-0 overflow-x-clip",
+          embedded
+            ? "w-full min-w-0 max-w-none overflow-x-visible"
+            : "mx-auto w-[90vw] max-w-[1700px] min-w-0 overflow-x-clip",
           compact ? "py-4" : "pt-2 pb-6 sm:pt-3 sm:pb-8",
-          showBottomPlayer ? "pb-[92px] sm:pb-[98px]" : "",
         )}
       >
         {!hideHeader && activeBannerSlide && (
@@ -1106,757 +850,60 @@ export default function CatalogClient({
           </div>
         )}
 
-        {shouldShowFilteringControls && tracks.length > 0 && (
-          <section className="mb-2 overflow-x-clip rounded border border-border bg-card/40 p-2">
-            <div className="sm:hidden">
-              <div className="flex items-center gap-1">
-                <span className="inline-flex h-7 items-center rounded border border-border px-2 text-xs text-muted-foreground">
-                  {visibleTracks.length}/{tracks.length}
-                </span>
-
-                {!compact && (
-                  <div className="inline-flex h-7 overflow-hidden rounded border border-border">
-                    <button
-                      type="button"
-                      onClick={() => handleViewModeChange("grid")}
-                      aria-label="Vista grid"
-                      aria-pressed={effectiveViewMode === "grid"}
-                      title="Vista grid"
-                      className={cn(
-                        "inline-flex w-8 items-center justify-center transition",
-                        effectiveViewMode === "grid"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      <LayoutGrid className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleViewModeChange("list")}
-                      aria-label="Vista lista"
-                      aria-pressed={effectiveViewMode === "list"}
-                      title="Vista lista"
-                      className={cn(
-                        "inline-flex w-8 items-center justify-center border-l border-border transition",
-                        effectiveViewMode === "list"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      <List className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => clearTrackFilters()}
-                  disabled={!hasActiveTrackFilters}
-                  className={cn(
-                    "ml-auto h-7 rounded border px-2 text-xs font-semibold transition",
-                    hasActiveTrackFilters
-                      ? "border-foreground/70 text-foreground hover:border-foreground"
-                      : "cursor-not-allowed border-border text-muted-foreground/70",
-                  )}
-                >
-                  Limpiar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setMobileFiltersOpen((prev) => !prev)}
-                  aria-expanded={mobileFiltersOpen}
-                  aria-label={mobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
-                  className="inline-flex h-7 items-center gap-1 rounded border border-border px-2 text-xs font-semibold text-foreground/90 transition hover:border-foreground/70"
-                >
-                  {mobileFiltersOpen ? "Ocultar filtros" : "Abrir filtros"}
-                  <ChevronDown
-                    className={cn(
-                      "h-3.5 w-3.5 transition-transform",
-                      mobileFiltersOpen ? "rotate-180" : "",
-                    )}
-                  />
-                </button>
-              </div>
-
-              <div className={cn("mt-2.5", mobileFiltersOpen ? "block" : "hidden")}>
-                <label className="min-w-0">
-                  <span className="sr-only">Buscar</span>
-                  <input
-                    data-catalog-search="true"
-                    type="text"
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Buscar..."
-                    className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-                  />
-                </label>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <label className="min-w-0">
-                    <span className="sr-only">Mood</span>
-                    <div className="relative">
-                      <select
-                        value={activeMood}
-                        onChange={(event) => setActiveMood(event.target.value)}
-                        className={filterSelectClass}
-                      >
-                        <option value="all">Mood</option>
-                        {moodOptions.map((mood) => (
-                          <option key={mood} value={mood}>
-                            {mood}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
-                    </div>
-                  </label>
-
-                  <label className="min-w-0">
-                    <span className="sr-only">Uso</span>
-                    <div className="relative">
-                      <select
-                        value={activeUse}
-                        onChange={(event) => setActiveUse(event.target.value)}
-                        className={filterSelectClass}
-                      >
-                        <option value="all">Uso</option>
-                        {useOptions.map((use) => (
-                          <option key={use} value={use}>
-                            {use}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
-                    </div>
-                  </label>
-                </div>
-
-                <label className="mt-3 block min-w-0">
-                  <span className="sr-only">Género</span>
-                  <div className="relative">
-                    <select
-                      value={activeGenre}
-                      onChange={(event) => setActiveGenre(event.target.value)}
-                      className={filterSelectClass}
-                    >
-                      <option value="all">Género</option>
-                      {genreOptions.map((genre) => (
-                        <option key={genre} value={genre}>
-                          {genre}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
-                  </div>
-                </label>
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <label className="min-w-0">
-                    <span className="sr-only">BPM mínimo</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={400}
-                      step={1}
-                      inputMode="numeric"
-                      value={bpmMin}
-                      onChange={(event) => setBpmMin(event.target.value)}
-                      placeholder="Min"
-                      className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-                    />
-                  </label>
-
-                  <label className="min-w-0">
-                    <span className="sr-only">BPM máximo</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={400}
-                      step={1}
-                      inputMode="numeric"
-                      value={bpmMax}
-                      onChange={(event) => setBpmMax(event.target.value)}
-                      placeholder="Max"
-                      className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-                    />
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="hidden items-end gap-1.5 sm:grid sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_130px_130px_130px_78px_78px_auto]">
-              <label className="min-w-0">
-                <span className="sr-only">Buscar</span>
-                <input
-                  data-catalog-search="true"
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Buscar..."
-                  className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-                />
-              </label>
-
-              <label className="min-w-0">
-                <span className="sr-only">Mood</span>
-                <div className="relative">
-                  <select
-                    value={activeMood}
-                    onChange={(event) => setActiveMood(event.target.value)}
-                    className={filterSelectClass}
-                  >
-                    <option value="all">Mood</option>
-                    {moodOptions.map((mood) => (
-                      <option key={mood} value={mood}>
-                        {mood}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
-                </div>
-              </label>
-
-              <label className="min-w-0">
-                <span className="sr-only">Uso</span>
-                <div className="relative">
-                  <select
-                    value={activeUse}
-                    onChange={(event) => setActiveUse(event.target.value)}
-                    className={filterSelectClass}
-                  >
-                    <option value="all">Uso</option>
-                    {useOptions.map((use) => (
-                      <option key={use} value={use}>
-                        {use}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
-                </div>
-              </label>
-
-              <label className="min-w-0">
-                <span className="sr-only">Género</span>
-                <div className="relative">
-                  <select
-                    value={activeGenre}
-                    onChange={(event) => setActiveGenre(event.target.value)}
-                    className={filterSelectClass}
-                  >
-                    <option value="all">Género</option>
-                    {genreOptions.map((genre) => (
-                      <option key={genre} value={genre}>
-                        {genre}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/90" />
-                </div>
-              </label>
-
-              <label className="min-w-0">
-                <span className="sr-only">BPM mínimo</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={400}
-                  step={1}
-                  inputMode="numeric"
-                  value={bpmMin}
-                  onChange={(event) => setBpmMin(event.target.value)}
-                  placeholder="Min"
-                  className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-                />
-              </label>
-
-              <label className="min-w-0">
-                <span className="sr-only">BPM máximo</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={400}
-                  step={1}
-                  inputMode="numeric"
-                  value={bpmMax}
-                  onChange={(event) => setBpmMax(event.target.value)}
-                  placeholder="Max"
-                  className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-                />
-              </label>
-
-              <div className="flex items-center justify-between gap-1 sm:col-span-2 sm:justify-end xl:col-span-1">
-                <span className="inline-flex h-7 items-center rounded border border-border px-2 text-xs text-muted-foreground">
-                  {visibleTracks.length}/{tracks.length}
-                </span>
-                {!compact && (
-                  <div className="inline-flex h-7 overflow-hidden rounded border border-border">
-                    <button
-                      type="button"
-                      onClick={() => handleViewModeChange("grid")}
-                      aria-label="Vista grid"
-                      aria-pressed={effectiveViewMode === "grid"}
-                      title="Vista grid"
-                      className={cn(
-                        "inline-flex w-8 items-center justify-center transition",
-                        effectiveViewMode === "grid"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      <LayoutGrid className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleViewModeChange("list")}
-                      aria-label="Vista lista"
-                      aria-pressed={effectiveViewMode === "list"}
-                      title="Vista lista"
-                      className={cn(
-                        "inline-flex w-8 items-center justify-center border-l border-border transition",
-                        effectiveViewMode === "list"
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:bg-muted",
-                      )}
-                    >
-                      <List className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => clearTrackFilters()}
-                  disabled={!hasActiveTrackFilters}
-                  className={cn(
-                    "h-7 rounded border px-2 text-xs font-semibold transition",
-                    hasActiveTrackFilters
-                      ? "border-foreground/70 text-foreground hover:border-foreground"
-                      : "cursor-not-allowed border-border text-muted-foreground/70",
-                  )}
-                >
-                  Limpiar
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        <div
-          className={cn(
-            "grid min-w-0 gap-2 xl:gap-3",
-            showDetailPanel
-              ? "lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_480px]"
-              : "grid-cols-1",
-          )}
-        >
-          <section className="min-w-0">
-            {tracks.length === 0 ? (
-              <div className="rounded-2xl border border-border bg-background/70 px-5 py-8 text-sm text-muted-foreground">
-                No hay tracks disponibles en este catálogo.
-              </div>
-            ) : visibleTracks.length === 0 ? (
-              <div className="space-y-3 rounded-2xl border border-border bg-background/70 px-5 py-8 text-sm text-muted-foreground">
-                <p>No encontramos tracks con esos filtros.</p>
-                {hasActiveTrackFilters && (
-                  <button
-                    type="button"
-                    onClick={() => clearTrackFilters({ focusSearch: true })}
-                    className="rounded border border-foreground/70 px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-foreground"
-                  >
-                    Limpiar filtros
-                  </button>
-                )}
-              </div>
-            ) : effectiveViewMode === "grid" ? (
-              <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5">
-                {visibleTracks.map((track) => {
-                  const isSelected = track.id === selectedTrack?.id;
-                  const isActive = track.id === currentTrackId;
-                  const showPause = isActive && isPlaying;
-
-                  return (
-                    <li key={track.id}>
-                      <article
-                        className={cn(
-                          "group cursor-pointer overflow-hidden rounded-md border bg-card/80 transition",
-                          isSelected
-                            ? "border-foreground shadow-[0_0_0_1px_rgba(243,241,234,0.35)]"
-                            : "border-border hover:border-foreground/60",
-                        )}
-                      >
-                        <div className="relative aspect-square w-full overflow-hidden bg-card">
-                          <img
-                            src={resolveCatalogCoverUrl(track)}
-                            alt={`Cover de ${track.title}`}
-                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                            loading="lazy"
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => setSelectedTrackId(track.id)}
-                            className="absolute inset-0 z-10 cursor-pointer"
-                            aria-pressed={isSelected}
-                            aria-label={`Seleccionar ${track.title}`}
-                          />
-
-                          <button
-                            type="button"
-                            onClick={() => playTrack(track)}
-                            className={cn(
-                              "absolute bottom-2 left-2 z-20 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border backdrop-blur transition",
-                              isActive
-                                ? "border-foreground bg-foreground text-background"
-                                : "border-foreground/50 bg-black/40 text-foreground hover:bg-foreground hover:text-background",
-                            )}
-                            aria-label={showPause ? `Pausar ${track.title}` : `Reproducir ${track.title}`}
-                          >
-                            {showPause ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                          </button>
-
-                          {isActive && (
-                            <div className="absolute inset-x-0 bottom-0 z-20 h-1 bg-black/60">
-                              <div
-                                className="h-full bg-foreground transition-[width]"
-                                style={{ width: `${Math.round((progressMap[track.id] ?? 0) * 100)}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setSelectedTrackId(track.id)}
-                          className="block w-full cursor-pointer text-left"
-                          aria-pressed={isSelected}
-                        >
-                          <div className="space-y-1 px-2.5 py-2.5">
-                            <LoopingText
-                              text={track.title}
-                              className="text-left text-[15px] font-semibold leading-tight text-foreground"
-                              speedPxPerSecond={32}
-                              forceLoopOnMobile
-                            />
-
-                            <LoopingText
-                              text={track.artist || "Artista"}
-                              className="text-left text-sm text-muted-foreground"
-                              speedPxPerSecond={30}
-                              forceLoopOnMobile
-                            />
-                          </div>
-                        </button>
-                      </article>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <ul className="space-y-2">
-                {visibleTracks.map((track) => {
-                  const isSelected = track.id === selectedTrack?.id;
-                  const isActive = track.id === currentTrackId;
-                  const showPause = isActive && isPlaying;
-                  const durationLabel = getTrackDurationLabel(track);
-
-                  return (
-                    <li key={track.id}>
-                      <article
-                        className={cn(
-                          "relative cursor-pointer overflow-hidden rounded-md border bg-card/80 transition focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground/60",
-                          isSelected
-                            ? "border-foreground shadow-[0_0_0_1px_rgba(243,241,234,0.28)]"
-                            : "border-border hover:border-foreground/60",
-                        )}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Seleccionar ${track.title}`}
-                        aria-pressed={isSelected}
-                        onClick={() => setSelectedTrackId(track.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedTrackId(track.id);
-                          }
-                        }}
-                      >
-                        <div className="flex min-w-0 items-center gap-2 p-2 sm:gap-3">
-                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded border border-border bg-card sm:h-20 sm:w-20">
-                            <img
-                              src={resolveCatalogCoverUrl(track)}
-                              alt={`Cover de ${track.title}`}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          </div>
-
-                          <div className="min-w-0 flex-1 text-left">
-                            {isMobileViewport ? (
-                              <LoopingText
-                                text={track.title}
-                                className="text-left text-sm font-semibold text-foreground"
-                                speedPxPerSecond={32}
-                                forceLoopOnMobile
-                              />
-                            ) : (
-                              <h3 className="truncate text-sm font-semibold text-foreground sm:text-[15px]">
-                                {track.title}
-                              </h3>
-                            )}
-
-                            {isMobileViewport ? (
-                              <LoopingText
-                                text={track.artist || "Artista"}
-                                className="text-left text-xs text-muted-foreground"
-                                speedPxPerSecond={30}
-                                forceLoopOnMobile
-                              />
-                            ) : (
-                              <p className="truncate text-xs text-muted-foreground sm:text-sm">
-                                {track.artist || "Artista"}
-                              </p>
-                            )}
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                              <span>{durationLabel}</span>
-                              {track.bpm ? <span>{Math.round(track.bpm)} BPM</span> : null}
-                              {track.key ? <span>{track.key}</span> : null}
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              playTrack(track);
-                            }}
-                            className={cn(
-                              "mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition sm:mr-3",
-                              isActive
-                                ? "border-foreground bg-foreground text-background"
-                                : "border-foreground/50 text-foreground hover:bg-foreground hover:text-background",
-                            )}
-                            aria-label={showPause ? `Pausar ${track.title}` : `Reproducir ${track.title}`}
-                          >
-                            {showPause ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                          </button>
-                        </div>
-
-                        {isActive && (
-                          <div className="absolute inset-x-0 bottom-0 h-1 bg-black/60">
-                            <div
-                              className="h-full bg-foreground transition-[width]"
-                              style={{ width: `${Math.round((progressMap[track.id] ?? 0) * 100)}%` }}
-                            />
-                          </div>
-                        )}
-                      </article>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-
-          {showDetailPanel && (
-            <aside className="min-w-0 self-start lg:sticky lg:top-[calc(var(--header-h)+1rem)]">
-              <section className="rounded-md border border-border bg-background/95 p-4 sm:p-5">
-                <header className="mb-3 border-b border-border/80 pb-2.5">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/90">
-                    Detalle del track
-                  </h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground/90">
-                    {selectedTrack ? "Selección actual" : "Sin selección"}
-                  </p>
-                </header>
-                {selectedTrack ? (
-                  <div className="space-y-4">
-                    <div className="overflow-hidden rounded-md border border-border bg-card">
-                      <img
-                        src={resolveCatalogCoverUrl(selectedTrack)}
-                        alt={`Cover grande de ${selectedTrack.title}`}
-                        className="aspect-[2/1] w-full object-cover"
-                      />
-                    </div>
-
-                    <div className="space-y-2 rounded-md border border-border bg-card/45 p-3">
-                      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => playTrack(selectedTrack)}
-                          className={cn(
-                            "flex h-11 w-11 items-center justify-center rounded-full border transition",
-                            panelTrackIsPlaying
-                              ? "border-foreground bg-foreground text-background"
-                              : "border-foreground text-foreground hover:bg-foreground hover:text-background",
-                          )}
-                          aria-label={panelTrackIsPlaying ? "Pausar track" : "Reproducir track"}
-                        >
-                          {panelTrackIsPlaying ? (
-                            <Pause className="h-5 w-5" />
-                          ) : (
-                            <Play className="ml-0.5 h-5 w-5" />
-                          )}
-                        </button>
-
-                        <div className="min-w-0 flex-1">
-                          <LoopingText
-                            text={selectedTrack.title}
-                            className="text-left text-lg font-semibold leading-tight text-foreground"
-                            speedPxPerSecond={34}
-                            forceLoopOnMobile
-                          />
-                          <LoopingText
-                            text={`de ${selectedTrack.artist || "Artista"}`}
-                            className="text-left text-sm text-muted-foreground"
-                            speedPxPerSecond={30}
-                            forceLoopOnMobile
-                          />
-                        </div>
-                        <span className="justify-self-end whitespace-nowrap rounded border border-border px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                          {selectedTrackBpmBadge}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <input
-                          type="range"
-                          min={0}
-                          max={1000}
-                          value={Math.round(panelProgress * 1000)}
-                          onChange={(event) => {
-                            if (!selectedTrack) return;
-                            seekTrack(selectedTrack, Number(event.target.value) / 1000);
-                          }}
-                          className="h-2 w-full cursor-pointer accent-foreground"
-                          aria-label="Progreso de reproducción"
-                        />
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{formatTime(panelCurrentSec)}</span>
-                          <span>{formatTime(panelDuration)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <Link
-                        href={`/track/${selectedTrack.id}`}
-                        className="inline-flex items-center justify-center rounded border border-foreground bg-foreground px-3 py-2 text-sm font-semibold text-background transition hover:opacity-90"
-                      >
-                        Ver detalles
-                      </Link>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex items-center justify-center gap-2 rounded border border-foreground/50 px-3 py-2 text-sm font-semibold text-foreground transition hover:border-foreground"
-                          >
-                            <FileText className="h-4 w-4" />
-                            Licencias
-                          </button>
-                        </DialogTrigger>
-                        <DialogContent className="border-border bg-background text-foreground sm:max-w-xl">
-                          <DialogHeader>
-                            <DialogTitle>Licencias disponibles</DialogTitle>
-                            <DialogDescription className="text-muted-foreground">
-                              {selectedTrack.title} · {selectedTrack.artist}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            {selectedTrackLicenseCards.map((card) => (
-                              <article
-                                key={card.id}
-                                className="rounded border border-border bg-card/60 p-3"
-                              >
-                                <p className="text-sm font-semibold text-foreground">{card.title}</p>
-                                <p className="mt-2 text-xl font-semibold leading-none text-foreground">
-                                  {card.price}
-                                </p>
-                                <p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                                  {card.formats}
-                                </p>
-                                <p className="mt-1 text-xs text-muted-foreground">{card.note}</p>
-                              </article>
-                            ))}
-                          </div>
-                          <div className="flex flex-col items-start justify-between gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center">
-                            <p>Valores referenciales sujetos al uso final.</p>
-                            <Link
-                              href={`/track/${selectedTrack.id}`}
-                              className="inline-flex items-center rounded border border-foreground/50 px-2.5 py-1.5 font-semibold text-foreground transition hover:border-foreground"
-                            >
-                              Ver ficha completa
-                            </Link>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-
-                    <div className="overflow-hidden rounded-md border border-border bg-card/30">
-                      <dl className="grid grid-cols-3 divide-x divide-border/80 border-b border-border/80">
-                        <DetailMetaCell label="BPM" value={selectedTrackBpmValue ? String(selectedTrackBpmValue) : "—"} />
-                        <DetailMetaCell label="Tonalidad" value={selectedTrack.key ?? "—"} />
-                        <DetailMetaCell label="Género" value={selectedTrackGenreLabel} />
-                      </dl>
-                      <dl className="grid grid-cols-3 divide-x divide-border/80">
-                        <DetailMetaCell
-                          label="Duración"
-                          value={selectedTrack.duration || formatTime(panelDuration)}
-                        />
-                        <DetailMetaCell label="Licencia" value={selectedTrackLicenseLabel} />
-                        <DetailMetaCell
-                          label="Estado sync"
-                          value={selectedTrackSyncLabel}
-                          forceLoopOnMobile
-                        />
-                      </dl>
-                    </div>
-
-                    {(selectedTrackMoods.length > 0 || selectedTrackUses.length > 0) && (
-                      <div className="rounded-md border border-border bg-card/30 p-2.5">
-                        <div className="grid grid-cols-1 divide-y divide-border/80 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-                          <div className="pb-2.5 sm:pb-0 sm:pr-2.5">
-                            <DetailTagColumn label="Moods" values={selectedTrackMoods} tone="mood" />
-                          </div>
-                          <div className="pt-2.5 sm:pt-0 sm:pl-2.5">
-                            <DetailTagColumn label="Usos" values={selectedTrackUses} tone="use" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Selecciona un track para ver detalles.</p>
-                )}
-              </section>
-            </aside>
-          )}
-        </div>
+                <TrackCollectionBrowser
+          tracks={visibleTracks}
+          totalTracks={tracks.length}
+          selectedTrack={selectedTrack}
+          currentTrackId={currentTrackId}
+          isPlaying={isPlaying}
+          progressMap={progressMap}
+          isMobileViewport={isMobileViewport}
+          showDetailPanel={showDetailPanel}
+          viewMode={effectiveViewMode}
+          onViewModeChange={handleViewModeChange}
+          compact={compact}
+          shouldShowFilteringControls={shouldShowFilteringControls}
+          hasActiveTrackFilters={hasActiveTrackFilters}
+          mobileFiltersOpen={mobileFiltersOpen}
+          onMobileFiltersOpenChange={setMobileFiltersOpen}
+          onClearTrackFilters={clearTrackFilters}
+          onSelectTrackId={setSelectedTrackId}
+          onPlayTrack={playTrack}
+          onSeekTrack={seekTrack}
+          resolveCoverUrl={resolveCatalogCoverUrl}
+          getTrackDurationLabel={getTrackDurationLabel}
+          formatTime={formatTime}
+          filterSelectClass={filterSelectClass}
+          searchTerm={searchTerm}
+          onSearchTermChange={setSearchTerm}
+          activeMood={activeMood}
+          onActiveMoodChange={setActiveMood}
+          activeUse={activeUse}
+          onActiveUseChange={setActiveUse}
+          activeGenre={activeGenre}
+          onActiveGenreChange={setActiveGenre}
+          bpmMin={bpmMin}
+          onBpmMinChange={setBpmMin}
+          bpmMax={bpmMax}
+          onBpmMaxChange={setBpmMax}
+          moodOptions={moodOptions}
+          useOptions={useOptions}
+          genreOptions={genreOptions}
+          panelDuration={panelDuration}
+          panelProgress={panelProgress}
+          panelCurrentSec={panelCurrentSec}
+          panelTrackIsPlaying={panelTrackIsPlaying}
+          selectedTrackBpmBadge={selectedTrackBpmBadge}
+          selectedTrackBpmValue={selectedTrackBpmValue}
+          selectedTrackGenreLabel={selectedTrackGenreLabel}
+          selectedTrackLicenseLabel={selectedTrackLicenseLabel}
+          selectedTrackSyncLabel={selectedTrackSyncLabel}
+          selectedTrackMoods={selectedTrackMoods}
+          selectedTrackUses={selectedTrackUses}
+          selectedTrackLicenseCards={selectedTrackLicenseCards}
+        />
       </div>
 
-      {playerTrack && (
-        <CatalogBottomPlayerV2
-          trackId={playerTrack.id}
-          title={playerTrack.title}
-          artist={playerTrack.artist || "Artista"}
-          coverUrl={resolveCatalogCoverUrl(playerTrack)}
-          waveformB64={playerTrack.waveformB64 ?? null}
-          isPlaying={isPlaying}
-          currentSec={playerCurrentSec}
-          durationSec={playerDuration}
-          progress={playerProgress}
-          volume={playerVolume}
-          hasPrev={currentQueueIndex > 0}
-          hasNext={currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1}
-          onTogglePlay={() => playTrack(playerTrack)}
-          onPrev={playPrevTrack}
-          onNext={playNextTrack}
-          onSeek={(timeSec) => seekTrackToTime(playerTrack, timeSec)}
-          onVolumeChange={setPlayerVolumeSafe}
-          onToggleMute={togglePlayerMute}
-          onClose={closeBottomPlayer}
-        />
-      )}
     </div>
   );
 }

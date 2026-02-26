@@ -521,3 +521,60 @@ Componentes/archivos no inventariados previamente (33):
 - `src/components/sections/Hero copy.tsx`
 - `src/components/sections/Hero.tsx`
 - `src/components/support/SupportTicketDialog.tsx`
+
+## 15) Collection System reusable (Core + Adapters)
+
+Objetivo de esta sección:
+
+- Documentar el sistema plug-and-play para listas `grid/list` + detalle, desacoplado por dominio.
+- Registrar qué piezas son genéricas y cuáles son adapter de tracks para `/catalog`.
+
+### Core genérico (`src/components/collection`)
+
+| Componente / Hook | Ruta | Rol | Estado |
+| --- | --- | --- | --- |
+| `CollectionBrowser` | `src/components/collection/CollectionBrowser.tsx` | Layout reusable de colección (grid/list + detalle) mediante render slots | Activo |
+| `CollectionFilterShell` | `src/components/collection/CollectionFilterShell.tsx` | Shell reusable de filtros (mobile colapsable + desktop visible) | Activo |
+| `CollectionToolbar` | `src/components/collection/CollectionToolbar.tsx` | Barra reusable (contador, toggle vista, limpiar, toggle filtros mobile) | Activo |
+| `useCollectionState` | `src/components/collection/useCollectionState.ts` | Estado reusable de selección y modo vista (controlado/no controlado) | Activo |
+| `types` | `src/components/collection/types.ts` | Contratos genéricos (`CollectionViewMode`, render contexts, props core) | Activo |
+| `index` | `src/components/collection/index.ts` | API de exports del core | Activo |
+
+### Adapter de tracks (`src/components/catalog/adapters`)
+
+| Componente | Ruta | Rol | Estado |
+| --- | --- | --- | --- |
+| `TrackCollectionBrowser` | `src/components/catalog/adapters/TrackCollectionBrowser.tsx` | Orquestador adapter que conecta estado/handlers de catálogo al core | Activo |
+| `TrackFilterControls` | `src/components/catalog/adapters/TrackFilterControls.tsx` | Controles de filtro específicos de tracks (search/mood/uso/género/BPM) | Activo |
+| `TrackGridItem` | `src/components/catalog/adapters/TrackGridItem.tsx` | Render item de track en vista grid | Activo |
+| `TrackListItem` | `src/components/catalog/adapters/TrackListItem.tsx` | Render item de track en vista lista | Activo |
+| `TrackDetailPanel` | `src/components/catalog/adapters/TrackDetailPanel.tsx` | Panel detalle seleccionado (metadata, acciones y licencias) | Activo |
+| `types` + `index` | `src/components/catalog/adapters/types.ts`, `src/components/catalog/adapters/index.ts` | Tipos/exports del adapter | Activo |
+
+### Integración actual
+
+- `src/app/catalog/CatalogClient.tsx`:
+  - Mantiene orquestación de dominio (datos, banner, tracking).
+  - Delega bloque de filtros + lista grid/list + detalle en `TrackCollectionBrowser`.
+- Queda explícitamente fuera del core:
+  - Hero/banner.
+  - Player sticky global (se monta desde shell).
+  - Tracking de hero (`/api/catalog/hero-events`).
+
+## 16) Player global (ODR)
+
+Objetivo de esta sección:
+
+- Dejar trazable la arquitectura de reproducción única para rutas públicas.
+- Evitar regresiones donde una vista local vuelva a “adueñarse” del audio.
+
+| Componente / Hook | Ruta | Rol | Estado |
+| --- | --- | --- | --- |
+| `GlobalPlayerProvider` | `src/components/player/global-player-context.tsx` | Host único de estado + `<audio>` + cola/persistencia | Activo |
+| `useGlobalPlayerState` | `src/components/player/global-player-context.tsx` | Lectura de estado global de reproducción | Activo |
+| `useGlobalPlayer` | `src/components/player/global-player-context.tsx` | API de control global (play/seek/next/prev/volume/close) | Activo |
+| `GlobalPlayerHost` | `src/components/player/GlobalPlayerHost.tsx` | Render visual del player global usando `CatalogBottomPlayerV2` | Activo |
+| `FrontendShell` (integración) | `src/components/site/FrontendShell.tsx` | Monta provider/host en rutas públicas y los excluye de `/admin`/`/creator` | Activo |
+| `CatalogBottomPlayerV2` | `src/components/catalog/CatalogBottomPlayerV2.tsx` | Skin/UI del player global | Activo |
+| `TrackSimpleAudioPlayer` | `src/components/track/TrackSimpleAudioPlayer.tsx` | Control remoto de player global en `/track/[id]` (`queuePolicy: keep`) | Activo |
+| `CatalogClient` (integración) | `src/app/catalog/CatalogClient.tsx` | Control remoto en catálogo (`queuePolicy: replace`), sin host local | Activo |

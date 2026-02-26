@@ -1,62 +1,149 @@
-/**
- * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │ Archivo: src/app/track/[id]/page.tsx                                        │
- * ├─────────────────────────────────────────────────────────────────────────────┤
- * │ Objetivo                                                                    │
- * │ - Ficha pública del track con estética mínima/cinematográfica y tokens      │
- * │   globales (bg-background/card/border, radios 2px).                         │
- * │ - Server Component prepara datos y entrega waveform/base64 + URLs públicas. │
- * │ - PublicAudioBar usa el waveform Artlist-style y soporta click-to-seek.     │
- * └─────────────────────────────────────────────────────────────────────────────┘
- */
-
-import type { ReactNode } from "react";
-import { notFound, redirect } from "next/navigation";
-import Head from "next/head";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Prisma } from "@prisma/client";
 import CatalogClient from "@/app/catalog/CatalogClient";
-import { db } from "@/server/db";
+import CopyLinkButton from "@/components/public/CopyLinkButton";
+import TrackDeliverablesDialog from "@/components/track/TrackDeliverablesDialog";
+import TrackLicensesDialog from "@/components/track/TrackLicensesDialog";
+import TrackSimpleAudioPlayer from "@/components/track/TrackSimpleAudioPlayer";
+import type {
+  LicenseSummaryItem,
+  LicenseTermRow,
+  TrackLicenseViewModel,
+} from "@/lib/licenses/types";
 import { getS3PublicUrl } from "@/lib/storage/s3";
-import TrackHero, { type TrackHeroDetailSection } from "./TrackHero";
-
-export const dynamic = "force-dynamic";
+import { db } from "@/server/db";
 
 type PageProps = {
-  params: Promise<{ id: string; catalog?: string }>;
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+  params: Promise<{ id: string }>;
 };
 
-/** Buffer(Bytes) → base64 para entregar al canvas del cliente */
+const trackBaseSelect = {
+  id: true,
+  title: true,
+  artist: true,
+  coverUrl: true,
+  audioUrl: true,
+  assetKey: true,
+  durationSec: true,
+  bpm: true,
+  key: true,
+  genres: true,
+  subgenres: true,
+  licenseType: true,
+  pricingTier: true,
+  budgetMin: true,
+  budgetMax: true,
+  budgetCurrency: true,
+  oneStop: true,
+  clearedForSync: true,
+  mfn: true,
+  restrictions: true,
+  exclusiveTerritories: true,
+  restrictedTerritories: true,
+  restrictedIndustries: true,
+  restrictedPlatforms: true,
+  restrictedBrands: true,
+  updatedAt: true,
+  ownerUserId: true,
+  versions: {
+    select: { id: true, label: true, durationSec: true, kind: true },
+    orderBy: { sortOrder: "asc" },
+    take: 20,
+  },
+  stems: {
+    select: { id: true, name: true, group: true },
+    orderBy: { sortOrder: "asc" },
+    take: 30,
+  },
+  tags: {
+    select: {
+      tag: {
+        select: {
+          type: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.TrackSelect;
+
+const trackLicenseAssignmentSelect = {
+  id: true,
+  isEnabled: true,
+  sortOrder: true,
+  priceOverride: true,
+  summaryOverrideJson: true,
+  termsOverrideJson: true,
+  agreementOverrideText: true,
+  licenseTemplate: {
+    select: {
+      id: true,
+      name: true,
+      status: true,
+      sortOrder: true,
+      isPopular: true,
+      priceAmount: true,
+      currency: true,
+      formats: true,
+      summaryJson: true,
+      termsMatrixJson: true,
+      agreementText: true,
+      notes: true,
+      ownerUserId: true,
+    },
+  },
+} satisfies Prisma.TrackLicenseAssignmentSelect;
+
+type TrackBase = Prisma.TrackGetPayload<{ select: typeof trackBaseSelect }>;
+type TrackWithLicenses = TrackBase & {
+  licenseAssignments: Array<
+    Prisma.TrackLicenseAssignmentGetPayload<{ select: typeof trackLicenseAssignmentSelect }>
+  >;
+};
+
+function isMissingTrackLicenseAssignmentTable(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code !== "P2021") return false;
+  const table = String((error.meta as { table?: unknown } | undefined)?.table ?? "");
+  return table.includes("TrackLicenseAssignment");
+}
+
+type SimilarTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  moods: string[];
+  uses: string[];
+  genres: string[];
+  bpm: number | undefined;
+  key: string | undefined;
+  audioUrl: string;
+  coverUrl: string | null;
+  durationSec: number | null;
+  duration: string;
+  waveformB64: string | null;
+  licenseType: string | null;
+  pricingTier: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  budgetCurrency: string | null;
+  clearedForSync: boolean | null;
+};
+
 function bytesToBase64(buf: Buffer | null): string | null {
   if (!buf) return null;
   return Buffer.from(buf).toString("base64");
 }
 
-/** Prefiere assetKey→R2; si no, usa audioUrl como fallback */
-function publicAudioUrl(input: {
-  assetKey: string | null;
-  audioUrl: string | null;
-}): string | null {
-  if (input.assetKey) return getS3PublicUrl(input.assetKey);
-  return input.audioUrl ?? null;
-}
-
-function baseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL)
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  if (process.env.VERCEL_URL)
-    return `https://${process.env.VERCEL_URL.replace(/\/$/, "")}`;
-  // Fallback explícito al dominio público para evitar canonicals en localhost en prod
-  return "https://lynxmedia.cl";
-}
-
-/** mm:ss para duración */
-function fmtDuration(sec: number | null | undefined): string {
-  if (sec == null || !isFinite(sec)) return "—";
-  const s = Math.max(0, Math.floor(sec));
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, "0")}`;
+function formatDuration(sec: number | null | undefined): string {
+  if (typeof sec !== "number" || !Number.isFinite(sec) || sec <= 0) return "—";
+  const safe = Math.max(0, Math.floor(sec));
+  const minutes = Math.floor(safe / 60);
+  const seconds = safe % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatUpdated(date: Date): string {
@@ -66,73 +153,104 @@ function formatUpdated(date: Date): string {
   }).format(date);
 }
 
-/** Pill visual para moods/uses/restrictions */
-function Pill({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-[2px] border border-border bg-background/80 px-2 py-1 text-[11px] leading-tight text-foreground">
-      {children}
-    </span>
-  );
-}
-
-type PublishingShare = {
-  role: string;
-  name: string | null;
-  sharePct: number | null;
-  ipiNumber: string | null;
-  pro: string | null;
-  caeNumber: string | null;
-};
-
-type TrackVersionLite = {
-  label: string;
-  durationSec: number | null;
-  kind: string | null;
-};
-
-type TrackStemLite = {
-  name: string;
-  group: string | null;
-};
-
-function formatText(value: string | null | undefined) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function formatList(
-  values: string[] | null | undefined,
-  separator = " / ",
+function formatCurrencyAmount(
+  amount: number | null | undefined,
+  currency: string | null | undefined,
 ): string | null {
-  if (!Array.isArray(values) || values.length === 0) return null;
-  const cleaned = values.map((value) => value.trim()).filter(Boolean);
-  return cleaned.length ? cleaned.join(separator) : null;
-}
-
-function formatBooleanFlag(value: boolean | null | undefined) {
-  if (value === null || value === undefined) return null;
-  return value ? "Si" : "No";
-}
-
-function formatTrackType(value: string | null | undefined) {
-  if (!value) return null;
-  switch (value) {
-    case "INSTRUMENTAL":
-      return "Instrumental";
-    case "VOCAL":
-      return "Vocal";
-    case "VOCAL_INSTRUMENTAL":
-      return "Vocal + instrumental";
-    case "OTHER":
-      return "Otro";
-    default:
-      return value;
+  if (typeof amount !== "number" || !Number.isFinite(amount)) return null;
+  const code = (currency ?? "USD").toUpperCase();
+  try {
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: code,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${code} ${Math.round(amount)}`;
   }
 }
 
-function formatLicenseType(value: string | null | undefined) {
-  if (!value) return null;
-  switch (value) {
+function normalizeStrings(values?: string[] | null, limit = 8): string[] {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function publicAudioUrl(input: { assetKey: string | null; audioUrl: string | null }): string | null {
+  if (input.assetKey) return getS3PublicUrl(input.assetKey);
+  return input.audioUrl ?? null;
+}
+
+function getBadgeTone(type: "mood" | "use") {
+  if (type === "mood") return "catalog-tag-mood";
+  return "catalog-tag-use";
+}
+
+function hashToPositiveInt(value: string): number {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function resolveCover(url: string | null | undefined, seed: string): string {
+  const clean = url?.trim();
+  if (clean) return clean;
+  return `https://loremflickr.com/960/960/music?lock=${hashToPositiveInt(seed)}`;
+}
+
+function normalizeSummaryItems(raw: unknown): LicenseSummaryItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const label = typeof (item as { label?: unknown }).label === "string"
+        ? (item as { label: string }).label.trim()
+        : "";
+      const value = typeof (item as { value?: unknown }).value === "string"
+        ? (item as { value: string }).value.trim()
+        : "";
+      if (!label || !value) return null;
+      return { label, value };
+    })
+    .filter((item): item is LicenseSummaryItem => Boolean(item))
+    .slice(0, 80);
+}
+
+function normalizeTermRows(raw: unknown): LicenseTermRow[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const label = typeof (item as { label?: unknown }).label === "string"
+        ? (item as { label: string }).label.trim()
+        : "";
+      const value = typeof (item as { value?: unknown }).value === "string"
+        ? (item as { value: string }).value.trim()
+        : "";
+      if (!label || !value) return null;
+      return { label, value };
+    })
+    .filter((item): item is LicenseTermRow => Boolean(item))
+    .slice(0, 160);
+}
+
+function buildDefaultAgreement(name: string) {
+  return [
+    `${name}`,
+    "",
+    "1. Licencia sujeta a aprobación y pago correspondiente.",
+    "2. El productor conserva la titularidad del master y publishing.",
+    "3. El uso del beat debe respetar límites y condiciones pactadas.",
+  ].join("\n");
+}
+
+function formatLicenseType(value?: string | null) {
+  switch ((value ?? "").toUpperCase()) {
     case "NON_EXCLUSIVE":
       return "No exclusiva";
     case "EXCLUSIVE":
@@ -142,595 +260,662 @@ function formatLicenseType(value: string | null | undefined) {
     case "BUYOUT":
       return "Buyout";
     default:
-      return value;
+      return "No definida";
   }
 }
 
-function formatPricingTier(value: string | null | undefined) {
-  if (!value) return null;
-  switch (value) {
-    case "LOW":
-      return "Low";
-    case "MID":
-      return "Mid";
-    case "HIGH":
-      return "High";
-    case "BESPOKE":
-      return "Bespoke";
-    default:
-      return value;
-  }
-}
-
-function formatBudgetRange(
-  min: number | null | undefined,
-  max: number | null | undefined,
-  currency: string | null | undefined,
-) {
-  const hasMin = typeof min === "number" && Number.isFinite(min);
-  const hasMax = typeof max === "number" && Number.isFinite(max);
-  if (!hasMin && !hasMax) return null;
-  const prefix = currency ? `${currency} ` : "";
-  if (hasMin && hasMax) return `${prefix}${min} - ${max}`;
-  if (hasMin) return `${prefix}${min}+`;
-  return `${prefix}${max}`;
-}
-
-function formatTermMonths(months: number | null | undefined) {
-  if (typeof months !== "number" || !Number.isFinite(months)) return null;
-  return `${months} mes${months === 1 ? "" : "es"}`;
-}
-
-function formatPublishing(
-  shares: PublishingShare[] | null | undefined,
-  fallback: string | null | undefined,
-) {
-  if (Array.isArray(shares) && shares.length) {
-    const items = shares
-      .map((share) => {
-        const name = formatText(share.name);
-        if (!name) return null;
-        const pct =
-          typeof share.sharePct === "number" && Number.isFinite(share.sharePct)
-            ? ` ${share.sharePct}%`
-            : "";
-        const role = formatPublishingRole(share.role);
-        return role ? `${role}: ${name}${pct}` : `${name}${pct}`;
-      })
-      .filter((item): item is string => Boolean(item));
-    if (items.length) return items.join(" / ");
-  }
-  return formatText(fallback);
-}
-
-function formatPublishingRole(role: string) {
-  if (!role) return null;
-  if (role === "WRITER") return "Autor";
-  if (role === "PUBLISHER") return "Publisher";
-  return role;
-}
-
-function formatPublishingDetails(share: PublishingShare | null) {
-  if (!share) return null;
-  const name = formatText(share.name);
-  const pct =
-    typeof share.sharePct === "number" && Number.isFinite(share.sharePct)
-      ? `${share.sharePct}%`
+function deriveLegacyFallbackLicenses(track: {
+  id: string;
+  licenseType: string | null;
+  pricingTier: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  budgetCurrency: string | null;
+}): TrackLicenseViewModel[] {
+  const min =
+    typeof track.budgetMin === "number" && Number.isFinite(track.budgetMin)
+      ? track.budgetMin
       : null;
-  const details = [
-    share.pro ? `PRO ${share.pro}` : null,
-    share.caeNumber ? `CAE ${share.caeNumber}` : null,
-    share.ipiNumber ? `IPI ${share.ipiNumber}` : null,
-  ].filter(Boolean) as string[];
-
-  const base = [name, pct].filter(Boolean).join(" ");
-  if (!base && details.length === 0) return null;
-  if (!base) return details.join(" · ");
-  if (details.length === 0) return base;
-  return `${base} · ${details.join(" · ")}`;
-}
-
-function formatVersions(versions: TrackVersionLite[] | null | undefined) {
-  if (!Array.isArray(versions) || versions.length === 0) return [];
-  return versions
-    .map((version) => formatVersionLabel(version))
-    .filter((value): value is string => Boolean(value));
-}
-
-function formatVersionLabel(version: TrackVersionLite) {
-  const label = version.label?.trim();
-  if (label) return label;
-  if (version.durationSec && Number.isFinite(version.durationSec)) {
-    return fmtDuration(version.durationSec);
-  }
-  if (version.kind) return version.kind;
-  return null;
-}
-
-function formatVersionDetail(version: TrackVersionLite) {
-  const label = formatText(version.label) ?? formatVersionLabel(version);
-  if (!label) return null;
-  const duration =
-    typeof version.durationSec === "number" && Number.isFinite(version.durationSec)
-      ? fmtDuration(version.durationSec)
+  const max =
+    typeof track.budgetMax === "number" && Number.isFinite(track.budgetMax)
+      ? track.budgetMax
       : null;
-  const kind = formatVersionKind(version.kind);
-  const extras = [duration, kind].filter(Boolean);
-  return extras.length ? `${label} · ${extras.join(" · ")}` : label;
-}
 
-function formatVersionKind(value: string | null | undefined) {
-  if (!value) return null;
-  switch (value) {
-    case "FULL":
-      return "Full";
-    case "CUTDOWN":
-      return "Cutdown";
-    case "ALT_MIX":
-      return "Alt mix";
-    case "INSTRUMENTAL":
-      return "Instrumental";
-    case "VOCAL":
-      return "Vocal";
-    case "OTHER":
-      return "Otro";
-    default:
-      return value;
-  }
-}
+  let basic = min;
+  let premium: number | null = null;
+  let exclusive = max;
 
-function formatStemDetail(stem: TrackStemLite) {
-  const name = formatText(stem.name);
-  if (!name) return null;
-  const group = formatStemGroup(stem.group);
-  return group ? `${name} · ${group}` : name;
-}
-
-function formatStemGroup(value: string | null | undefined) {
-  if (!value) return null;
-  switch (value) {
-    case "INSTRUMENT":
-      return "Instrumento";
-    case "VOCAL":
-      return "Vocal";
-    case "FX":
-      return "FX";
-    case "PERCUSSION":
-      return "Percusion";
-    case "OTHER":
-      return "Otro";
-    default:
-      return value;
-  }
-}
-
-function pickCatalogSlug(
-  fromParam: string | null | undefined,
-  fromTags: { slug: string; type: string }[] | null | undefined,
-) {
-  const candidate = fromParam?.trim().toLowerCase();
-  if (candidate) return candidate;
-  if (fromTags && fromTags.length) {
-    const cat = fromTags.find((t) => t.type === "CATALOG");
-    if (cat) return cat.slug;
-  }
-  return null;
-}
-
-export default async function TrackPublicPage({ params, searchParams }: PageProps) {
-  const { id, catalog: routeCatalog } = await params;
-  const sp = searchParams ? await searchParams : undefined;
-
-  const catalogParam =
-    (Array.isArray(sp?.c) ? sp?.c[0] : sp?.c) ??
-    (Array.isArray(sp?.catalog) ? sp?.catalog[0] : sp?.catalog);
-  const catParam = Array.isArray(sp?.cat) ? sp?.cat[0] : sp?.cat;
-
-  // Redirige /track/[id]?c=slug -> /track/[id] (sin query, uso de cat opcional)
-  if (catalogParam && !routeCatalog) {
-    return redirect(`/track/${id}`);
+  if (min !== null && max !== null) {
+    premium = Math.round(min + (max - min) * 0.45);
+  } else if (min !== null) {
+    premium = Math.round(min * 1.6);
+    exclusive = Math.round(min * 2.4);
+  } else if (max !== null) {
+    basic = Math.round(max * 0.45);
+    premium = Math.round(max * 0.7);
+    exclusive = max;
   }
 
-  // 1) Datos del track (pública + ficha técnica)
-  const track = await db.track.findUnique({
-    where: { id },
+  const currency = (track.budgetCurrency ?? "USD").toUpperCase();
+  const safeCurrency: "CLP" | "USD" | "EUR" =
+    currency === "CLP" || currency === "EUR" ? currency : "USD";
+
+  const items: TrackLicenseViewModel[] = [
+    {
+      id: `legacy-basic-${track.id}`,
+      templateId: `legacy-basic-${track.id}`,
+      name: "Licencia estándar",
+      isPopular: false,
+      priceAmount: basic,
+      currency: safeCurrency,
+      formats: ["MP3"],
+      summaryItems: [
+        { label: "Uso", value: "Distribución digital base" },
+        { label: "Fuente", value: "Fallback legacy" },
+      ],
+      termRows: [
+        { label: "MP3", value: "Incluido" },
+        { label: "WAV", value: "No incluido" },
+      ],
+      agreementText: buildDefaultAgreement("Licencia estándar"),
+      notes: null,
+      source: "legacy-fallback",
+      sortOrder: 1,
+    },
+    {
+      id: `legacy-premium-${track.id}`,
+      templateId: `legacy-premium-${track.id}`,
+      name: "Licencia ampliada",
+      isPopular: true,
+      priceAmount: premium,
+      currency: safeCurrency,
+      formats: ["MP3", "WAV"],
+      summaryItems: [
+        { label: "Uso", value: "Mayor alcance comercial" },
+        { label: "Fuente", value: "Fallback legacy" },
+      ],
+      termRows: [
+        { label: "MP3", value: "Incluido" },
+        { label: "WAV", value: "Incluido" },
+      ],
+      agreementText: buildDefaultAgreement("Licencia ampliada"),
+      notes: track.pricingTier ? `Tier: ${track.pricingTier}` : null,
+      source: "legacy-fallback",
+      sortOrder: 2,
+    },
+    {
+      id: `legacy-exclusive-${track.id}`,
+      templateId: `legacy-exclusive-${track.id}`,
+      name: "Licencia exclusiva",
+      isPopular: false,
+      priceAmount: exclusive,
+      currency: safeCurrency,
+      formats: ["MP3", "WAV", "STEMS"],
+      summaryItems: [
+        { label: "Uso", value: "Asignación exclusiva del track" },
+        { label: "Tipo", value: formatLicenseType(track.licenseType) },
+      ],
+      termRows: [
+        { label: "MP3", value: "Incluido" },
+        { label: "WAV", value: "Incluido" },
+        { label: "Trackouts", value: "Incluido" },
+      ],
+      agreementText: buildDefaultAgreement("Licencia exclusiva"),
+      notes: null,
+      source: "legacy-fallback",
+      sortOrder: 3,
+    },
+  ];
+
+  const normalizedType = (track.licenseType ?? "").toUpperCase();
+  if (normalizedType === "EXCLUSIVE" || normalizedType === "BUYOUT") {
+    return [items[2]!];
+  }
+  if (normalizedType === "NON_EXCLUSIVE") {
+    return [items[0]!, items[1]!];
+  }
+  return items;
+}
+
+export default async function TrackPublicPage({ params }: PageProps) {
+  const { id } = await params;
+
+  let track: TrackWithLicenses | null = null;
+  try {
+    const row = await db.track.findUnique({
+      where: { id },
+      select: {
+        ...trackBaseSelect,
+        licenseAssignments: {
+          select: trackLicenseAssignmentSelect,
+          orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+        },
+      },
+    });
+    track = row as TrackWithLicenses | null;
+  } catch (error) {
+    if (!isMissingTrackLicenseAssignmentTable(error)) {
+      throw error;
+    }
+    console.warn(
+      "[track-page] TrackLicenseAssignment table missing in DB. Falling back to legacy license rendering.",
+    );
+    const legacyRow = await db.track.findUnique({
+      where: { id },
+      select: trackBaseSelect,
+    });
+    track = legacyRow ? ({ ...legacyRow, licenseAssignments: [] } as TrackWithLicenses) : null;
+  }
+
+  if (!track) notFound();
+
+  const trackTags = (track.tags ?? []).map((tt) => tt.tag).filter(Boolean);
+  const moodTags = trackTags.filter((tag) => tag.type === "MOOD");
+  const useTags = trackTags.filter((tag) => tag.type === "USE");
+
+  const moods = normalizeStrings(moodTags.map((tag) => tag.name), 10);
+  const uses = normalizeStrings(useTags.map((tag) => tag.name), 10);
+  const genres = normalizeStrings(track.genres ?? [], 6);
+
+  const audioSrc = publicAudioUrl({ assetKey: track.assetKey, audioUrl: track.audioUrl });
+  const primaryGenre = genres[0] ?? "—";
+  const coverUrl = resolveCover(track.coverUrl, track.id);
+  const subgenreLabel = normalizeStrings(track.subgenres ?? [], 4).join(" · ") || "—";
+  const restrictionTags = normalizeStrings(track.restrictions ?? [], 10);
+  const updatedLabel = formatUpdated(track.updatedAt);
+
+  const assignedLicenses: TrackLicenseViewModel[] = track.licenseAssignments
+    .filter((assignment) => assignment.isEnabled && assignment.licenseTemplate.status === "ACTIVE")
+    .map((assignment) => {
+      const template = assignment.licenseTemplate;
+      const summaryItems = normalizeSummaryItems(
+        assignment.summaryOverrideJson ?? template.summaryJson,
+      );
+      const termRows = normalizeTermRows(
+        assignment.termsOverrideJson ?? template.termsMatrixJson,
+      );
+      const agreementText =
+        assignment.agreementOverrideText?.trim() ||
+        template.agreementText?.trim() ||
+        buildDefaultAgreement(template.name);
+
+      const currency = template.currency === "CLP" || template.currency === "EUR" ? template.currency : "USD";
+
+      return {
+        id: assignment.id,
+        templateId: template.id,
+        name: template.name,
+        isPopular: template.isPopular,
+        priceAmount: assignment.priceOverride ?? template.priceAmount ?? null,
+        currency,
+        formats: normalizeStrings(template.formats ?? [], 8),
+        summaryItems,
+        termRows,
+        agreementText,
+        notes: template.notes,
+        source: "assignment",
+        sortOrder: assignment.sortOrder,
+      } satisfies TrackLicenseViewModel;
+    })
+    .slice(0, 6);
+
+  let fallbackLicenses: TrackLicenseViewModel[] = [];
+  if (assignedLicenses.length === 0) {
+    const ownerTemplates = track.ownerUserId
+      ? await db.licenseTemplate.findMany({
+          where: {
+            ownerUserId: track.ownerUserId,
+            status: "ACTIVE",
+          },
+          orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+          take: 6,
+        })
+      : [];
+
+    const globalTemplates = await db.licenseTemplate.findMany({
+      where: {
+        ownerUserId: null,
+        status: "ACTIVE",
+      },
+      orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+      take: 6,
+    });
+
+    const templateMap = new Map<string, (typeof ownerTemplates)[number]>();
+    for (const template of ownerTemplates) templateMap.set(template.id, template);
+    for (const template of globalTemplates) {
+      if (!templateMap.has(template.id)) templateMap.set(template.id, template);
+    }
+
+    const merged = Array.from(templateMap.values()).slice(0, 6);
+    fallbackLicenses = merged.map((template, index) => {
+      const summaryItems = normalizeSummaryItems(template.summaryJson);
+      const termRows = normalizeTermRows(template.termsMatrixJson);
+      const agreementText =
+        template.agreementText?.trim() || buildDefaultAgreement(template.name);
+      const currency = template.currency === "CLP" || template.currency === "EUR" ? template.currency : "USD";
+
+      return {
+        id: `fallback-${template.id}`,
+        templateId: template.id,
+        name: template.name,
+        isPopular: template.isPopular,
+        priceAmount: template.priceAmount ?? null,
+        currency,
+        formats: normalizeStrings(template.formats ?? [], 8),
+        summaryItems,
+        termRows,
+        agreementText,
+        notes: template.notes,
+        source: template.ownerUserId ? "owner-fallback" : "global-fallback",
+        sortOrder: template.sortOrder ?? index,
+      } satisfies TrackLicenseViewModel;
+    });
+  }
+
+  const licenseCards =
+    assignedLicenses.length > 0
+      ? assignedLicenses
+      : fallbackLicenses.length > 0
+        ? fallbackLicenses
+        : deriveLegacyFallbackLicenses(track);
+
+  const similarWhere: Prisma.TrackWhereInput = moodTags.length
+    ? {
+        AND: [
+          { id: { not: track.id } },
+          {
+            tags: {
+              some: {
+                tag: {
+                  slug: { in: moodTags.map((tag) => tag.slug).slice(0, 2) },
+                },
+              },
+            },
+          },
+        ],
+      }
+    : { id: { not: track.id } };
+
+  let similarTracks = await db.track.findMany({
+    where: similarWhere,
+    orderBy: { updatedAt: "desc" },
+    take: 8,
     select: {
       id: true,
       title: true,
       artist: true,
       coverUrl: true,
+      audioUrl: true,
       durationSec: true,
       bpm: true,
       key: true,
-      trackType: true,
-      genres: true,
-      subgenres: true,
-      assetKey: true,
-      audioUrl: true,
       waveform: true,
-      restrictions: true,
-      master: true,
-      isrc: true,
-      iswc: true,
+      tags: {
+        select: {
+          tag: {
+            select: {
+              type: true,
+              name: true,
+            },
+          },
+        },
+      },
+      genres: true,
       licenseType: true,
-      oneStop: true,
-      clearedForSync: true,
-      exclusiveTerritories: true,
-      exclusiveTermMonths: true,
-      restrictedTerritories: true,
-      restrictedIndustries: true,
-      restrictedPlatforms: true,
-      restrictedBrands: true,
-      mediaBuy: true,
       pricingTier: true,
       budgetMin: true,
       budgetMax: true,
       budgetCurrency: true,
-      publishingSplit: true,
-      publishingShares: {
-        select: {
-          role: true,
-          name: true,
-          sharePct: true,
-          ipiNumber: true,
-          pro: true,
-          caeNumber: true,
-        },
-      },
-      versions: {
-        select: {
-          label: true,
-          durationSec: true,
-          kind: true,
-          sortOrder: true,
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-      stems: {
-        select: {
-          name: true,
-          group: true,
-          sortOrder: true,
-        },
-        orderBy: { sortOrder: "asc" },
-      },
-      updatedAt: true,
-      tags: {
-        select: {
-          tag: {
-            select: { slug: true, type: true, name: true },
+      clearedForSync: true,
+    },
+  });
+
+  if (similarTracks.length < 4) {
+    const fallback = await db.track.findMany({
+      where: { id: { not: track.id } },
+      orderBy: { updatedAt: "desc" },
+      take: 8,
+      select: {
+        id: true,
+        title: true,
+        artist: true,
+        coverUrl: true,
+        audioUrl: true,
+        durationSec: true,
+        bpm: true,
+        key: true,
+        waveform: true,
+        tags: {
+          select: {
+            tag: {
+              select: {
+                type: true,
+                name: true,
+              },
+            },
           },
         },
+        genres: true,
+        licenseType: true,
+        pricingTier: true,
+        budgetMin: true,
+        budgetMax: true,
+        budgetCurrency: true,
+        clearedForSync: true,
       },
-    },
-  });
-  if (!track) notFound();
-
-  const moods = (track.tags ?? [])
-    .filter((tt) => tt.tag?.type === "MOOD")
-    .map((tt) => ({ name: tt.tag!.name, slug: tt.tag!.slug }))
-    .filter((t) => t.name && t.slug);
-  const uses = (track.tags ?? [])
-    .filter((tt) => tt.tag?.type === "USE")
-    .map((tt) => ({ name: tt.tag!.name, slug: tt.tag!.slug }))
-    .filter((t) => t.name && t.slug);
-
-  // 2) Preparar src público + waveform en base64 para el canvas
-  const src = publicAudioUrl({
-    assetKey: track.assetKey,
-    audioUrl: track.audioUrl,
-  });
-  const waveformB64 = bytesToBase64(track.waveform as unknown as Buffer | null);
-
-  // 3) Similar por mood + tag de catálogo (si aplica); fallback recientes
-  const catalogSlugs =
-    track.tags
-      ?.map((t: any) => (t.tag?.type === "CATALOG" ? t.tag.slug : null))
-      .filter(Boolean) ?? [];
-
-  const baseSelect = {
-    id: true,
-    title: true,
-    artist: true,
-    loudnessLufs: true,
-    durationSec: true,
-    bpm: true,
-    key: true,
-    audioUrl: true,
-    waveform: true,
-    tags: {
-      select: {
-        tag: { select: { name: true, slug: true, type: true } },
-      },
-    },
-  };
-
-  const makeWhere = (useMood: boolean) => {
-    const clauses: any[] = [{ id: { not: track.id } }];
-    if (useMood && moods.length) {
-      clauses.push({
-        tags: {
-          some: { tag: { type: "MOOD", slug: moods[0]?.slug } },
-        },
-      });
-    }
-    if (catalogSlugs.length) {
-      clauses.push({
-        tags: {
-          some: { tag: { slug: { in: catalogSlugs }, type: "CATALOG" } },
-        },
-      });
-    }
-    return clauses.length ? { AND: clauses } : undefined;
-  };
-
-  let similar = await db.track.findMany({
-    where: makeWhere(true),
-    orderBy: { updatedAt: "desc" },
-    take: 6,
-    select: baseSelect,
-  });
-  if (!similar.length) {
-    similar = await db.track.findMany({
-      where: makeWhere(false),
-      orderBy: { updatedAt: "desc" },
-      take: 6,
-      select: baseSelect,
     });
+
+    const map = new Map(similarTracks.map((item) => [item.id, item]));
+    for (const item of fallback) {
+      if (!map.has(item.id)) map.set(item.id, item);
+    }
+    similarTracks = Array.from(map.values()).slice(0, 8);
   }
 
-  const similarCatalogTracks = similar.map((s: any) => ({
-    id: s.id,
-    title: s.title ?? "Sin título",
-    artist: s.artist ?? "Artista desconocido",
-    moods: moods.map((m) => m.name),
-    uses: uses.map((u) => u.name),
-    bpm: s.bpm ?? undefined,
-    key: s.key ?? undefined,
-    audioUrl: s.audioUrl,
-    durationSec: s.durationSec ?? null,
-    duration: fmtDuration(s.durationSec ?? 0),
-    waveformB64: bytesToBase64(s.waveform as any),
-  }));
+  const similarCatalogTracks: SimilarTrack[] = similarTracks.map((item) => {
+    const itemTags = (item.tags ?? []).map((tt) => tt.tag).filter(Boolean);
+    const itemMoods = normalizeStrings(
+      itemTags.filter((tag) => tag.type === "MOOD").map((tag) => tag.name),
+      6,
+    );
+    const itemUses = normalizeStrings(
+      itemTags.filter((tag) => tag.type === "USE").map((tag) => tag.name),
+      6,
+    );
 
-  const activeCatalogSlug = pickCatalogSlug(
-    catParam ?? catalogParam,
-    track.tags?.map((t: any) => ({
-      slug: t.tag?.slug,
-      type: t.tag?.type,
-    })),
-  );
-
-  const backHref = catParam
-    ? `/catalog?cat=${encodeURIComponent(catParam)}`
-    : activeCatalogSlug
-      ? "/catalog"
-      : "/catalog";
-  const backLabel = "Catálogo";
-  const canonicalPath = `/track/${id}`;
-  const canonicalUrl = `${baseUrl()}${canonicalPath}`;
-
-  const publishingSummary = formatPublishing(
-    track.publishingShares as PublishingShare[] | null | undefined,
-    track.publishingSplit,
-  );
-
-  const writerShare =
-    track.publishingShares?.find((share) => share.role === "WRITER") ?? null;
-  const publisherShare =
-    track.publishingShares?.find((share) => share.role === "PUBLISHER") ?? null;
-
-  const writerDetails = formatPublishingDetails(writerShare);
-  const publisherDetails = formatPublishingDetails(publisherShare);
-
-  const versionLabels = formatVersions(track.versions);
-  const versionDetailLabels = (track.versions ?? [])
-    .map((version) => formatVersionDetail(version))
-    .filter((value): value is string => Boolean(value));
-  const stemLabels = (track.stems ?? [])
-    .map((stem) => formatStemDetail(stem))
-    .filter((value): value is string => Boolean(value));
-  const budgetLabel = formatBudgetRange(
-    track.budgetMin,
-    track.budgetMax,
-    track.budgetCurrency,
-  );
-
-  const detailSections: TrackHeroDetailSection[] = [
-    {
-      id: "sync",
-      label: "Metadata sync",
-      hint: "Musical y clasificación",
-      columns: [
-        [
-          {
-            label: "BPM",
-            value:
-              track.bpm != null ? String(Math.round(track.bpm)) : null,
-          },
-          { label: "Tonalidad", value: formatText(track.key) },
-          {
-            label: "Tipo de track",
-            value: formatTrackType(track.trackType),
-          },
-          { label: "Genero", value: formatList(track.genres) },
-          { label: "Subgenero", value: formatList(track.subgenres) },
-        ],
-        [
-          { label: "One-stop", value: formatBooleanFlag(track.oneStop) },
-          {
-            label: "Cleared para sync",
-            value: formatBooleanFlag(track.clearedForSync),
-          },
-          {
-            label: "Tipo de licencia",
-            value: formatLicenseType(track.licenseType),
-          },
-          {
-            label: "Territorios permitidos",
-            value: formatList(track.exclusiveTerritories),
-          },
-          {
-            label: "Plazo (meses)",
-            value: formatTermMonths(track.exclusiveTermMonths),
-          },
-        ],
-      ],
-    },
-    {
-      id: "restrictions",
-      label: "Restricciones y pricing",
-      hint: "Alcance y condiciones",
-      columns: [
-        [
-          {
-            label: "Territorios restringidos",
-            value: formatList(track.restrictedTerritories),
-          },
-          {
-            label: "Industrias restringidas",
-            value: formatList(track.restrictedIndustries, " · "),
-          },
-          {
-            label: "Plataformas restringidas",
-            value: formatList(track.restrictedPlatforms, " · "),
-          },
-          {
-            label: "Marcas restringidas",
-            value: formatList(track.restrictedBrands, " · "),
-          },
-          { label: "Media buy", value: formatText(track.mediaBuy) },
-          {
-            label: "Restricciones",
-            value: formatList(track.restrictions, " · "),
-          },
-        ],
-        [
-          {
-            label: "Pricing tier",
-            value: formatPricingTier(track.pricingTier),
-          },
-          { label: "Presupuesto", value: budgetLabel },
-        ],
-      ],
-    },
-    {
-      id: "rights",
-      label: "Derechos y autores",
-      hint: "Licencias e IDs",
-      columns: [
-        [
-          { label: "Master", value: formatText(track.master) },
-          { label: "Publishing", value: publishingSummary },
-          { label: "ISRC", value: formatText(track.isrc) },
-          { label: "ISWC", value: formatText(track.iswc) },
-        ],
-        [
-          { label: "Autor", value: writerDetails },
-          { label: "Publisher", value: publisherDetails },
-        ],
-      ],
-    },
-  ];
+    return {
+      id: item.id,
+      title: item.title,
+      artist: item.artist,
+      moods: itemMoods,
+      uses: itemUses,
+      genres: normalizeStrings(item.genres ?? [], 4),
+      bpm: typeof item.bpm === "number" ? item.bpm : undefined,
+      key: item.key ?? undefined,
+      audioUrl: item.audioUrl,
+      coverUrl: item.coverUrl,
+      durationSec: item.durationSec,
+      duration: formatDuration(item.durationSec),
+      waveformB64: bytesToBase64(item.waveform as unknown as Buffer | null),
+      licenseType: item.licenseType,
+      pricingTier: item.pricingTier,
+      budgetMin: item.budgetMin,
+      budgetMax: item.budgetMax,
+      budgetCurrency: item.budgetCurrency,
+      clearedForSync: item.clearedForSync,
+    };
+  });
 
   return (
     <div className="bg-background text-foreground">
-      <Head>
-        <link rel="canonical" href={canonicalUrl} />
-      </Head>
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 pb-16 pt-10">
-        {/* Header minimal */}
-        <header className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+      <div className="mx-auto w-[90vw] max-w-[1700px] pb-20 pt-3 sm:pt-4">
+        <header className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
           <Link
-            href={backHref}
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
+            href="/catalog"
+            className="inline-flex items-center gap-1.5 rounded border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-foreground/70 hover:text-foreground"
           >
-            ← {backLabel}
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Volver al catálogo
           </Link>
-          <span aria-label="Última actualización">{formatUpdated(track.updatedAt)}</span>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              ODR Records · actualizado {updatedLabel}
+            </span>
+            <CopyLinkButton />
+          </div>
         </header>
 
-        <TrackHero
-          track={{
-            id: track.id,
-            title: track.title,
-            artist: track.artist,
-            durationSec: track.durationSec,
-            moods: moods.map((m) => m.name),
-            uses: uses.map((u) => u.name),
-            restrictions: track.restrictions,
-            bpm: track.bpm ?? null,
-            key: track.key ?? null,
-            versions: versionLabels.length ? versionLabels : null,
-          }}
-          coverUrl={track.coverUrl}
-          audioSrc={src}
-          waveformB64={waveformB64}
-          detailSections={detailSections}
-        />
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_350px] xl:items-start">
+          <div className="space-y-3">
+            <article className="relative overflow-hidden rounded-md border border-border bg-card/30">
+              <img
+                src={coverUrl}
+                alt={`Cover de ${track.title}`}
+                className="h-[260px] w-full object-cover sm:h-[320px] lg:h-[380px]"
+              />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
+                  ODR Records · Track licensing
+                </p>
+                <h1 className="mt-1 text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                  {track.title}
+                </h1>
+                <p className="mt-1 text-sm text-white/85 sm:text-base">{track.artist || "Artista"}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
+                    BPM {track.bpm ? Math.round(track.bpm) : "—"}
+                  </span>
+                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
+                    Key {track.key || "—"}
+                  </span>
+                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
+                    {formatDuration(track.durationSec)}
+                  </span>
+                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
+                    {primaryGenre}
+                  </span>
+                </div>
+              </div>
+            </article>
 
-        <section className="rounded-[2px] border border-border bg-card p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-medium leading-tight">Entregables</h2>
-            <span className="text-xs text-muted-foreground">
-              Versiones y stems
-            </span>
-          </div>
-          <div className="mt-3 grid gap-4 md:grid-cols-2">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Versiones
-              </p>
-              <div className="mt-2">
-                {versionDetailLabels.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {versionDetailLabels.map((label, index) => (
-                      <Pill key={`version-${index}`}>{label}</Pill>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">—</span>
-                )}
-              </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <TrackLicensesDialog
+                trackTitle={track.title}
+                trackArtist={track.artist}
+                licenses={licenseCards}
+              />
+              <TrackDeliverablesDialog
+                trackTitle={track.title}
+                trackArtist={track.artist}
+                versions={track.versions}
+                stems={track.stems}
+              />
             </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                Stems / trackouts
-              </p>
-              <div className="mt-2">
-                {stemLabels.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {stemLabels.map((label, index) => (
-                      <Pill key={`stem-${index}`}>{label}</Pill>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">—</span>
-                )}
-              </div>
-            </div>
+
+            <TrackSimpleAudioPlayer
+              trackId={track.id}
+              title={track.title}
+              artist={track.artist}
+              src={audioSrc}
+              coverUrl={coverUrl}
+              durationSec={track.durationSec}
+            />
           </div>
+
+          <aside className="space-y-3 xl:sticky xl:top-[calc(var(--header-h)+0.75rem)]">
+            <section className="rounded-md border border-border bg-card/35 p-3">
+              <h2 className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
+                <SlidersHorizontal className="h-4 w-4" />
+                Snapshot del beat
+              </h2>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                <dt className="text-muted-foreground">BPM</dt>
+                <dd className="text-right font-semibold text-foreground">
+                  {track.bpm ? Math.round(track.bpm) : "—"}
+                </dd>
+                <dt className="text-muted-foreground">Tonalidad</dt>
+                <dd className="text-right font-semibold text-foreground">{track.key || "—"}</dd>
+                <dt className="text-muted-foreground">Duración</dt>
+                <dd className="text-right font-semibold text-foreground">{formatDuration(track.durationSec)}</dd>
+                <dt className="text-muted-foreground">Estado sync</dt>
+                <dd className="text-right font-semibold text-foreground">
+                  {track.clearedForSync === false ? "Bajo revisión" : "Disponible"}
+                </dd>
+                <dt className="text-muted-foreground">One-stop</dt>
+                <dd className="text-right font-semibold text-foreground">
+                  {track.oneStop === true ? "Sí" : track.oneStop === false ? "No" : "—"}
+                </dd>
+                <dt className="text-muted-foreground">MFN</dt>
+                <dd className="text-right font-semibold text-foreground">
+                  {track.mfn === true ? "Sí" : track.mfn === false ? "No" : "—"}
+                </dd>
+              </dl>
+            </section>
+
+            <section className="rounded-md border border-border bg-card/35 p-3">
+              <h2 className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
+                <ShieldCheck className="h-4 w-4" />
+                Perfil creativo
+              </h2>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                <dt className="text-muted-foreground">Género</dt>
+                <dd className="text-right font-semibold text-foreground">{primaryGenre}</dd>
+                <dt className="text-muted-foreground">Subgénero</dt>
+                <dd className="truncate text-right font-semibold text-foreground">{subgenreLabel}</dd>
+              </dl>
+              <div className="mt-2.5 grid gap-2">
+                <div>
+                  <p className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Moods</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {moods.length > 0 ? (
+                      moods.map((mood) => (
+                        <span
+                          key={mood}
+                          className={`rounded-full border px-2 py-0.5 text-xs font-medium ${getBadgeTone("mood")}`}
+                        >
+                          {mood}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Sin moods</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Usos</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {uses.length > 0 ? (
+                      uses.map((use) => (
+                        <span
+                          key={use}
+                          className={`rounded-full border px-2 py-0.5 text-xs font-medium ${getBadgeTone("use")}`}
+                        >
+                          {use}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Sin usos</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-md border border-border bg-card/35 p-3">
+              <h2 className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
+                <ShieldCheck className="h-4 w-4" />
+                Cumplimiento y restricciones
+              </h2>
+              <div className="mt-2 space-y-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Restricciones</p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {restrictionTags.length > 0 ? (
+                      restrictionTags.map((restriction) => (
+                        <span
+                          key={restriction}
+                          className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-foreground"
+                        >
+                          {restriction}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Sin restricciones registradas</span>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <div className="rounded border border-border bg-background/70 p-2">
+                    <p className="font-semibold text-foreground">Territorios exclusivos</p>
+                    <p className="mt-0.5 line-clamp-3">
+                      {normalizeStrings(track.exclusiveTerritories, 6).join(", ") || "—"}
+                    </p>
+                  </div>
+                  <div className="rounded border border-border bg-background/70 p-2">
+                    <p className="font-semibold text-foreground">Territorios restringidos</p>
+                    <p className="mt-0.5 line-clamp-3">
+                      {normalizeStrings(track.restrictedTerritories, 6).join(", ") || "—"}
+                    </p>
+                  </div>
+                  <div className="rounded border border-border bg-background/70 p-2">
+                    <p className="font-semibold text-foreground">Industrias restringidas</p>
+                    <p className="mt-0.5 line-clamp-3">
+                      {normalizeStrings(track.restrictedIndustries, 6).join(", ") || "—"}
+                    </p>
+                  </div>
+                  <div className="rounded border border-border bg-background/70 p-2">
+                    <p className="font-semibold text-foreground">Plataformas/Marcas</p>
+                    <p className="mt-0.5 line-clamp-3">
+                      {[
+                        ...normalizeStrings(track.restrictedPlatforms, 3),
+                        ...normalizeStrings(track.restrictedBrands, 3),
+                      ].join(", ") || "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-md border border-border bg-card/35 p-3">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
+                Licencias
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Este track tiene {licenseCards.length} opción{licenseCards.length === 1 ? "" : "es"} de licencia.
+              </p>
+              <div className="mt-2 space-y-1">
+                {licenseCards.slice(0, 3).map((license) => (
+                  <div
+                    key={license.id}
+                    className="flex items-center justify-between gap-2 rounded border border-border bg-background/70 px-2 py-1.5"
+                  >
+                    <p className="truncate text-xs font-medium text-foreground">{license.name}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {formatCurrencyAmount(license.priceAmount, license.currency) ?? "A cotizar"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3">
+                <TrackLicensesDialog
+                  trackTitle={track.title}
+                  trackArtist={track.artist}
+                  licenses={licenseCards}
+                />
+              </div>
+            </section>
+          </aside>
         </section>
 
-        <section className="rounded-[2px] border border-border bg-card p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-medium leading-tight">Piezas similares</h2>
-            <span className="text-xs text-muted-foreground">
-              {moods.length ? `Mood · ${moods[0]?.name}` : "Recientes"}
-            </span>
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-foreground/95">
+              Más beats para explorar
+            </h2>
+            <Link
+              href="/catalog"
+              className="text-xs font-semibold text-muted-foreground underline-offset-4 transition hover:text-foreground hover:underline"
+            >
+              Ver catálogo completo
+            </Link>
           </div>
-          {similarCatalogTracks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay sugerencias por ahora.</p>
-          ) : (
+
+          {similarCatalogTracks.length > 0 ? (
             <CatalogClient
               tracks={similarCatalogTracks}
               hideHeader
-              compact
-              catalogSlug={activeCatalogSlug ?? undefined}
-              title="Piezas similares"
+              embedded
+              showDetailPanel
+              showFilteringControls
+              title="Más beats"
               subtitle=""
               eyebrow=""
             />
+          ) : (
+            <p className="text-sm text-muted-foreground">No encontramos beats similares por ahora.</p>
           )}
         </section>
       </div>
