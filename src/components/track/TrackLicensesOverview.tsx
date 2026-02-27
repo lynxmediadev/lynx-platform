@@ -112,7 +112,7 @@ export default function TrackLicensesOverview({ licenses }: Props) {
           <div className="rounded border border-border bg-background/70">
             <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
               <p className="truncate text-sm font-semibold text-foreground">{selected?.name || "Licencia"}</p>
-              <span className="rounded border border-border bg-card/80 px-2 py-0.5 text-sm font-semibold text-foreground">
+              <span className="rounded border border-border bg-card/80 px-2 py-0.5 text-xs font-semibold text-foreground">
                 {selectedPrice}
               </span>
             </div>
@@ -120,7 +120,7 @@ export default function TrackLicensesOverview({ licenses }: Props) {
               {selectedFormats}
             </div>
 
-            <div className="grid border-t border-border sm:grid-cols-2">
+            <div className="grid auto-rows-fr gap-1.5 border-t border-border p-1.5 sm:grid-cols-2">
               {snapshotRows.map((row, index) => {
                 const Icon = iconForCondition(row.label);
                 return (
@@ -129,10 +129,7 @@ export default function TrackLicensesOverview({ licenses }: Props) {
                     icon={Icon}
                     label={row.label}
                     value={row.value}
-                    className={cn(
-                      "flex items-center gap-2 border-b border-border/70 px-3 py-2",
-                      index % 2 === 1 ? "sm:border-l sm:border-border/70" : "",
-                    )}
+                    className="h-full justify-between rounded border border-border/70 bg-background/80 px-3 py-2.5"
                   />
                 );
               })}

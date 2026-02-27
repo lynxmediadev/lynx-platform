@@ -40,8 +40,13 @@ export function InfoChip({
   iconClassName,
 }: InfoChipProps) {
   return (
-    <article className={cn("flex items-center gap-2", className)}>
-      <div className="min-w-0 flex items-center gap-2">
+    <article
+      className={cn(
+        "flex flex-col items-center gap-0.5 text-center hover:bg-muted/25",
+        className,
+      )}
+    >
+      <div className="min-w-0 flex items-center justify-center gap-2">
         {icon ? (
           <span
             className={cn(
@@ -54,14 +59,14 @@ export function InfoChip({
         ) : null}
         <p
           className={cn(
-            "min-w-0 truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground",
+            "min-w-0 truncate text-[10px] uppercase tracking-[0.12em] leading-tight text-muted-foreground",
             labelClassName,
           )}
         >
           {label}
         </p>
       </div>
-      <p className={cn("ml-auto min-w-0 truncate text-right text-xs font-semibold text-foreground", valueClassName)}>
+      <p className={cn("min-w-0 truncate text-center text-xs font-semibold leading-tight text-foreground", valueClassName)}>
         {value}
       </p>
     </article>
