@@ -119,14 +119,14 @@ export default function TrackSimpleAudioPlayer({
   };
 
   return (
-    <div className={cn("rounded-md border border-border bg-card/50 p-3", className)}>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
+    <div className={cn("rounded-md border border-border bg-card/50 p-2", className)}>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
         <button
           type="button"
           onClick={handleTogglePlay}
           disabled={isDisabled}
           className={cn(
-            "flex h-11 w-11 items-center justify-center rounded-full border transition",
+            "flex h-9 w-9 items-center justify-center rounded-full border transition",
             isDisabled
               ? "cursor-not-allowed border-border text-muted-foreground"
               : isPlaying
@@ -135,10 +135,10 @@ export default function TrackSimpleAudioPlayer({
           )}
           aria-label={isPlaying ? "Pausar" : "Reproducir"}
         >
-          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
+          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
         </button>
 
-        <div className="min-w-0 space-y-1">
+        <div className="min-w-0 space-y-0.5">
           <input
             type="range"
             min={0}
@@ -146,10 +146,10 @@ export default function TrackSimpleAudioPlayer({
             value={Math.round(ratio * 1000)}
             disabled={isDisabled || safeDuration <= 0}
             onChange={(event) => onSeek(Number(event.target.value) / 1000)}
-            className="h-2 w-full cursor-pointer accent-foreground"
+            className="h-1.5 w-full cursor-pointer accent-foreground"
             aria-label="Barra de progreso de audio"
           />
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>{formatTime(localCurrentSec)}</span>
             <span>{formatTime(safeDuration)}</span>
           </div>

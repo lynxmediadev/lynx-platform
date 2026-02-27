@@ -11,6 +11,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { buildDummyBeatLeaseContract } from "@/lib/licenses/dummy-beat-lease-contract";
+import {
+  getLicenseMapRows,
+  getLicenseSummaryConditions,
+  toSummaryItems,
+} from "@/lib/licenses/license-view";
 import type { TrackLicenseDialogTab, TrackLicenseViewModel } from "@/lib/licenses/types";
 
 type Props = {
@@ -50,6 +56,21 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
 
   const selectedLicense =
     licenses.find((license) => license.id === selectedLicenseId) ?? licenses[0] ?? null;
+  const summaryRows = selectedLicense
+    ? toSummaryItems(getLicenseSummaryConditions(selectedLicense))
+    : [];
+  const mapRows = selectedLicense ? getLicenseMapRows(selectedLicense) : [];
+  const agreementText = selectedLicense
+    ? selectedLicense.agreementText?.trim() ||
+      buildDummyBeatLeaseContract({
+        licenseName: selectedLicense.name,
+        beatTitle: trackTitle,
+        producerName: "ODR Records",
+        artistName: trackArtist || "Artista",
+        priceLabel: formatCurrency(selectedLicense.priceAmount, selectedLicense.currency),
+        currencyLabel: selectedLicense.currency,
+      })
+    : "";
 
   return (
     <Dialog>
@@ -58,7 +79,7 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
           type="button"
           className="inline-flex h-10 items-center justify-center rounded border border-foreground bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90"
         >
-          Ver licencias
+          Ver Licencias
         </button>
       </DialogTrigger>
 
@@ -132,9 +153,9 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
               <TabsContent value="summary" className="mt-3 space-y-2">
                 {selectedLicense ? (
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {selectedLicense.summaryItems.length > 0 ? (
-                      selectedLicense.summaryItems.map((row) => (
-                        <article key={`${selectedLicense.id}-${row.label}`} className="rounded border border-border bg-background/80 p-2.5">
+                    {summaryRows.length > 0 ? (
+                      summaryRows.map((row, index) => (
+                        <article key={`${selectedLicense.id}-${row.label}-${index}`} className="rounded border border-border bg-background/80 p-2.5">
                           <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                             {row.label}
                           </p>
@@ -150,7 +171,7 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
 
               <TabsContent value="map" className="mt-3">
                 {selectedLicense ? (
-                  selectedLicense.termRows.length > 0 ? (
+                  mapRows.length > 0 ? (
                     <div className="overflow-hidden rounded border border-border">
                       <table className="w-full text-sm">
                         <thead className="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
@@ -160,7 +181,7 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedLicense.termRows.map((row, index) => (
+                          {mapRows.map((row, index) => (
                             <tr
                               key={`${selectedLicense.id}-${row.label}-${index}`}
                               className={index % 2 ? "bg-card/30" : "bg-background/80"}
@@ -182,7 +203,7 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
                 {selectedLicense ? (
                   <div className="max-h-[45vh] overflow-y-auto rounded border border-border bg-background/80 p-3">
                     <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                      {selectedLicense.agreementText || "Sin texto de contrato para esta licencia."}
+                      {agreementText || "Sin texto de contrato para esta licencia."}
                     </pre>
                   </div>
                 ) : null}

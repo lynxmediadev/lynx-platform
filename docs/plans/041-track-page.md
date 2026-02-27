@@ -214,3 +214,20 @@ Rediseñar `/track/[id]` para que el foco comercial principal sea el sistema de 
     - `npm run build` ✅
     - `npm run test` ✅ (con `npm run dev` activo)
   - Estado: `completado`
+
+- 2026-02-27
+  - Fase completada: **Iteración licencias V2 (sección + modal + data)**
+  - Archivos tocados:
+    - `src/app/track/[id]/page.tsx`
+    - `src/components/track/TrackLicensesOverview.tsx`
+    - `src/components/track/TrackLicensesDialog.tsx`
+    - `src/lib/licenses/license-view.ts`
+    - `src/lib/licenses/dummy-beat-lease-contract.ts`
+    - `prisma/seed.ts`
+  - Validación ejecutada:
+    - `npm run db:seed` ✅
+    - `npm run build` ✅
+    - `npm run typecheck` ✅
+    - `npm test` ✅ (con `npm run dev -- --hostname 127.0.0.1 --port 3000` activo)
+    - Verificación DB: 12 tracks, asignaciones entre 2 y 6 por track, 0 fuera de rango, presupuestos en CLP.
+  - Estado: `completado`

@@ -6,7 +6,9 @@ import CatalogClient from "@/app/catalog/CatalogClient";
 import CopyLinkButton from "@/components/public/CopyLinkButton";
 import TrackDeliverablesDialog from "@/components/track/TrackDeliverablesDialog";
 import TrackLicensesDialog from "@/components/track/TrackLicensesDialog";
+import TrackLicensesOverview from "@/components/track/TrackLicensesOverview";
 import TrackSimpleAudioPlayer from "@/components/track/TrackSimpleAudioPlayer";
+import { buildDummyBeatLeaseContract } from "@/lib/licenses/dummy-beat-lease-contract";
 import type {
   LicenseSummaryItem,
   LicenseTermRow,
@@ -153,23 +155,6 @@ function formatUpdated(date: Date): string {
   }).format(date);
 }
 
-function formatCurrencyAmount(
-  amount: number | null | undefined,
-  currency: string | null | undefined,
-): string | null {
-  if (typeof amount !== "number" || !Number.isFinite(amount)) return null;
-  const code = (currency ?? "USD").toUpperCase();
-  try {
-    return new Intl.NumberFormat("es-CL", {
-      style: "currency",
-      currency: code,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${code} ${Math.round(amount)}`;
-  }
-}
-
 function normalizeStrings(values?: string[] | null, limit = 8): string[] {
   if (!Array.isArray(values)) return [];
   return values
@@ -258,14 +243,15 @@ function normalizeTermRows(raw: unknown): LicenseTermRow[] {
     .slice(0, 160);
 }
 
-function buildDefaultAgreement(name: string) {
-  return [
-    `${name}`,
-    "",
-    "1. Licencia sujeta a aprobación y pago correspondiente.",
-    "2. El productor conserva la titularidad del master y publishing.",
-    "3. El uso del beat debe respetar límites y condiciones pactadas.",
-  ].join("\n");
+function buildDefaultAgreement(name: string, beatTitle: string, artist: string | null) {
+  return buildDummyBeatLeaseContract({
+    licenseName: name,
+    beatTitle,
+    producerName: "ODR Records",
+    artistName: artist || "Artista",
+    priceLabel: "A cotizar",
+    currencyLabel: "CLP",
+  });
 }
 
 function formatLicenseType(value?: string | null) {
@@ -336,7 +322,7 @@ function deriveLegacyFallbackLicenses(track: {
         { label: "MP3", value: "Incluido" },
         { label: "WAV", value: "No incluido" },
       ],
-      agreementText: buildDefaultAgreement("Licencia estándar"),
+      agreementText: buildDefaultAgreement("Licencia estándar", `Track ${track.id}`, "Artista"),
       notes: null,
       source: "legacy-fallback",
       sortOrder: 1,
@@ -357,7 +343,7 @@ function deriveLegacyFallbackLicenses(track: {
         { label: "MP3", value: "Incluido" },
         { label: "WAV", value: "Incluido" },
       ],
-      agreementText: buildDefaultAgreement("Licencia ampliada"),
+      agreementText: buildDefaultAgreement("Licencia ampliada", `Track ${track.id}`, "Artista"),
       notes: track.pricingTier ? `Tier: ${track.pricingTier}` : null,
       source: "legacy-fallback",
       sortOrder: 2,
@@ -379,7 +365,7 @@ function deriveLegacyFallbackLicenses(track: {
         { label: "WAV", value: "Incluido" },
         { label: "Trackouts", value: "Incluido" },
       ],
-      agreementText: buildDefaultAgreement("Licencia exclusiva"),
+      agreementText: buildDefaultAgreement("Licencia exclusiva", `Track ${track.id}`, "Artista"),
       notes: null,
       source: "legacy-fallback",
       sortOrder: 3,
@@ -456,7 +442,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
       const agreementText =
         assignment.agreementOverrideText?.trim() ||
         template.agreementText?.trim() ||
-        buildDefaultAgreement(template.name);
+        buildDefaultAgreement(template.name, track.title, track.artist);
 
       const currency = template.currency === "CLP" || template.currency === "EUR" ? template.currency : "USD";
 
@@ -511,7 +497,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
       const summaryItems = normalizeSummaryItems(template.summaryJson);
       const termRows = normalizeTermRows(template.termsMatrixJson);
       const agreementText =
-        template.agreementText?.trim() || buildDefaultAgreement(template.name);
+        template.agreementText?.trim() || buildDefaultAgreement(template.name, track.title, track.artist);
       const currency = template.currency === "CLP" || template.currency === "EUR" ? template.currency : "USD";
 
       return {
@@ -720,36 +706,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
               </div>
             </article>
 
-            <TrackSimpleAudioPlayer
-              trackId={track.id}
-              title={track.title}
-              artist={track.artist}
-              src={audioSrc}
-              coverUrl={coverUrl}
-              durationSec={track.durationSec}
-            />
-
-            <section className="rounded-md border border-border bg-card/35 p-3 xl:flex-1">
-              <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
-                Licencias
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Este track tiene {licenseCards.length} opción{licenseCards.length === 1 ? "" : "es"} de licencia.
-              </p>
-              <div className="mt-2 space-y-1">
-                {licenseCards.slice(0, 3).map((license) => (
-                  <div
-                    key={license.id}
-                    className="flex items-center justify-between gap-2 rounded border border-border bg-background/70 px-2 py-1.5"
-                  >
-                    <p className="truncate text-xs font-medium text-foreground">{license.name}</p>
-                    <span className="text-xs text-muted-foreground">
-                      {formatCurrencyAmount(license.priceAmount, license.currency) ?? "A cotizar"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <TrackLicensesOverview licenses={licenseCards} />
 
             <div className="grid gap-2 sm:grid-cols-2">
               <TrackLicensesDialog
@@ -795,6 +752,15 @@ export default async function TrackPublicPage({ params }: PageProps) {
                 </dd>
               </dl>
             </section>
+
+            <TrackSimpleAudioPlayer
+              trackId={track.id}
+              title={track.title}
+              artist={track.artist}
+              src={audioSrc}
+              coverUrl={coverUrl}
+              durationSec={track.durationSec}
+            />
 
             <section className="rounded-md border border-border bg-card/35 p-3">
               <h2 className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
