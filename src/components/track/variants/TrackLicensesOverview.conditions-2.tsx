@@ -16,7 +16,6 @@ import {
   formatLicenseAmount,
   getLicenseSnapshotConditions,
 } from "@/lib/licenses/license-view";
-import { InfoChip } from "@/components/ui/info-chip";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -124,16 +123,23 @@ export default function TrackLicensesOverview({ licenses }: Props) {
               {snapshotRows.map((row, index) => {
                 const Icon = iconForCondition(row.label);
                 return (
-                  <InfoChip
+                  <article
                     key={`${row.label}-${index}`}
-                    icon={Icon}
-                    label={row.label}
-                    value={row.value}
                     className={cn(
                       "flex items-center gap-2 border-b border-border/70 px-3 py-2",
                       index % 2 === 1 ? "sm:border-l sm:border-border/70" : "",
                     )}
-                  />
+                  >
+                    <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-card/60 text-muted-foreground">
+                      <Icon className="h-3.5 w-3.5" />
+                    </span>
+                    <p className="min-w-0 truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {row.label}
+                    </p>
+                    <p className="ml-auto min-w-0 truncate text-right text-sm font-semibold text-foreground">
+                      {row.value}
+                    </p>
+                  </article>
                 );
               })}
             </div>

@@ -254,7 +254,7 @@ export default function WaveformScrubber({
     try {
       wfRef.current = b64ToFloat32(waveformB64);
     } catch {
-      wfRef.current = null;
+      wfRef.current = makeFallbackWaveform();
     }
     requestAnimationFrame(() => {
       recompute();

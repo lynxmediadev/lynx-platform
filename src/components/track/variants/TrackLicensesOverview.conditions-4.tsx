@@ -1,4 +1,4 @@
-// Variant snapshot: "conditions 2"
+// Variant snapshot: "conditions 4"
 "use client";
 
 import * as React from "react";
@@ -16,7 +16,6 @@ import {
   formatLicenseAmount,
   getLicenseSnapshotConditions,
 } from "@/lib/licenses/license-view";
-import { InfoChip } from "@/components/ui/info-chip";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -48,7 +47,11 @@ export default function TrackLicensesOverview({ licenses }: Props) {
   }, [licenses, selectedId]);
 
   const selected = licenses.find((license) => license.id === selectedId) ?? licenses[0] ?? null;
-  const snapshotRows = selected ? getLicenseSnapshotConditions(selected) : [];
+  const snapshotRows = selected ? getLicenseSnapshotConditions(selected).slice(0, 8) : [];
+  const conditionRows = Array.from({ length: Math.ceil(snapshotRows.length / 2) }, (_, rowIndex) => ({
+    left: snapshotRows[rowIndex * 2],
+    right: snapshotRows[rowIndex * 2 + 1],
+  }));
   const visibleLicenses = licenses.slice(0, 6);
   const selectedFormats = selected?.formats.join(", ") || "Sin formatos";
   const selectedPrice = selected
@@ -110,30 +113,62 @@ export default function TrackLicensesOverview({ licenses }: Props) {
           </div>
 
           <div className="rounded border border-border bg-background/70">
-            <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-              <p className="truncate text-sm font-semibold text-foreground">{selected?.name || "Licencia"}</p>
-              <span className="rounded border border-border bg-card/80 px-2 py-0.5 text-sm font-semibold text-foreground">
+            <div className="flex items-start justify-between gap-3 border-b border-border px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {selected?.name || "Licencia"}
+                </p>
+                <p className="truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                  {selectedFormats}
+                </p>
+              </div>
+              <span className="shrink-0 rounded border border-border bg-card/80 px-2 py-0.5 text-sm font-semibold text-foreground">
                 {selectedPrice}
               </span>
             </div>
-            <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              {selectedFormats}
-            </div>
-
-            <div className="grid border-t border-border sm:grid-cols-2">
-              {snapshotRows.map((row, index) => {
-                const Icon = iconForCondition(row.label);
+            <div className="grid">
+              {conditionRows.map((row, rowIndex) => {
+                const LeftIcon = row.left ? iconForCondition(row.left.label) : null;
+                const RightIcon = row.right ? iconForCondition(row.right.label) : null;
                 return (
-                  <InfoChip
-                    key={`${row.label}-${index}`}
-                    icon={Icon}
-                    label={row.label}
-                    value={row.value}
+                  <article
+                    key={`condition-row-${rowIndex}`}
                     className={cn(
-                      "flex items-center gap-2 border-b border-border/70 px-3 py-2",
-                      index % 2 === 1 ? "sm:border-l sm:border-border/70" : "",
+                      "grid grid-cols-2",
+                      rowIndex > 0 ? "border-t border-border/65" : "",
                     )}
-                  />
+                  >
+                    <div className="flex items-center justify-between gap-2 px-3 py-2">
+                      {row.left ? (
+                        <>
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border/80 bg-card/55 text-muted-foreground">
+                              {LeftIcon ? <LeftIcon className="h-3 w-3" /> : null}
+                            </span>
+                            <p className="truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                              {row.left.label}
+                            </p>
+                          </div>
+                          <p className="truncate text-xs font-semibold text-foreground">{row.left.value}</p>
+                        </>
+                      ) : null}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 border-l border-border/65 px-3 py-2">
+                      {row.right ? (
+                        <>
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border/80 bg-card/55 text-muted-foreground">
+                              {RightIcon ? <RightIcon className="h-3 w-3" /> : null}
+                            </span>
+                            <p className="truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                              {row.right.label}
+                            </p>
+                          </div>
+                          <p className="truncate text-xs font-semibold text-foreground">{row.right.value}</p>
+                        </>
+                      ) : null}
+                    </div>
+                  </article>
                 );
               })}
             </div>

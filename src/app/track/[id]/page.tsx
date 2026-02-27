@@ -678,18 +678,18 @@ export default async function TrackPublicPage({ params }: PageProps) {
               <img
                 src={coverUrl}
                 alt={`Cover de ${track.title}`}
-                className="h-[170px] w-full object-cover sm:h-[185px] md:h-[205px]"
+                className="h-[155px] w-full object-cover sm:h-[170px] md:h-[190px]"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
-              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+              <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
                   ODR Records · Track licensing
                 </p>
-                <h1 className="mt-1 text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                <h1 className="text-xl font-semibold leading-tight text-white sm:text-2xl">
                   {track.title}
                 </h1>
-                <p className="mt-1 text-sm text-white/85 sm:text-base">{track.artist || "Artista"}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <p className="text-sm text-white/85">{track.artist || "Artista"}</p>
+                <div className="flex flex-wrap gap-1.5">
                   <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
                     BPM {track.bpm ? Math.round(track.bpm) : "—"}
                   </span>
@@ -705,6 +705,15 @@ export default async function TrackPublicPage({ params }: PageProps) {
                 </div>
               </div>
             </article>
+
+            <TrackSimpleAudioPlayer
+              trackId={track.id}
+              title={track.title}
+              artist={track.artist}
+              src={audioSrc}
+              coverUrl={coverUrl}
+              durationSec={track.durationSec}
+            />
 
             <TrackLicensesOverview licenses={licenseCards} />
 
@@ -752,15 +761,6 @@ export default async function TrackPublicPage({ params }: PageProps) {
                 </dd>
               </dl>
             </section>
-
-            <TrackSimpleAudioPlayer
-              trackId={track.id}
-              title={track.title}
-              artist={track.artist}
-              src={audioSrc}
-              coverUrl={coverUrl}
-              durationSec={track.durationSec}
-            />
 
             <section className="rounded-md border border-border bg-card/35 p-3">
               <h2 className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">

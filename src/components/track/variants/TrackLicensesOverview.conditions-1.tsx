@@ -1,4 +1,4 @@
-// Variant snapshot: "conditions 2"
+// Variant snapshot: "conditions 1"
 "use client";
 
 import * as React from "react";
@@ -16,7 +16,6 @@ import {
   formatLicenseAmount,
   getLicenseSnapshotConditions,
 } from "@/lib/licenses/license-view";
-import { InfoChip } from "@/components/ui/info-chip";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -120,20 +119,24 @@ export default function TrackLicensesOverview({ licenses }: Props) {
               {selectedFormats}
             </div>
 
-            <div className="grid border-t border-border sm:grid-cols-2">
+            <div className="grid gap-1.5 border-t border-border p-2 sm:grid-cols-2">
               {snapshotRows.map((row, index) => {
                 const Icon = iconForCondition(row.label);
                 return (
-                  <InfoChip
+                  <article
                     key={`${row.label}-${index}`}
-                    icon={Icon}
-                    label={row.label}
-                    value={row.value}
-                    className={cn(
-                      "flex items-center gap-2 border-b border-border/70 px-3 py-2",
-                      index % 2 === 1 ? "sm:border-l sm:border-border/70" : "",
-                    )}
-                  />
+                    className="rounded border border-border bg-background/70 px-2.5 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded border border-border bg-card/60 text-muted-foreground">
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                        {row.label}
+                      </p>
+                    </div>
+                    <p className="mt-1 pl-7 text-sm font-semibold text-foreground">{row.value}</p>
+                  </article>
                 );
               })}
             </div>

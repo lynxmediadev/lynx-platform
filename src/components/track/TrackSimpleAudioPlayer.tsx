@@ -119,8 +119,8 @@ export default function TrackSimpleAudioPlayer({
   };
 
   return (
-    <div className={cn("rounded-md border border-border bg-card/50 p-2", className)}>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
+    <div className={cn("rounded-none border-0 bg-transparent p-0 shadow-none", className)}>
+      <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-2">
         <button
           type="button"
           onClick={handleTogglePlay}
@@ -138,22 +138,22 @@ export default function TrackSimpleAudioPlayer({
           {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
         </button>
 
-        <div className="min-w-0 space-y-0.5">
-          <input
-            type="range"
-            min={0}
-            max={1000}
-            value={Math.round(ratio * 1000)}
-            disabled={isDisabled || safeDuration <= 0}
-            onChange={(event) => onSeek(Number(event.target.value) / 1000)}
-            className="h-1.5 w-full cursor-pointer accent-foreground"
-            aria-label="Barra de progreso de audio"
-          />
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>{formatTime(localCurrentSec)}</span>
-            <span>{formatTime(safeDuration)}</span>
-          </div>
+        <div className="min-w-[74px] text-center text-[11px] font-medium tabular-nums text-muted-foreground">
+          <span>{formatTime(localCurrentSec)}</span>
+          <span className="mx-1 text-muted-foreground/70">/</span>
+          <span>{formatTime(safeDuration)}</span>
         </div>
+
+        <input
+          type="range"
+          min={0}
+          max={1000}
+          value={Math.round(ratio * 1000)}
+          disabled={isDisabled || safeDuration <= 0}
+          onChange={(event) => onSeek(Number(event.target.value) / 1000)}
+          className="h-1.5 w-full cursor-pointer accent-foreground"
+          aria-label="Barra de progreso de audio"
+        />
       </div>
     </div>
   );

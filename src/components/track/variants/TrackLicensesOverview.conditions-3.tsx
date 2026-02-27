@@ -1,4 +1,4 @@
-// Variant snapshot: "conditions 2"
+// Variant snapshot: "conditions 3"
 "use client";
 
 import * as React from "react";
@@ -16,7 +16,6 @@ import {
   formatLicenseAmount,
   getLicenseSnapshotConditions,
 } from "@/lib/licenses/license-view";
-import { InfoChip } from "@/components/ui/info-chip";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -49,6 +48,8 @@ export default function TrackLicensesOverview({ licenses }: Props) {
 
   const selected = licenses.find((license) => license.id === selectedId) ?? licenses[0] ?? null;
   const snapshotRows = selected ? getLicenseSnapshotConditions(selected) : [];
+  const primaryRows = snapshotRows.slice(0, 4);
+  const secondaryRows = snapshotRows.slice(4);
   const visibleLicenses = licenses.slice(0, 6);
   const selectedFormats = selected?.formats.join(", ") || "Sin formatos";
   const selectedPrice = selected
@@ -120,22 +121,53 @@ export default function TrackLicensesOverview({ licenses }: Props) {
               {selectedFormats}
             </div>
 
-            <div className="grid border-t border-border sm:grid-cols-2">
-              {snapshotRows.map((row, index) => {
-                const Icon = iconForCondition(row.label);
-                return (
-                  <InfoChip
-                    key={`${row.label}-${index}`}
-                    icon={Icon}
-                    label={row.label}
-                    value={row.value}
-                    className={cn(
-                      "flex items-center gap-2 border-b border-border/70 px-3 py-2",
-                      index % 2 === 1 ? "sm:border-l sm:border-border/70" : "",
-                    )}
-                  />
-                );
-              })}
+            <div className="space-y-2 border-t border-border p-2">
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {primaryRows.map((row, index) => {
+                  const Icon = iconForCondition(row.label);
+                  return (
+                    <article
+                      key={`${row.label}-primary-${index}`}
+                      className="rounded border border-border bg-card/55 px-2.5 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-background/70 text-muted-foreground">
+                          <Icon className="h-3.5 w-3.5" />
+                        </span>
+                        <p className="min-w-0 truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                          {row.label}
+                        </p>
+                      </div>
+                      <p className="mt-1.5 pl-7 text-sm font-semibold text-foreground">{row.value}</p>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="rounded border border-border bg-background/50">
+                {secondaryRows.map((row, index) => {
+                  const Icon = iconForCondition(row.label);
+                  return (
+                    <article
+                      key={`${row.label}-secondary-${index}`}
+                      className={cn(
+                        "flex items-center gap-2 px-2.5 py-1.5",
+                        index > 0 ? "border-t border-border/60" : "",
+                      )}
+                    >
+                      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-card/55 text-muted-foreground">
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <p className="min-w-0 truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                        {row.label}
+                      </p>
+                      <p className="ml-auto min-w-0 truncate text-right text-sm font-semibold text-foreground">
+                        {row.value}
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

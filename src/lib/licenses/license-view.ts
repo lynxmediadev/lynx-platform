@@ -54,14 +54,6 @@ export function getLicenseSnapshotConditions(
   const lookup = buildLookup(license);
   return [
     {
-      label: "Precio",
-      value: formatLicenseAmount(license.priceAmount, license.currency),
-    },
-    {
-      label: "Formatos",
-      value: license.formats.join(", ") || "—",
-    },
-    {
       label: "Copias de distribución",
       value: findByKeywords(lookup, ["copias", "distribución", "distribution"]),
     },
