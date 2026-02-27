@@ -4,6 +4,7 @@
 import * as React from "react";
 import {
   AudioLines,
+  ArrowDown,
   Disc3,
   Film,
   Radio,
@@ -56,86 +57,103 @@ export default function TrackLicensesOverview({ licenses }: Props) {
     : "A cotizar";
 
   return (
-    <section className="w-full">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
+    <section className="mt-2 w-full">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-2">
+        <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-foreground">
           Licencias
         </h2>
+        <span aria-hidden className="text-xs text-muted-foreground">
+          ·
+        </span>
         <span className="rounded border border-border bg-background/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          {licenses.length} opción{licenses.length === 1 ? "" : "es"}
+          {licenses.length} {licenses.length === 1 ? "opción" : "opciones"}
         </span>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">Resumen comercial rápido por licencia.</p>
-
       {licenses.length === 0 ? (
         <div className="mt-3 rounded border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground">
           No hay licencias configuradas para este track.
         </div>
       ) : (
-        <div className="mt-2.5 grid gap-3 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <div className="grid grid-cols-2 gap-1.5">
-            {visibleLicenses.map((license) => {
-              const isActive = selected?.id === license.id;
-              return (
-                <button
-                  key={license.id}
-                  type="button"
-                  onClick={() => setSelectedId(license.id)}
+        <>
+          <div className="mt-2 grid gap-3 lg:grid-cols-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <p>Selecciona un tipo de licencia para revisar su alcance y términos base.</p>
+              <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground/80" aria-hidden />
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <p>Condiciones principales de la licencia seleccionada.</p>
+              <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground/80" aria-hidden />
+            </div>
+          </div>
+
+          <div className="mt-2.5 grid gap-3 lg:grid-cols-2 lg:items-stretch">
+            <div className="grid grid-cols-2 content-start gap-1.5 self-start">
+              {visibleLicenses.map((license) => {
+                const isActive = selected?.id === license.id;
+                return (
+                  <button
+                    key={license.id}
+                    type="button"
+                    onClick={() => setSelectedId(license.id)}
                   className={cn(
                     "rounded border px-2.5 py-2 text-left transition",
                     isActive
-                      ? "border-foreground bg-background"
-                      : "border-border bg-background/60 hover:border-foreground/70",
+                      ? "border-foreground bg-card/85"
+                      : "border-border bg-card/35 hover:border-foreground/70 hover:bg-card/70",
                   )}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-xs font-semibold text-foreground sm:text-sm">
-                      {license.name}
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                        {license.name}
+                      </p>
+                      {license.isPopular ? (
+                        <span className="rounded border border-foreground/50 px-1 py-0.5 text-[9px] uppercase tracking-[0.12em] text-foreground">
+                          Top
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {formatLicenseAmount(license.priceAmount, license.currency)}
                     </p>
-                    {license.isPopular ? (
-                      <span className="rounded border border-foreground/50 px-1 py-0.5 text-[9px] uppercase tracking-[0.12em] text-foreground">
-                        Top
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
-                    {formatLicenseAmount(license.priceAmount, license.currency)}
-                  </p>
-                  <p className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                    {license.formats.join(", ") || "Sin formatos"}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
+                    <p className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                      {license.formats.join(", ") || "Sin formatos"}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
 
-          <div className="rounded border border-border bg-background/70">
-            <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+            <div className="rounded border border-border bg-background/70">
+            <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
               <p className="truncate text-sm font-semibold text-foreground">{selected?.name || "Licencia"}</p>
+              <span aria-hidden className="text-xs text-muted-foreground">
+                ·
+              </span>
               <span className="rounded border border-border bg-card/80 px-2 py-0.5 text-xs font-semibold text-foreground">
                 {selectedPrice}
               </span>
             </div>
-            <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              {selectedFormats}
-            </div>
+              <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                {selectedFormats}
+              </div>
 
-            <div className="grid auto-rows-fr gap-1.5 border-t border-border p-1.5 sm:grid-cols-2">
-              {snapshotRows.map((row, index) => {
-                const Icon = iconForCondition(row.label);
-                return (
-                  <InfoChip
-                    key={`${row.label}-${index}`}
-                    icon={Icon}
-                    label={row.label}
-                    value={row.value}
-                    className="h-full justify-between rounded border border-border/70 bg-background/80 px-3 py-2.5"
-                  />
-                );
-              })}
+              <div className="grid auto-rows-fr gap-1.5 border-t border-border p-1.5 sm:grid-cols-2">
+                {snapshotRows.map((row, index) => {
+                  const Icon = iconForCondition(row.label);
+                  return (
+                    <InfoChip
+                      key={`${row.label}-${index}`}
+                      icon={Icon}
+                      label={row.label}
+                      value={row.value}
+                      className="h-full justify-between rounded border border-border/70 bg-background/80 px-3 py-2.5"
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </section>
   );

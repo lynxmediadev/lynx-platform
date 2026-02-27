@@ -673,7 +673,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
         </header>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_350px] xl:items-stretch">
-          <div className="space-y-3 xl:flex xl:h-full xl:flex-col">
+          <div className="flex flex-col gap-3 xl:h-full xl:justify-between xl:gap-0">
             <article className="relative overflow-hidden rounded-md border border-border bg-card/30">
               <img
                 src={coverUrl}
@@ -732,7 +732,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
             </div>
           </div>
 
-          <aside className="space-y-3 xl:self-start xl:sticky xl:top-[calc(var(--header-h)+0.75rem)]">
+          <aside className="space-y-3 xl:sticky xl:top-[calc(var(--header-h)+0.75rem)]">
             <section className="rounded-md border border-border bg-card/35 p-3">
               <h2 className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground/95">
                 <SlidersHorizontal className="h-4 w-4" />
