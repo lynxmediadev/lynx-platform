@@ -382,6 +382,28 @@ function deriveLegacyFallbackLicenses(track: {
   return items;
 }
 
+function sortLicensesByPriceAsc(licenses: TrackLicenseViewModel[]): TrackLicenseViewModel[] {
+  return [...licenses].sort((a, b) => {
+    const aHasPrice = typeof a.priceAmount === "number" && Number.isFinite(a.priceAmount);
+    const bHasPrice = typeof b.priceAmount === "number" && Number.isFinite(b.priceAmount);
+
+    if (aHasPrice && bHasPrice) {
+      if (a.priceAmount !== b.priceAmount) {
+        return (a.priceAmount as number) - (b.priceAmount as number);
+      }
+    } else if (aHasPrice !== bHasPrice) {
+      // "A cotizar" (null) queda al final.
+      return aHasPrice ? -1 : 1;
+    }
+
+    if (a.sortOrder !== b.sortOrder) {
+      return a.sortOrder - b.sortOrder;
+    }
+
+    return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+  });
+}
+
 export default async function TrackPublicPage({ params }: PageProps) {
   const { id } = await params;
 
@@ -518,12 +540,13 @@ export default async function TrackPublicPage({ params }: PageProps) {
     });
   }
 
-  const licenseCards =
+  const licenseCardsRaw =
     assignedLicenses.length > 0
       ? assignedLicenses
       : fallbackLicenses.length > 0
         ? fallbackLicenses
         : deriveLegacyFallbackLicenses(track);
+  const licenseCards = sortLicensesByPriceAsc(licenseCardsRaw);
 
   const similarWhere: Prisma.TrackWhereInput = moodTags.length
     ? {
@@ -682,26 +705,28 @@ export default async function TrackPublicPage({ params }: PageProps) {
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
               <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80">
-                  ODR Records · Track licensing
-                </p>
-                <h1 className="text-xl font-semibold leading-tight text-white sm:text-2xl">
-                  {track.title}
-                </h1>
-                <p className="text-sm text-white/85">{track.artist || "Artista"}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
-                    BPM {track.bpm ? Math.round(track.bpm) : "—"}
-                  </span>
-                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
-                    Key {track.key || "—"}
-                  </span>
-                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
-                    {formatDuration(track.durationSec)}
-                  </span>
-                  <span className="rounded border border-white/35 bg-black/25 px-2 py-0.5 text-xs font-medium text-white/95">
-                    {primaryGenre}
-                  </span>
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] leading-none text-white/80">
+                    ODR Records · Track licensing
+                  </p>
+                  <h1 className="text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">
+                    {track.title}
+                  </h1>
+                  <p className="text-sm leading-snug text-white/85">{track.artist || "Artista"}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex h-6 items-center rounded border border-white/35 bg-black/25 px-2 text-xs font-medium text-white/95">
+                      BPM {track.bpm ? Math.round(track.bpm) : "—"}
+                    </span>
+                    <span className="inline-flex h-6 items-center rounded border border-white/35 bg-black/25 px-2 text-xs font-medium text-white/95">
+                      Key {track.key || "—"}
+                    </span>
+                    <span className="inline-flex h-6 items-center rounded border border-white/35 bg-black/25 px-2 text-xs font-medium text-white/95">
+                      {formatDuration(track.durationSec)}
+                    </span>
+                    <span className="inline-flex h-6 items-center rounded border border-white/35 bg-black/25 px-2 text-xs font-medium text-white/95">
+                      {primaryGenre}
+                    </span>
+                  </div>
                 </div>
               </div>
             </article>
@@ -717,18 +742,23 @@ export default async function TrackPublicPage({ params }: PageProps) {
 
             <TrackLicensesOverview licenses={licenseCards} />
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <TrackLicensesDialog
-                trackTitle={track.title}
-                trackArtist={track.artist}
-                licenses={licenseCards}
-              />
-              <TrackDeliverablesDialog
-                trackTitle={track.title}
-                trackArtist={track.artist}
-                versions={track.versions}
-                stems={track.stems}
-              />
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:gap-3">
+              <div>
+                <TrackLicensesDialog
+                  trackTitle={track.title}
+                  trackArtist={track.artist}
+                  licenses={licenseCards}
+                />
+              </div>
+              <div className="hidden lg:block" aria-hidden />
+              <div>
+                <TrackDeliverablesDialog
+                  trackTitle={track.title}
+                  trackArtist={track.artist}
+                  versions={track.versions}
+                  stems={track.stems}
+                />
+              </div>
             </div>
           </div>
 

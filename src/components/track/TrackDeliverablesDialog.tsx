@@ -49,7 +49,7 @@ export default function TrackDeliverablesDialog({
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-10 items-center justify-center gap-2 rounded border border-border bg-background px-3 text-sm font-semibold text-foreground transition hover:border-foreground/70"
+          className="flex h-10 w-full items-center justify-center gap-2 rounded border border-border bg-background px-3 text-sm font-semibold text-foreground transition hover:border-foreground/70"
         >
           <FileAudio2 className="h-4 w-4" />
           Entregables

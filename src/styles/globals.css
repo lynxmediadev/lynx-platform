@@ -248,6 +248,52 @@ body {
   min-width: 640px;
 }
 
+/* =========================================================
+   Scrollbar global (theme-aware, sutil)
+   - Aplica en todo contenedor con overflow del proyecto.
+   - Mantiene compatibilidad con clases explícitas heredadas.
+   ======================================================= */
+.odr-scrollbar,
+.scroll-region,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 26%, transparent) transparent;
+}
+
+.odr-scrollbar::-webkit-scrollbar,
+.scroll-region::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.odr-scrollbar,
+.scroll-region {
+  scrollbar-gutter: stable;
+}
+
+.odr-scrollbar::-webkit-scrollbar-track,
+.scroll-region::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.odr-scrollbar::-webkit-scrollbar-thumb,
+.scroll-region::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 24%, transparent);
+  background-clip: padding-box;
+}
+
+.odr-scrollbar::-webkit-scrollbar-thumb:hover,
+.scroll-region::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--foreground) 40%, transparent);
+  background-clip: padding-box;
+}
+
 @keyframes lm-loop-scroll {
   0% {
     transform: translate3d(0, 0, 0);

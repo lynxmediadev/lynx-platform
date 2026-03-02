@@ -37,6 +37,7 @@ function iconForCondition(label: string): LucideIcon {
 
 export default function TrackLicensesOverview({ licenses }: Props) {
   const [selectedId, setSelectedId] = React.useState<string | null>(licenses[0]?.id ?? null);
+  const MAX_LICENSE_SLOTS = 6;
 
   React.useEffect(() => {
     if (!licenses.length) {
@@ -51,6 +52,10 @@ export default function TrackLicensesOverview({ licenses }: Props) {
   const selected = licenses.find((license) => license.id === selectedId) ?? licenses[0] ?? null;
   const snapshotRows = selected ? getLicenseSnapshotConditions(selected) : [];
   const visibleLicenses = licenses.slice(0, 6);
+  const paddedLicenses = [
+    ...visibleLicenses,
+    ...Array.from({ length: Math.max(0, MAX_LICENSE_SLOTS - visibleLicenses.length) }, () => null),
+  ];
   const selectedFormats = selected?.formats.join(", ") || "Sin formatos";
   const selectedPrice = selected
     ? formatLicenseAmount(selected.priceAmount, selected.currency)
@@ -59,7 +64,7 @@ export default function TrackLicensesOverview({ licenses }: Props) {
   return (
     <section className="mt-2 w-full">
       <div className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-2">
-        <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-foreground">
+        <h2 className="text-lg font-bold uppercase tracking-[0.16em] text-foreground">
           Licencias
         </h2>
         <span aria-hidden className="text-xs text-muted-foreground">
@@ -77,29 +82,38 @@ export default function TrackLicensesOverview({ licenses }: Props) {
         <>
           <div className="mt-2 grid gap-3 lg:grid-cols-2">
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <p>Selecciona un tipo de licencia para revisar su alcance y términos base.</p>
               <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground/80" aria-hidden />
+              <p>Selecciona un tipo de licencia para revisar su alcance y términos base.</p>
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <p>Condiciones principales de la licencia seleccionada.</p>
               <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground/80" aria-hidden />
+              <p>Condiciones principales de la licencia seleccionada.</p>
             </div>
           </div>
 
-          <div className="mt-2.5 grid gap-3 lg:grid-cols-2 lg:items-stretch">
-            <div className="grid grid-cols-2 content-start gap-1.5 self-start">
-              {visibleLicenses.map((license) => {
+          <div className="mt-2.5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:items-stretch">
+          <div className="grid h-full grid-cols-2 content-start gap-1.5">
+            {paddedLicenses.map((license, index) => {
+                if (!license) {
+                  return (
+                    <div
+                      key={`license-slot-empty-${index}`}
+                      aria-hidden
+                      className="pointer-events-none min-h-[86px] rounded border border-transparent"
+                    />
+                  );
+                }
                 const isActive = selected?.id === license.id;
                 return (
                   <button
-                    key={license.id}
+                    key={`license-slot-${license.id}`}
                     type="button"
                     onClick={() => setSelectedId(license.id)}
                   className={cn(
-                    "rounded border px-2.5 py-2 text-left transition",
+                    "min-h-[86px] rounded border px-2.5 py-2 text-left transition duration-400",
                     isActive
                       ? "border-foreground bg-card/85"
-                      : "border-border bg-card/35 hover:border-foreground/70 hover:bg-card/70",
+                      : "border-border bg-card/15 hover:border-foreground/70 hover:bg-card/70",
                   )}
                 >
                     <div className="flex items-center justify-between gap-2">
@@ -123,7 +137,9 @@ export default function TrackLicensesOverview({ licenses }: Props) {
               })}
             </div>
 
-            <div className="rounded border border-border bg-background/70">
+          <div className="hidden self-stretch bg-border/60 lg:block" aria-hidden />
+
+          <div className="rounded border border-border bg-background/70">
             <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
               <p className="truncate text-sm font-semibold text-foreground">{selected?.name || "Licencia"}</p>
               <span aria-hidden className="text-xs text-muted-foreground">
@@ -134,7 +150,7 @@ export default function TrackLicensesOverview({ licenses }: Props) {
               </span>
             </div>
               <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                {selectedFormats}
+                <span className="font-bold">Formatos · </span>{selectedFormats}
               </div>
 
               <div className="grid auto-rows-fr gap-1.5 border-t border-border p-1.5 sm:grid-cols-2">

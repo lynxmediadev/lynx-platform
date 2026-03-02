@@ -1,4 +1,4 @@
-export type TrackLicenseDialogTab = "summary" | "map" | "agreement";
+export type TrackLicenseDialogTab = "summary" | "agreement";
 
 export type LicenseSummaryItem = {
   label: string;
