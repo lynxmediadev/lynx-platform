@@ -33,6 +33,7 @@ Fuente: migrado desde `docs/PROJECT_GENERAL_CONTEXT.md` el 2026-02-20.
 | TagChips        | `src/components/ui/TagChips.tsx`        | Sistema genérico de tags/chips | Activo |
 | CopyButton      | `src/components/ui/CopyButton.tsx`      | Copiar texto con feedback      | Activo |
 | CopyIconButton  | `src/components/ui/CopyIconButton.tsx`  | Copiar vía botón ícono         | Activo |
+| CompactSelectableCard | `src/components/ui/compact-selectable-card.tsx` | Card selector compacto reusable (title/value/meta/badge) | Activo |
 | AudioPlayer     | `src/components/ui/AudioPlayer.tsx`     | Reproductor de audio UI        | Activo |
 | AudioPlayerDemo | `src/components/ui/AudioPlayerDemo.tsx` | Demo/uso de AudioPlayer        | Activo |
 | CatalogCardUI   | `src/components/ui/catalog/card.tsx`    | Card visual de catálogo        | Activo |
@@ -578,3 +579,37 @@ Objetivo de esta sección:
 | `CatalogBottomPlayerV2` | `src/components/catalog/CatalogBottomPlayerV2.tsx` | Skin/UI del player global | Activo |
 | `TrackSimpleAudioPlayer` | `src/components/track/TrackSimpleAudioPlayer.tsx` | Control remoto de player global en `/track/[id]` (`queuePolicy: keep`) | Activo |
 | `CatalogClient` (integración) | `src/app/catalog/CatalogClient.tsx` | Control remoto en catálogo (`queuePolicy: replace`), sin host local | Activo |
+
+## 17) Track Page Licensing V2 (`/track/[id]`)
+
+Objetivo de esta sección:
+
+- Dejar trazable el estado actual (MVP visual) del flujo de licencias en track page.
+- Evitar ambigüedad al retomar trabajo en otra sesión/PC.
+
+| Componente / Módulo | Ruta | Rol | Estado |
+| --- | --- | --- | --- |
+| `TrackPublicPage` | `src/app/track/[id]/page.tsx` | Orquestación de data + layout principal + integración de modales/licencias | Activo |
+| `TrackSimpleAudioPlayer` | `src/components/track/TrackSimpleAudioPlayer.tsx` | Player simple de ficha (control remoto del player global) | Activo |
+| `TrackLicensesOverview` | `src/components/track/TrackLicensesOverview.tsx` | Selector de licencias + condiciones rápidas en la ficha | Activo |
+| `TrackLicensesDialog` | `src/components/track/TrackLicensesDialog.tsx` | Modal de licencias (`Resumen` + `Contrato`) | Activo |
+| `TrackDeliverablesDialog` | `src/components/track/TrackDeliverablesDialog.tsx` | Modal de entregables (versiones/stems) | Activo |
+| `CompactSelectableCard` | `src/components/ui/compact-selectable-card.tsx` | Bloque reusable usado para selector compacto de licencias | Activo |
+| `dummy-beat-lease-contract` | `src/lib/licenses/dummy-beat-lease-contract.ts` | Contrato dummy base para pruebas en pestaña `Contrato` | Activo |
+| `license-view` | `src/lib/licenses/license-view.ts` | Mapeo/normalización de condiciones y filas de licencia | Activo |
+| `types` de licencias | `src/lib/licenses/types.ts` | Tipos del flujo; `TrackLicenseDialogTab` vigente: `summary | agreement` | Activo |
+
+Notas de UX vigentes:
+
+- Modal `Ver Licencias`:
+  - pestañas activas: `Resumen` y `Contrato` (sin `Mapa completo` separado);
+  - `Resumen` usa doble tabla lado a lado con wrapping seguro;
+  - botón flotante de flecha para scroll al final dentro de `Resumen`.
+- `Más beats para explorar` permanece como bloque obligatorio al final de `/track/[id]` y usa `CatalogClient` embebido.
+
+Archivos de variantes visuales históricas (referencia/experimentos):
+
+- `src/components/track/variants/TrackLicensesOverview.conditions-1.tsx`
+- `src/components/track/variants/TrackLicensesOverview.conditions-2.tsx`
+- `src/components/track/variants/TrackLicensesOverview.conditions-3.tsx`
+- `src/components/track/variants/TrackLicensesOverview.conditions-4.tsx`

@@ -38,6 +38,39 @@ Referencia única para `/admin/tracks/[id]/edit`:
 
 ## STAGING (pendiente obligatorio antes de producción)
 
+## ESTADO OPERATIVO ACTUAL (HANDOFF PC1 -> PC2)
+
+Última actualización operativa (frontend track/licencias):
+
+- Branch de trabajo: `platform-1`
+- Commit base para continuar: `ab836e6` (`feat(track): refine licenses modal UX and reusable selectors`)
+- Remote: `origin git@github.com:lynxmediadev/lynx-platform.git`
+
+Estado funcional vigente:
+
+1. Player global:
+   - Arquitectura global activa vía `GlobalPlayerProvider` + `GlobalPlayerHost` en `FrontendShell`.
+   - Reproducción continua entre `/catalog`, `/track/[id]` y `/playlist/[id]`.
+   - `CatalogClient` y `TrackSimpleAudioPlayer` operan como controles remotos del player global.
+2. `/track/[id]` (visual MVP actual):
+   - Columna A: cover + player simple + bloque de licencias + botones (`Ver Licencias`, `Entregables`).
+   - Columna B: snapshot, perfil creativo, cumplimiento/restricciones.
+   - Sección final `Más beats para explorar` usa `CatalogClient` embebido y debe mantenerse.
+3. Modal `Ver Licencias`:
+   - Pestañas activas: `Resumen` y `Contrato`.
+   - `Resumen` usa tablas dobles (2 columnas) con scroll interno, hover sutil por fila y wrapping seguro para textos largos.
+   - Botón flotante de flecha para ir al final del bloque de `Resumen` (se oculta al llegar al final).
+   - `Contrato` mantiene scroll interno y evita doble scroll molesto en el popup.
+4. Reutilización nueva:
+   - Selector compacto reusable creado: `src/components/ui/compact-selectable-card.tsx`.
+   - Usado actualmente en selección de licencias dentro de `TrackLicensesDialog`.
+
+Notas para continuidad:
+
+- Este estado se considera **checkpoint visual/UX** para track page.
+- Próxima iteración recomendada: pulido funcional/comercial de licencias (contrato real, comparativas y reglas de compra), manteniendo esta base visual.
+- Si se prueban alternativas de diseño, conservar trazabilidad en `docs/plans/041-track-page.md`.
+
 Estado actual:
 
 - Proyecto en etapa de ajustes funcionales/visuales => **continuar en local**.
