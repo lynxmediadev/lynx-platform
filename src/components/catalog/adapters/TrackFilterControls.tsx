@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { useId } from "react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 
 type Props = {
   mobile: boolean;
@@ -41,20 +42,32 @@ export default function TrackFilterControls({
   genreOptions,
   filterSelectClass,
 }: Props) {
+  const searchInputId = useId();
+
   if (mobile) {
     return (
       <>
-        <label className="min-w-0">
-          <span className="sr-only">Buscar</span>
-          <input
-            data-catalog-search="true"
-            type="text"
-            value={searchTerm}
-            onChange={(event) => onSearchTermChange(event.target.value)}
-            placeholder="Buscar..."
-            className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-          />
-        </label>
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor={searchInputId}
+            className="inline-flex shrink-0 cursor-pointer select-none items-center gap-1 rounded border border-foreground/20 bg-foreground px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-background"
+          >
+            <span>Filtro | Buscar</span>
+            <ArrowRight className="h-3 w-3" />
+          </label>
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">Buscar</span>
+            <input
+              id={searchInputId}
+              data-catalog-search="true"
+              type="text"
+              value={searchTerm}
+              onChange={(event) => onSearchTermChange(event.target.value)}
+              placeholder="Buscar..."
+              className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
+            />
+          </label>
+        </div>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <label className="min-w-0">
@@ -152,17 +165,27 @@ export default function TrackFilterControls({
 
   return (
     <>
-      <label className="min-w-[220px] flex-1 basis-[280px]">
-        <span className="sr-only">Buscar</span>
-        <input
-          data-catalog-search="true"
-          type="text"
-          value={searchTerm}
-          onChange={(event) => onSearchTermChange(event.target.value)}
-          placeholder="Buscar..."
-          className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
-        />
-      </label>
+      <div className="flex min-w-[320px] flex-1 basis-[360px] items-center gap-2">
+        <label
+          htmlFor={searchInputId}
+          className="inline-flex shrink-0 cursor-pointer select-none items-center gap-1 rounded border border-foreground/20 bg-foreground px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-background"
+        >
+          <span>Filtro | Buscar</span>
+          <ArrowRight className="h-3 w-3" />
+        </label>
+        <label className="min-w-[220px] flex-1">
+          <span className="sr-only">Buscar</span>
+          <input
+            id={searchInputId}
+            data-catalog-search="true"
+            type="text"
+            value={searchTerm}
+            onChange={(event) => onSearchTermChange(event.target.value)}
+            placeholder="Buscar..."
+            className="h-7 w-full rounded border border-border bg-background px-2 text-xs text-foreground placeholder:text-muted-foreground/90 focus:border-foreground focus:outline-none"
+          />
+        </label>
+      </div>
 
       <label className="w-[120px] shrink-0">
         <span className="sr-only">Mood</span>

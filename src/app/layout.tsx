@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
   return (
     <html lang="es" className={`${fontVars} dark-`} suppressHydrationWarning>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <FrontendShell>{children}</FrontendShell>
       </body>
     </html>

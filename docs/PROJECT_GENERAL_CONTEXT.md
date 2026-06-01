@@ -20,6 +20,34 @@ Ahora unas consideraciones para la implementación y planificación:
 - Tampoco necesito esos botones en /catalog con las Categorías.
 - Ya que quitaremos la lógica de pivote, seguramente quedará lógica en código perdido, archivos innecesarios y que pueden llevar a confusiones, bugs, etc. Hay que dejar limpia esta implementación.
 
+## VISIÓN ACTUALIZADA — Catálogo, Assets, Merch y Servicios
+
+Dirección vigente:
+
+- PLATFORM/ODR debe operar como un ecosistema de catálogo y venta de assets digitales, merchandising y servicios profesionales.
+- Assets digitales objetivo:
+  - drums, loops, samples, beats, instrumentales, voces y locuciones para publicidad.
+- Productos físicos/merchandising objetivo:
+  - ropa, gorros, pantalones, CDs, vinilos, cassettes y drops relacionados a ODR.
+- Servicios existentes se mantienen:
+  - audio profesional, mezcla, mastering, sound design, producción y servicios creativos.
+
+Implicancia para UI pública:
+
+- `/catalog` sigue siendo una ruta central de descubrimiento.
+- `/track/[id]` mantiene el enfoque de licencias claras e información comercial completa.
+- `/` pasa a ser una entrada visual de catálogo/descubrimiento, no solo una presentación institucional.
+- El home anterior se conserva como `/about-us`, ya que su información funciona mejor como contexto de marca/servicios.
+
+Estado visual actual del home:
+
+- `/` contiene un laboratorio curado de 12 opciones de homepage brutalista en una pantalla por opción.
+- El orden activo prioriza las antiguas opciones 1/13, 9/13, 8/13, 3/13, 2/13 y 11/13; la antigua 4/13 queda oculta por similitud con la 1/13.
+- Las opciones restantes se conservan al final en su orden relativo.
+- Cada opción incluye indicador inferior izquierdo (`Home option N/12`) y CTA o rutas hacia `/catalog`.
+- La antigua opcion 2/10 queda archivada para revision en `/dev/home-archive/saved-1`.
+- `/about-us` renderiza el home anterior basado en `HomeSnap`.
+
 ## Inventario de rutas y checklist (fuente vigente)
 
 Regla de validación:

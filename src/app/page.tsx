@@ -1,15 +1,5 @@
-/**
- * src/app/page.tsx
- * =========================================================
- * PERAS Y MANZANAS
- * - Este archivo es la “entrada” del Homepage (/).
- * - Mantiene page.tsx mínimo: delega todo el comportamiento de Snap
- *   y la composición de secciones a un componente dedicado (HomeSnap).
- * =========================================================
- */
-
-import HomeSnap from "@/components/home/HomeSnap";
+import HomeVariantExplorer from "@/components/home-v2/HomeVariantExplorer";
 
 export default function HomePage() {
-  return <HomeSnap />;
+  return <HomeVariantExplorer />;
 }
