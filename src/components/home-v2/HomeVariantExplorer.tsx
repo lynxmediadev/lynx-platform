@@ -3,18 +3,10 @@
 import { useEffect, useMemo } from "react";
 import type { ComponentType } from "react";
 
-import HomeVariantAssetCircuit from "./HomeVariantAssetCircuit";
-import HomeVariantDropLedger from "./HomeVariantDropLedger";
 import HomeVariantEditorialWall from "./HomeVariantEditorialWall";
-import HomeVariantMonitorWall from "./HomeVariantMonitorWall";
 import HomeVariantOdrIndex from "./HomeVariantOdrIndex";
-import HomeVariantPortalGrid from "./HomeVariantPortalGrid";
-import HomeVariantProductTicker from "./HomeVariantProductTicker";
 import HomeVariantSearchMonolith from "./HomeVariantSearchMonolith";
 import HomeVariantSignalBoard from "./HomeVariantSignalBoard";
-import HomeVariantSoundMuseum from "./HomeVariantSoundMuseum";
-import HomeVariantSplitDecision from "./HomeVariantSplitDecision";
-import HomeVariantTen from "./HomeVariantTen";
 import type { HomeVariantProps } from "./data";
 
 const variants: ComponentType<HomeVariantProps>[] = [
@@ -22,15 +14,9 @@ const variants: ComponentType<HomeVariantProps>[] = [
   HomeVariantSignalBoard,
   HomeVariantSearchMonolith,
   HomeVariantOdrIndex,
-  HomeVariantTen,
-  HomeVariantPortalGrid,
-  HomeVariantDropLedger,
-  HomeVariantSoundMuseum,
-  HomeVariantSplitDecision,
-  HomeVariantAssetCircuit,
-  HomeVariantProductTicker,
-  HomeVariantMonitorWall,
 ];
+
+const inverseThemeIndexes = new Set([0, 1, 2]);
 
 export default function HomeVariantExplorer() {
   const panelStyle = useMemo(
@@ -60,7 +46,11 @@ export default function HomeVariantExplorer() {
         style={panelStyle}
       >
         {variants.map((Variant, index) => (
-          <div key={index} className="snap-start" style={panelStyle}>
+          <div
+            key={index}
+            className={`snap-start ${inverseThemeIndexes.has(index) ? "home-theme-inverse" : ""}`}
+            style={panelStyle}
+          >
             <Variant optionIndex={index + 1} optionTotal={variants.length} />
           </div>
         ))}

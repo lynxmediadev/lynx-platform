@@ -41,10 +41,11 @@ Implicancia para UI pública:
 
 Estado visual actual del home:
 
-- `/` contiene un laboratorio curado de 12 opciones de homepage brutalista en una pantalla por opción.
-- El orden activo prioriza las antiguas opciones 1/13, 9/13, 8/13, 3/13, 2/13 y 11/13; la antigua 4/13 queda oculta por similitud con la 1/13.
-- Las opciones restantes se conservan al final en su orden relativo.
-- Cada opción incluye indicador inferior izquierdo (`Home option N/12`) y CTA o rutas hacia `/catalog`.
+- `/` contiene un laboratorio curado de 4 opciones de homepage brutalista en una pantalla por opción.
+- Las opciones activas son las antiguas 1/12, 2/12, 3/12 y 4/12.
+- Las antiguas opciones 5/12 a 12/12 quedan guardadas como `home-v2-saved-1` a `home-v2-saved-8` en `/dev/home-archive/`.
+- Cada opción activa incluye indicador inferior izquierdo (`Home option N/4`) y CTA o rutas hacia `/catalog`.
+- En Home V2, los viewports 1 y 3 deben verse en el modo global elegido; los viewports 2 y 4 deben verse en el modo opuesto. Esto se resuelve con scopes locales `home-theme-inverse` porque algunas variantes usan tokens invertidos (`bg-foreground text-background`).
 - La antigua opcion 2/10 queda archivada para revision en `/dev/home-archive/saved-1`.
 - `/about-us` renderiza el home anterior basado en `HomeSnap`.
 

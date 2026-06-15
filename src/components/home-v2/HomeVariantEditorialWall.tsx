@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
@@ -13,15 +12,6 @@ export default function HomeVariantEditorialWall({
 }: HomeVariantProps) {
   return (
     <section className="relative h-full overflow-hidden bg-foreground text-background">
-      <Image
-        src="/images/hero/hero5.jpg"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover grayscale opacity-45 contrast-150"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/45 to-foreground/10" />
-
       <div className="relative z-10 grid h-full grid-rows-[auto_1fr_auto]">
         <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-background/30 p-4 font-mono text-[10px] uppercase tracking-[0.18em] md:p-6">
           <span>Editorial wall</span>
@@ -30,8 +20,9 @@ export default function HomeVariantEditorialWall({
         </header>
 
         <div className="flex min-h-0 items-center overflow-hidden px-4 md:px-8">
-          <h1 className="font-cinema-title text-[22vw] uppercase leading-[0.72] tracking-normal">
-            Goods
+          <h1 className="flex w-full items-baseline gap-[3vw] font-cinema-title leading-[0.72] tracking-normal">
+            <span className="text-[28vw]">ODR</span>
+            <span className="text-[12vw]">Records</span>
           </h1>
         </div>
 

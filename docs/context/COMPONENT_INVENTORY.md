@@ -626,28 +626,27 @@ Objetivo de esta sección:
 | `AboutUsPage` | `src/app/about-us/page.tsx` | Ruta que conserva el home anterior (`HomeSnap`) | Activo |
 | `SavedHomeTemplateOnePage` | `src/app/dev/home-archive/saved-1/page.tsx` | Archivo visual de la antigua opcion 2/10 | Activo |
 | `HomePage` | `src/app/page.tsx` | Entrada del nuevo laboratorio de home | Activo |
-| `HomeVariantExplorer` | `src/components/home-v2/HomeVariantExplorer.tsx` | Contenedor snap de 12 opciones curadas de homepage | Activo |
-| `HomeVariantEditorialWall` | `src/components/home-v2/HomeVariantEditorialWall.tsx` | Antigua opcion 1/13, ahora opcion activa 1/12 | Activo |
-| `HomeVariantSignalBoard` | `src/components/home-v2/HomeVariantSignalBoard.tsx` | Antigua opcion 9/13, ahora opcion activa 2/12 | Activo |
-| `HomeVariantSearchMonolith` | `src/components/home-v2/HomeVariantSearchMonolith.tsx` | Antigua opcion 8/13, ahora opcion activa 3/12 | Activo |
-| `HomeVariantOdrIndex` | `src/components/home-v2/HomeVariantOdrIndex.tsx` | Antigua opcion 3/13, ahora opcion activa 4/12 | Activo |
-| `HomeVariantTen` | `src/components/home-v2/HomeVariantTen.tsx` | Antigua opcion 2/13, ahora opcion activa 5/12 | Activo |
+| `HomeVariantExplorer` | `src/components/home-v2/HomeVariantExplorer.tsx` | Contenedor snap de 4 opciones curadas de homepage | Activo |
+| `HomeVariantEditorialWall` | `src/components/home-v2/HomeVariantEditorialWall.tsx` | Opcion activa 1/4 | Activo |
+| `HomeVariantSignalBoard` | `src/components/home-v2/HomeVariantSignalBoard.tsx` | Opcion activa 2/4 | Activo |
+| `HomeVariantSearchMonolith` | `src/components/home-v2/HomeVariantSearchMonolith.tsx` | Opcion activa 3/4 | Activo |
+| `HomeVariantOdrIndex` | `src/components/home-v2/HomeVariantOdrIndex.tsx` | Opcion activa 4/4 | Activo |
+| `HomeVariantTen` | `src/components/home-v2/HomeVariantTen.tsx` | Guardada como `home-v2-saved-1` | Archivado |
 | `HomeVariantThree` | `src/components/home-v2/HomeVariantThree.tsx` | Antigua opcion 4/13, oculta por similitud con 1/13 | Oculto |
-| `HomeVariantDropLedger..AssetCircuit` | `src/components/home-v2/HomeVariant*.tsx` | Seis propuestas nuevas mas atrevidas y divergentes | Activo |
-| `HomeVariantPortalGrid` | `src/components/home-v2/HomeVariantPortalGrid.tsx` | Antigua opcion 17/20, ahora opcion activa 11/13 | Activo |
-| `HomeVariantProductTicker` | `src/components/home-v2/HomeVariantProductTicker.tsx` | Antigua opcion 18/20, ahora opcion activa 12/13 | Activo |
-| `HomeVariantMonitorWall` | `src/components/home-v2/HomeVariantMonitorWall.tsx` | Antigua opcion 20/20, ahora opcion activa 13/13 | Activo |
+| `HomeVariantDropLedger..AssetCircuit` | `src/components/home-v2/HomeVariant*.tsx` | Guardadas como `home-v2-saved-3` a `home-v2-saved-6` | Archivado |
+| `HomeVariantPortalGrid` | `src/components/home-v2/HomeVariantPortalGrid.tsx` | Guardada como `home-v2-saved-2` | Archivado |
+| `HomeVariantProductTicker` | `src/components/home-v2/HomeVariantProductTicker.tsx` | Guardada como `home-v2-saved-7` | Archivado |
+| `HomeVariantMonitorWall` | `src/components/home-v2/HomeVariantMonitorWall.tsx` | Guardada como `home-v2-saved-8` | Archivado |
 | `HomeVariantTwo` | `src/components/home-v2/HomeVariantTwo.tsx` | Antigua opcion 2/10, archivada en ruta dev | Archivado |
 | `FindThingsCta` | `src/components/home-v2/FindThingsCta.tsx` | CTA reusable hacia `/catalog` | Activo |
-| `HomeOptionIndicator` | `src/components/home-v2/HomeOptionIndicator.tsx` | Indicador inferior izquierdo `Home option N/12` | Activo |
+| `HomeOptionIndicator` | `src/components/home-v2/HomeOptionIndicator.tsx` | Indicador inferior izquierdo `Home option N/4` o etiqueta `Saved N` | Activo |
 | `HomeAssetTile` | `src/components/home-v2/HomeAssetTile.tsx` | Tile clickeable para assets/merch/servicios con fallback visual de imagen | Activo |
 | `home-v2/data` | `src/components/home-v2/data.ts` | Placeholder data visual navegable para el laboratorio | Activo |
 
 Notas de UX vigentes:
 
-- `/` muestra 12 opciones curadas navegables por viewport para evaluación visual.
-- El orden vigente prioriza antiguas 1/13, 9/13, 8/13, 3/13, 2/13 y 11/13.
-- La antigua opcion 4/13 queda oculta.
+- `/` muestra 4 opciones curadas navegables por viewport para evaluación visual.
+- Las antiguas opciones 5/12 a 12/12 se guardan en `/dev/home-archive/home-v2-saved-1..8`.
 - La antigua opcion 2/10 se conserva en `/dev/home-archive/saved-1`.
 - Cada opción debe ocupar una sola pantalla y evitar overflow horizontal.
 - CTA principal: `FIND THINGS` hacia `/catalog`.

@@ -1,5 +1,7 @@
 # 049 - Home V2 Reorden Activo: 12 Opciones
 
+> Nota vigente: este plan queda como antecedente historico. La seleccion activa fue reducida por `docs/plans/050-home-v2-active-4-saved-8.md`.
+
 ## Objetivo
 
 - Reordenar el laboratorio activo segun la seleccion del usuario.

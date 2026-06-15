@@ -150,6 +150,72 @@ html.light {
 }
 
 /* =========================================================
+   Local theme scopes
+   - Permiten que un bloque puntual del home use el modo opuesto
+     sin cambiar la preferencia global del usuario.
+   - Dark sigue siendo el default de :root; light se activa con tokens.
+   ======================================================= */
+.home-theme-light,
+html:not(.light) .home-theme-inverse {
+  --background: var(--lm-white-bg);
+  --foreground: var(--lm-ink);
+
+  --card: #ffffff;
+  --card-foreground: var(--foreground);
+
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+
+  --primary: var(--lm-ink);
+  --primary-foreground: var(--lm-white-bg);
+
+  --secondary: rgba(20, 20, 20, 0.06);
+  --secondary-foreground: var(--foreground);
+
+  --muted: rgba(20, 20, 20, 0.06);
+  --muted-foreground: rgba(20, 20, 20, 0.72);
+
+  --accent: rgba(20, 20, 20, 0.10);
+  --accent-foreground: var(--foreground);
+
+  --border: rgba(20, 20, 20, 0.14);
+  --input: rgba(20, 20, 20, 0.18);
+  --ring: rgba(20, 20, 20, 0.40);
+
+  color-scheme: light;
+}
+
+.home-theme-dark,
+html.light .home-theme-inverse {
+  --background: var(--lm-bg-deep);
+  --foreground: var(--lm-text-main);
+
+  --card: var(--lm-surface-soft);
+  --card-foreground: var(--foreground);
+
+  --popover: var(--lm-surface-strong);
+  --popover-foreground: var(--foreground);
+
+  --primary: var(--lm-accent);
+  --primary-foreground: var(--lm-text-main);
+
+  --secondary: var(--lm-bg-alt);
+  --secondary-foreground: var(--foreground);
+
+  --muted: color-mix(in oklab, var(--lm-bg-alt) 82%, var(--lm-bg-deep));
+  --muted-foreground: var(--lm-text-muted);
+
+  --accent: var(--lm-accent-soft);
+  --accent-foreground: var(--foreground);
+
+  --border: var(--lm-border-subtle);
+  --input: var(--border);
+  --ring: color-mix(in oklab, var(--lm-text-main) 35%, transparent);
+
+  color-scheme: dark;
+}
+
+/* =========================================================
    Tipografía base
    ======================================================= */
 body {
