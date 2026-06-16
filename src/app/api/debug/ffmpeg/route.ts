@@ -20,6 +20,10 @@ export const runtime = "nodejs"; // aseguramos entorno Node, no Edge
 const execFileAsync = promisify(execFile);
 
 export async function GET() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ ok: false }, { status: 404 });
+  }
+
   try {
     const ffmpegPath = getFfmpegPath();
     const ffprobePath = getFfprobePath();

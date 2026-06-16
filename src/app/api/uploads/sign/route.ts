@@ -25,6 +25,7 @@ import { getS3, getS3PublicUrl, getUploadConfig } from "@/lib/storage/s3";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { extension as extFromMime } from "mime-types";
+import { getRouteUser } from "@/lib/account-auth/route-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,11 @@ function ensureExt(mime: string, fileName: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getRouteUser();
+  if (!user || (user.role !== "ADMIN" && user.role !== "STAFF" && user.role !== "CREATOR")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const cfg = getUploadConfig();
   if (!cfg.ok) {
     return NextResponse.json({ error: "Uploads no configurado", missing: cfg.missing }, { status: 501 });

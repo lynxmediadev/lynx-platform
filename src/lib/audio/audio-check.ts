@@ -13,10 +13,21 @@ type AudioCheckOptions = {
 };
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
+const CACHE_MAX_SIZE = 500;
+
+// FIFO-bounded Map: cuando supera CACHE_MAX_SIZE elimina la entrada más antigua.
 const audioCheckCache = new Map<
   string,
   { status: "ok" | "invalid"; message: string | null; expiresAt: number }
 >();
+
+function cacheSet(key: string, value: { status: "ok" | "invalid"; message: string | null; expiresAt: number }) {
+  if (audioCheckCache.size >= CACHE_MAX_SIZE) {
+    const oldest = audioCheckCache.keys().next().value;
+    if (oldest !== undefined) audioCheckCache.delete(oldest);
+  }
+  audioCheckCache.set(key, value);
+}
 
 function buildCacheKey(resolvedAudioUrl: string, cacheKey?: string) {
   return cacheKey ? `${cacheKey}::${resolvedAudioUrl}` : resolvedAudioUrl;
@@ -60,7 +71,7 @@ export async function getAudioCheckStatus(
   }
 
   if (!options.skipCache) {
-    audioCheckCache.set(cacheKey, {
+    cacheSet(cacheKey, {
       status,
       message,
       expiresAt: now + ttlMs,

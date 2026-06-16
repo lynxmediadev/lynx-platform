@@ -10,6 +10,7 @@ import { z } from "zod";
 import { db } from "@/server/db";
 import { getTrackById as getDemo } from "@/mocks/track-store";
 import { canAccessTrackByRole, getRequestAuthUser } from "@/lib/account-auth/request-auth";
+import { getRouteUser } from "@/lib/account-auth/route-guards";
 
 const TRACK_TYPE_VALUES = ["INSTRUMENTAL", "VOCAL", "VOCAL_INSTRUMENTAL", "OTHER"] as const;
 const PRICING_TIER_VALUES = ["LOW", "MID", "HIGH", "BESPOKE"] as const;
@@ -152,18 +153,59 @@ function mapDb(row: any) {
   };
 }
 
+// Campos seguros para el público — sin datos financieros ni de derechos internos
+function mapPublic(row: any) {
+  return {
+    id: row.id,
+    title: row.title,
+    artist: row.artist,
+    audioUrl: row.audioUrl,
+    coverUrl: row.coverUrl ?? undefined,
+    bpm: row.bpm ?? undefined,
+    key: row.key ?? undefined,
+    trackType: row.trackType ?? undefined,
+    genres: row.genres ?? [],
+    subgenres: row.subgenres ?? [],
+    durationSec: row.durationSec ?? undefined,
+    moods: row.moods ?? [],
+    uses: row.uses ?? [],
+    versions: Array.isArray(row.versions)
+      ? row.versions.map((v: any) => ({
+          label: v.label,
+          durationSec: v.durationSec ?? undefined,
+          kind: v.kind ?? undefined,
+          sortOrder: v.sortOrder ?? undefined,
+        }))
+      : [],
+    stems: Array.isArray(row.stems)
+      ? row.stems.map((s: any) => ({
+          name: s.name,
+          group: s.group ?? undefined,
+          durationSec: s.durationSec ?? undefined,
+          sortOrder: s.sortOrder ?? undefined,
+        }))
+      : [],
+  };
+}
+
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const authUser = await getRouteUser();
+  const isPrivileged = !!authUser && (authUser.role === "ADMIN" || authUser.role === "STAFF");
+
   try {
     const row = await db.track.findUnique({
       where: { id },
       include: {
         versions: true,
         stems: true,
-        publishingShares: true,
+        publishingShares: isPrivileged,
       },
     });
-    if (row) return NextResponse.json(mapDb(row), { status: 200, headers: { "Cache-Control": "no-store" } });
+    if (row) {
+      const payload = isPrivileged ? mapDb(row) : mapPublic(row);
+      return NextResponse.json(payload, { status: 200, headers: { "Cache-Control": "no-store" } });
+    }
   } catch (e) {
     console.error("[GET /api/tracks/:id] DB error:", e);
   }

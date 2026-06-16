@@ -599,9 +599,26 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const isAdmin = authUser?.role === "ADMIN" || authUser?.role === "STAFF";
     const tracks = await db.track.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      select: isAdmin ? undefined : {
+        id: true,
+        title: true,
+        artist: true,
+        coverUrl: true,
+        audioUrl: true,
+        durationSec: true,
+        bpm: true,
+        key: true,
+        trackType: true,
+        genres: true,
+        subgenres: true,
+        licenseType: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     return NextResponse.json({ ok: true, tracks }, { headers: { "Cache-Control": "no-store" } });

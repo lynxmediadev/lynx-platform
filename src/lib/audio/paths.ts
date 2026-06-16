@@ -10,6 +10,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+// Permite letras, dígitos, separadores de path, guiones, puntos y espacios.
+// Bloquea caracteres de shell (;, |, &, $, `, >, <, etc.).
+const SAFE_PATH_RE = /^[a-zA-Z0-9/_\-. :\\]+$/;
+
+function isSafePath(p: string): boolean {
+  return SAFE_PATH_RE.test(p);
+}
+
 function stripQuotes(p?: string | null) {
   if (!p) return p ?? "";
   return p.replace(/^"(.*)"$/, "$1").trim();
@@ -51,16 +59,28 @@ function pick(candidates: Array<string | undefined>, fallbackCmd: string) {
   return fallbackCmd;
 }
 
+function safeEnvPath(value: string | undefined, varName: string): string | undefined {
+  if (!value) return undefined;
+  const fixed = fixRootPrefix(value);
+  if (!isSafePath(fixed)) {
+    console.warn(`[audio/paths] ${varName} contains unsafe characters — ignored. Value: "${fixed}"`);
+    return undefined;
+  }
+  return fixed;
+}
+
 export function getFfprobePath() {
   let modulePath: string | undefined;
   try { modulePath = (require("ffprobe-static").path as string); } catch {}
-  return pick([process.env.FFPROBE_PATH, modulePath], "ffprobe");
+  const envPath = safeEnvPath(process.env.FFPROBE_PATH, "FFPROBE_PATH");
+  return pick([envPath, modulePath], "ffprobe");
 }
 
 export function getFfmpegPath() {
   let modulePath: string | undefined;
   try { modulePath = (require("ffmpeg-static") as unknown as string); } catch {}
-  return pick([process.env.FFMPEG_PATH, modulePath], "ffmpeg");
+  const envPath = safeEnvPath(process.env.FFMPEG_PATH, "FFMPEG_PATH");
+  return pick([envPath, modulePath], "ffmpeg");
 }
 
 // Exportar “por compatibilidad”

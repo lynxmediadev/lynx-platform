@@ -35,11 +35,25 @@ type ProbeResult = {
   raw?: string;
 };
 
+const DOWNLOAD_TIMEOUT_MS = 30_000;
+const DOWNLOAD_MAX_BYTES = 500 * 1024 * 1024; // 500 MB
+
 /** Descarga la URL pública a un archivo temporal. */
 async function downloadToTemp(url: string, extGuess = "mp3"): Promise<string> {
-  const res = await fetch(url);
+  const signal = AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS);
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`Failed to download: ${res.status} ${res.statusText}`);
+
+  const contentLength = Number(res.headers.get("content-length") ?? "0");
+  if (contentLength > DOWNLOAD_MAX_BYTES) {
+    throw new Error(`Audio file too large: ${contentLength} bytes (max ${DOWNLOAD_MAX_BYTES})`);
+  }
+
   const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > DOWNLOAD_MAX_BYTES) {
+    throw new Error(`Audio file too large after download: ${buf.length} bytes (max ${DOWNLOAD_MAX_BYTES})`);
+  }
+
   const base = url.split("?")[0] ?? url;
   const match = base.match(/\.([a-z0-9]+)$/i);
   const ext = (match?.[1] ?? extGuess).toLowerCase();
