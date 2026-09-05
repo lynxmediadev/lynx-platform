@@ -41,7 +41,9 @@ export default function FrontendShell({ children }: FrontendShellProps) {
 
   return (
     <GlobalPlayerProvider>
-      <PublicShellContent hideHeader={hideHeader}>{children}</PublicShellContent>
+      <PublicShellContent hideHeader={hideHeader}>
+        {children}
+      </PublicShellContent>
     </GlobalPlayerProvider>
   );
 }
@@ -58,7 +60,11 @@ function PublicShellContent({
   return (
     <div className="min-h-dvh">
       {!hideHeader && <SiteHeader />}
-      <main className={`px-4 sm:px-6 ${currentTrack ? "pb-[92px] sm:pb-[98px]" : ""}`}>{children}</main>
+      <main
+        className={`px-4 sm:px-6 ${currentTrack ? "pb-[116px] sm:pb-[124px]" : ""}`}
+      >
+        {children}
+      </main>
       <GlobalPlayerHost />
     </div>
   );
