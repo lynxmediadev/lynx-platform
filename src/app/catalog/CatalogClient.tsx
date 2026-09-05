@@ -295,11 +295,10 @@ export default function CatalogClient({
     togglePlay,
     seekByRatio,
   } = useGlobalPlayer();
-  const bannerSessionIdRef = useRef<string>(
-    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : `banner-${Date.now()}`,
-  );
+  // This value is only used for analytics. Creating it during render produces
+  // a different server/client value and prevents React from hydrating the
+  // catalog controls reliably.
+  const bannerSessionIdRef = useRef<string>("");
 
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
     tracks[0]?.id ?? null,
@@ -564,6 +563,13 @@ export default function CatalogClient({
   useEffect(() => {
     setActiveCat(catalogSlug ?? null);
   }, [catalogSlug]);
+
+  useEffect(() => {
+    bannerSessionIdRef.current =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `banner-${Date.now()}`;
+  }, []);
 
   useEffect(() => {
     setVisibleTrackLimit(INITIAL_TRACK_LIMIT);

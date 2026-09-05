@@ -21,6 +21,9 @@ import "./src/env.js";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   agentRules: false,
+  // Windows reaches this WSL development server through the local port bridge.
+  // Next 16 blocks its dev-only scripts unless the bridge host is allowlisted.
+  allowedDevOrigins: ["172.28.161.23"],
   serverExternalPackages: ["ffmpeg-static", "ffprobe-static"],
   images: {
     remotePatterns: [
