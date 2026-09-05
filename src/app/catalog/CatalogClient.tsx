@@ -421,6 +421,20 @@ export default function CatalogClient({
     [visibleTracks, visibleTrackLimit],
   );
 
+  // Keep the selected ID valid when a filter removes the current track. The
+  // detail panel and the collection browser both consume this same ID, rather
+  // than independently falling back to the first card.
+  useEffect(() => {
+    if (visibleTracks.length === 0) {
+      if (selectedTrackId !== null) setSelectedTrackId(null);
+      return;
+    }
+
+    if (!visibleTracks.some((track) => track.id === selectedTrackId)) {
+      setSelectedTrackId(visibleTracks[0]?.id ?? null);
+    }
+  }, [visibleTracks, selectedTrackId]);
+
   const bannerSourceTracks = useMemo(
     () => (visibleTracks.length > 0 ? visibleTracks : tracks),
     [visibleTracks, tracks],
@@ -529,10 +543,7 @@ export default function CatalogClient({
     bannerSlides[activeSlideIndex] ?? bannerSlides[0] ?? null;
 
   const selectedTrack = useMemo(
-    () =>
-      visibleTracks.find((track) => track.id === selectedTrackId) ??
-      visibleTracks[0] ??
-      null,
+    () => visibleTracks.find((track) => track.id === selectedTrackId) ?? null,
     [selectedTrackId, visibleTracks],
   );
 
@@ -927,6 +938,7 @@ export default function CatalogClient({
         <TrackCollectionBrowser
           tracks={displayedTracks}
           totalTracks={visibleTracks.length}
+          selectedTrackId={selectedTrackId}
           selectedTrack={selectedTrack}
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}

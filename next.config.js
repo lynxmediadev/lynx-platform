@@ -20,6 +20,7 @@ import "./src/env.js";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  agentRules: false,
   serverExternalPackages: ["ffmpeg-static", "ffprobe-static"],
   images: {
     remotePatterns: [

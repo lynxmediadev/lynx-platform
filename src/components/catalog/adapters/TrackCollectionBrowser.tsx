@@ -14,6 +14,7 @@ import type { CatalogLicenseCard, CatalogTrack, ProgressMap } from "./types";
 type Props = {
   tracks: CatalogTrack[];
   totalTracks: number;
+  selectedTrackId: string | null;
   selectedTrack: CatalogTrack | null;
   currentTrackId: string | null;
   isPlaying: boolean;
@@ -66,6 +67,7 @@ type Props = {
 export default function TrackCollectionBrowser({
   tracks,
   totalTracks,
+  selectedTrackId,
   selectedTrack,
   currentTrackId,
   isPlaying,
@@ -118,7 +120,7 @@ export default function TrackCollectionBrowser({
     <CollectionBrowser
       items={tracks}
       totalItems={totalTracks}
-      selectedId={selectedTrack?.id ?? null}
+      selectedId={selectedTrackId}
       onSelectedIdChange={(next) => {
         if (!next) return;
         onSelectTrackId(next);
@@ -208,7 +210,7 @@ export default function TrackCollectionBrowser({
           )}
         </div>
       }
-      renderGridItem={({ item, isSelected, select }) => {
+      renderGridItem={({ item, isSelected }) => {
         const isActive = item.id === currentTrackId;
         const showPause = isActive && isPlaying;
         return (
@@ -219,12 +221,12 @@ export default function TrackCollectionBrowser({
             showPause={showPause}
             progress={progressMap[item.id] ?? 0}
             coverUrl={resolveCoverUrl(item)}
-            onSelect={select}
+            onSelect={() => onSelectTrackId(item.id)}
             onPlay={() => onPlayTrack(item)}
           />
         );
       }}
-      renderListItem={({ item, isSelected, select }) => {
+      renderListItem={({ item, isSelected }) => {
         const isActive = item.id === currentTrackId;
         const showPause = isActive && isPlaying;
         return (
@@ -236,7 +238,7 @@ export default function TrackCollectionBrowser({
             progress={progressMap[item.id] ?? 0}
             coverUrl={resolveCoverUrl(item)}
             durationLabel={getTrackDurationLabel(item)}
-            onSelect={select}
+            onSelect={() => onSelectTrackId(item.id)}
             onPlay={() => onPlayTrack(item)}
           />
         );
