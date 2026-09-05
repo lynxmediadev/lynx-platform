@@ -7,7 +7,10 @@ type UseTagCatalogOptions = {
   createUrl?: string;
   deleteUrl?: string;
   saveUrl?: string; // opcional para guardar selección por track
-  buildSaveBody?: (values: string[], normalizeLabel: (raw: string) => string) => any;
+  buildSaveBody?: (
+    values: string[],
+    normalizeLabel: (raw: string) => string,
+  ) => any;
   headers?: Record<string, string>;
   mapItem?: (item: any) => TagChip;
   buildCreateBody?: (label: string) => any;
@@ -44,7 +47,10 @@ const defaultMapItem = (
   };
 };
 
-const defaultCreateBody = (label: string, normalizeLabel: (raw: string) => string) => ({
+const defaultCreateBody = (
+  label: string,
+  normalizeLabel: (raw: string) => string,
+) => ({
   name: normalizeLabel(label),
 });
 
@@ -74,9 +80,15 @@ export function useTagCatalog(options: UseTagCatalogOptions) {
   const fetchAll = React.useCallback(async (): Promise<TagChip[]> => {
     const res = await fetch(listUrl, { headers });
     const data = await res.json().catch(() => ({}));
-    const rawItems = Array.isArray(data) ? data : data.items ?? data.moods ?? [];
+    const rawItems = Array.isArray(data)
+      ? data
+      : (data.items ?? data.moods ?? []);
     return (rawItems as any[])
-      .map((it) => (mapItem ? mapItem(it) : defaultMapItem(it, normalizeLabel, normalizeSlug)))
+      .map((it) =>
+        mapItem
+          ? mapItem(it)
+          : defaultMapItem(it, normalizeLabel, normalizeSlug),
+      )
       .filter(Boolean);
   }, [headers, listUrl, mapItem, normalizeLabel, normalizeSlug]);
 
@@ -86,14 +98,22 @@ export function useTagCatalog(options: UseTagCatalogOptions) {
       if (!q) return [];
       const url = searchUrl ?? listUrl;
       const sep = url.includes("?") ? "&" : "?";
-      const res = await fetch(`${url}${sep}query=${encodeURIComponent(q)}`, { headers });
+      const res = await fetch(`${url}${sep}query=${encodeURIComponent(q)}`, {
+        headers,
+      });
       const data = await res.json().catch(() => ({}));
-      const rawItems = Array.isArray(data) ? data : data.items ?? data.moods ?? [];
+      const rawItems = Array.isArray(data)
+        ? data
+        : (data.items ?? data.moods ?? []);
       return (rawItems as any[])
-        .map((it) => (mapItem ? mapItem(it) : defaultMapItem(it, normalizeLabel, normalizeSlug)))
+        .map((it) =>
+          mapItem
+            ? mapItem(it)
+            : defaultMapItem(it, normalizeLabel, normalizeSlug),
+        )
         .filter(Boolean);
     },
-    [headers, listUrl, mapItem, normalizeLabel, normalizeSlug, searchUrl]
+    [headers, listUrl, mapItem, normalizeLabel, normalizeSlug, searchUrl],
   );
 
   const create = React.useCallback(
@@ -112,14 +132,23 @@ export function useTagCatalog(options: UseTagCatalogOptions) {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return null;
         const payload = data.mood ?? data.item ?? data;
-        return (mapItem ? mapItem(payload) : defaultMapItem(payload, normalizeLabel, normalizeSlug));
-      } catch (_e) {
+        return mapItem
+          ? mapItem(payload)
+          : defaultMapItem(payload, normalizeLabel, normalizeSlug);
+      } catch {
         return null;
       } finally {
         setLoading(false);
       }
     },
-    [buildCreateBody, createUrl, headers, mapItem, normalizeLabel, normalizeSlug]
+    [
+      buildCreateBody,
+      createUrl,
+      headers,
+      mapItem,
+      normalizeLabel,
+      normalizeSlug,
+    ],
   );
 
   return {
@@ -133,7 +162,10 @@ export function useTagCatalog(options: UseTagCatalogOptions) {
           try {
             const res = await fetch(deleteUrl, {
               method: "DELETE",
-              headers: { "Content-Type": "application/json", ...(headers ?? {}) },
+              headers: {
+                "Content-Type": "application/json",
+                ...(headers ?? {}),
+              },
               body: JSON.stringify({ id: idOrSlug, slug: idOrSlug }),
             });
             return { ok: res.ok };

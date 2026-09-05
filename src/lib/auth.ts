@@ -15,39 +15,55 @@ import crypto from "node:crypto";
 
 export type AdminSessionPayloadV1 = {
   sub: "admin";
-  iat: number;   // issued at (ms)
-  exp: number;   // expires at (ms)
-  jti: string;   // token id (random)
-  ua?: string;   // hash sha256 del user-agent (opcional)
+  iat: number; // issued at (ms)
+  exp: number; // expires at (ms)
+  jti: string; // token id (random)
+  ua?: string; // hash sha256 del user-agent (opcional)
 };
 
-const ENC = "base64url" as crypto.BinaryToTextEncoding;
-
 function b64url(buf: Buffer) {
-  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return buf
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 export function sha256Hex(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
 }
 
-export function signAdminTokenV1(payload: AdminSessionPayloadV1, secret: string) {
+export function signAdminTokenV1(
+  payload: AdminSessionPayloadV1,
+  secret: string,
+) {
   const payloadB64 = b64url(Buffer.from(JSON.stringify(payload), "utf8"));
   const sig = crypto.createHmac("sha256", secret).update(payloadB64).digest();
   const sigB64 = b64url(sig);
   return `v1.${payloadB64}.${sigB64}`;
 }
 
-export function verifyAdminTokenV1(token: string, secret: string): AdminSessionPayloadV1 | null {
+export function verifyAdminTokenV1(
+  token: string,
+  secret: string,
+): AdminSessionPayloadV1 | null {
   try {
     const [v, payloadB64, sigB64] = token.split(".");
     if (v !== "v1" || !payloadB64 || !sigB64) return null;
-    const expected = crypto.createHmac("sha256", secret).update(payloadB64).digest();
+    const expected = crypto
+      .createHmac("sha256", secret)
+      .update(payloadB64)
+      .digest();
     const expectedB64 = b64url(expected);
     if (expectedB64.length !== sigB64.length) return null;
-    if (!crypto.timingSafeEqual(Buffer.from(expectedB64), Buffer.from(sigB64))) return null;
-    const json = Buffer.from(payloadB64.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+    if (!crypto.timingSafeEqual(Buffer.from(expectedB64), Buffer.from(sigB64)))
+      return null;
+    const json = Buffer.from(
+      payloadB64.replace(/-/g, "+").replace(/_/g, "/"),
+      "base64",
+    ).toString("utf8");
     const p = JSON.parse(json) as AdminSessionPayloadV1;
-    if (p.sub !== "admin" || typeof p.exp !== "number" || Date.now() >= p.exp) return null;
+    if (p.sub !== "admin" || typeof p.exp !== "number" || Date.now() >= p.exp)
+      return null;
     return p;
   } catch {
     return null;

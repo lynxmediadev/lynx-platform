@@ -22,9 +22,7 @@ import { TrackAnalyzeHeaderButtons } from "@/components/admin/AnalyzeActions";
 import { DeleteTrackButton } from "@/components/admin/track/DeleteTrackButton.client";
 import { deleteObjectFromS3 } from "@/lib/storage/delete-object";
 import { TrackEditShell } from "@/components/admin/track/edit/TrackEditShell";
-import {
-  getTrackOverviewPageData,
-} from "@/server/track-edit/queries";
+import { getTrackOverviewPageData } from "@/server/track-edit/queries";
 import { getTrackEditModuleNavItems } from "@/components/admin/track/edit/module-nav";
 
 type ModuleStatus = "ok" | "warning" | "info";
@@ -62,18 +60,18 @@ function ModuleCard({
   details: string[];
 }) {
   return (
-    <article className="rounded-lg border border-border bg-card/50 p-4">
+    <article className="border-border bg-card/50 rounded-lg border p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          <h2 className="text-foreground text-sm font-semibold">{title}</h2>
+          <p className="text-muted-foreground mt-1 text-xs">{description}</p>
         </div>
         <StatusChip status={status} text={statusText} />
       </div>
 
       <ul className="mt-3 space-y-1">
         {details.map((detail) => (
-          <li key={detail} className="text-xs text-muted-foreground">
+          <li key={detail} className="text-muted-foreground text-xs">
             {detail}
           </li>
         ))}
@@ -101,9 +99,13 @@ export default async function AdminTrackEditOverviewPage({
   }
 
   const assignedMoods =
-    trackOverview.tags?.filter((t) => t.tag.type === "MOOD").map((c) => c.tag.name) ?? [];
+    trackOverview.tags
+      ?.filter((t) => t.tag.type === "MOOD")
+      .map((c) => c.tag.name) ?? [];
   const assignedUses =
-    trackOverview.tags?.filter((t) => t.tag.type === "USE").map((c) => c.tag.name) ?? [];
+    trackOverview.tags
+      ?.filter((t) => t.tag.type === "USE")
+      .map((c) => c.tag.name) ?? [];
   const assignedCategories =
     trackOverview.tags
       ?.filter((t) => t.tag.type === "CATALOG")
@@ -125,13 +127,15 @@ export default async function AdminTrackEditOverviewPage({
       ? "ok"
       : "warning";
 
-  const idFilledCount = [trackOverview.isrc, trackOverview.iswc, trackOverview.upc].filter(
+  const idFilledCount = [
+    trackOverview.isrc,
+    trackOverview.iswc,
+    trackOverview.upc,
+  ].filter(
     (value) => typeof value === "string" && value.trim().length > 0,
   ).length;
 
-  const modules = getTrackEditModuleNavItems(trackOverview.id, {
-    includeFull: true,
-  });
+  const modules = getTrackEditModuleNavItems(trackOverview.id);
 
   async function deleteTrackAction(formData: FormData) {
     "use server";
@@ -192,10 +196,12 @@ export default async function AdminTrackEditOverviewPage({
             id={trackOverview.id}
             audioUrl={trackOverview.audioUrl}
           />
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${trackOverview.id}/edit/full`}>Vista completa</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="w-full text-xs sm:w-auto">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full text-xs sm:w-auto"
+          >
             <Link href="/admin/tracks">Volver al listado</Link>
           </Button>
         </>
@@ -206,8 +212,12 @@ export default async function AdminTrackEditOverviewPage({
           title="Creativo"
           description="Titulo, artista, modulo musical y tags creativos."
           href={`/admin/tracks/${trackOverview.id}/edit/creative`}
-          status={trackOverview.title && trackOverview.artist ? "ok" : "warning"}
-          statusText={trackOverview.title && trackOverview.artist ? "Listo" : "Pendiente"}
+          status={
+            trackOverview.title && trackOverview.artist ? "ok" : "warning"
+          }
+          statusText={
+            trackOverview.title && trackOverview.artist ? "Listo" : "Pendiente"
+          }
           details={[
             `Moods asignados: ${assignedMoods.length}`,
             `Usos asignados: ${assignedUses.length}`,
@@ -255,8 +265,8 @@ export default async function AdminTrackEditOverviewPage({
         />
 
         <ModuleCard
-          title="Review"
-          description="Revision consolidada final antes de publicar/entregar."
+          title="Revisión"
+          description="Revisión consolidada final antes de publicar o entregar."
           href={`/admin/tracks/${trackOverview.id}/edit/review`}
           status="info"
           statusText="Disponible"

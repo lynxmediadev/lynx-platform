@@ -6,16 +6,16 @@
 // Peras y manzanas: “Las llaves del auto (DB) siempre; las de la bodega (S3) solo si voy.”
 // ================================================
 
-/* eslint-env node */
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
-
 
 export const env = createEnv({
   server: {
     DATABASE_URL: z.string().url(),
     DIRECT_URL: z.string().url().optional(), // para prisma migrate
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
 
     // S3 opcional (se valida cuando firmamos)
     S3_ENDPOINT: z.string().url().optional(),

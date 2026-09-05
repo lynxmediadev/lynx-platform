@@ -12,19 +12,25 @@ type UsePublishingSharesArgs = {
 
 type SaveFeedback = { status: "saving" | "ok" | "error"; code?: string } | null;
 
-export function usePublishingShares({ trackId, initialShares }: UsePublishingSharesArgs) {
+export function usePublishingShares({
+  trackId,
+  initialShares,
+}: UsePublishingSharesArgs) {
   const [shares, setShares] = React.useState<Share[]>(
     (initialShares ?? []).slice().sort(sortByOrder),
   );
   const [shareError, setShareError] = React.useState<string | null>(null);
-  const [shareRoleErrors, setShareRoleErrors] = React.useState<{ WRITER?: string; PUBLISHER?: string }>(
-    {},
-  );
+  const [shareRoleErrors, setShareRoleErrors] = React.useState<{
+    WRITER?: string;
+    PUBLISHER?: string;
+  }>({});
   const [savingWriter, setSavingWriter] = React.useState(false);
   const [savingPublisher, setSavingPublisher] = React.useState(false);
   const [reorderSharePending, setReorderSharePending] = React.useState(false);
   const [saveFeedback, setSaveFeedback] = React.useState<SaveFeedback>(null);
-  const saveFeedbackTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveFeedbackTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   const [newWriter, setNewWriter] = React.useState<
     Share & { ipiNumber: string; pro: string; caeNumber: string }
@@ -60,8 +66,10 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
     const totalP = sumByRole("PUBLISHER", list);
     const roleErrors: { WRITER?: string; PUBLISHER?: string } = {};
 
-    if (totalW > 100) roleErrors.WRITER = "WRITER supera 100%. Ajusta porcentajes.";
-    if (totalP > 100) roleErrors.PUBLISHER = "PUBLISHER supera 100%. Ajusta porcentajes.";
+    if (totalW > 100)
+      roleErrors.WRITER = "WRITER supera 100%. Ajusta porcentajes.";
+    if (totalP > 100)
+      roleErrors.PUBLISHER = "PUBLISHER supera 100%. Ajusta porcentajes.";
 
     setShareRoleErrors(roleErrors);
     setShareError(roleErrors.WRITER ?? roleErrors.PUBLISHER ?? null);
@@ -69,13 +77,15 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
 
   React.useEffect(
     () => () => {
-      if (saveFeedbackTimerRef.current) clearTimeout(saveFeedbackTimerRef.current);
+      if (saveFeedbackTimerRef.current)
+        clearTimeout(saveFeedbackTimerRef.current);
     },
     [],
   );
 
   const showSaveFeedback = (next: SaveFeedback, durationMs?: number) => {
-    if (saveFeedbackTimerRef.current) clearTimeout(saveFeedbackTimerRef.current);
+    if (saveFeedbackTimerRef.current)
+      clearTimeout(saveFeedbackTimerRef.current);
     setSaveFeedback(next);
     if (durationMs && durationMs > 0) {
       saveFeedbackTimerRef.current = setTimeout(() => {
@@ -95,18 +105,19 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
         shares: ordered.map((s) => ({
           ...s,
           sharePct:
-            s.sharePct === null || Number.isNaN(Number(s.sharePct)) ? null : Number(s.sharePct),
+            s.sharePct === null || Number.isNaN(Number(s.sharePct))
+              ? null
+              : Number(s.sharePct),
         })),
       });
       if (!result.ok) {
         const msg = "message" in result ? result.message : null;
         setShareError(msg ?? "Error al guardar publishing shares.");
-        const code =
-          result.fieldErrors?.publishingShares?.length
-            ? "PUB_ONESTOP_100"
-            : msg?.toLowerCase().includes("validación")
-              ? "PUB_VALIDATION"
-              : "PUB_SAVE_FAILED";
+        const code = result.fieldErrors?.publishingShares?.length
+          ? "PUB_ONESTOP_100"
+          : msg?.toLowerCase().includes("validación")
+            ? "PUB_VALIDATION"
+            : "PUB_SAVE_FAILED";
         showSaveFeedback({ status: "error", code }, 5000);
         return false;
       }
@@ -114,7 +125,10 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
       showSaveFeedback({ status: "ok" }, 1000);
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error inesperado al guardar publishing.";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Error inesperado al guardar publishing.";
       setShareError(msg);
       const code = msg.includes("Failed to find Server Action")
         ? "PUB_ACTION_STALE"
@@ -133,7 +147,11 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
     return persistShares(ordered);
   };
 
-  const commitShareField = async (idx: number, field: keyof Share, value: string) => {
+  const commitShareField = async (
+    idx: number,
+    field: keyof Share,
+    value: string,
+  ) => {
     const next = shares.map((s, i) =>
       i === idx
         ? {
@@ -156,7 +174,9 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
   const moveShare = (globalIdx: number, delta: number) => {
     const role = shares[globalIdx]?.role;
     if (!role) return;
-    const indices = shares.map((s, i) => (s.role === role ? i : -1)).filter((i) => i >= 0);
+    const indices = shares
+      .map((s, i) => (s.role === role ? i : -1))
+      .filter((i) => i >= 0);
     const pos = indices.indexOf(globalIdx);
     if (pos === -1) return;
     const targetPos = clamp(pos + delta, 0, indices.length - 1);
@@ -175,7 +195,9 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
   const moveShareTo = (globalIdx: number, targetPos: number) => {
     const role = shares[globalIdx]?.role;
     if (!role) return;
-    const indices = shares.map((s, i) => (s.role === role ? i : -1)).filter((i) => i >= 0);
+    const indices = shares
+      .map((s, i) => (s.role === role ? i : -1))
+      .filter((i) => i >= 0);
     const pos = indices.indexOf(globalIdx);
     if (pos === -1) return;
     const clamped = clamp(targetPos, 0, indices.length - 1);
@@ -214,7 +236,8 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
         role,
         name: formState.name.trim(),
         sharePct:
-          formState.sharePct === null || Number.isNaN(Number(formState.sharePct))
+          formState.sharePct === null ||
+          Number.isNaN(Number(formState.sharePct))
             ? null
             : Number(formState.sharePct),
         ipiNumber: formState.ipiNumber.trim() || "",
@@ -226,7 +249,10 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
     const totalW = sumByRole("WRITER", ordered);
     const totalP = sumByRole("PUBLISHER", ordered);
     if (role === "WRITER" && totalW > 100) {
-      setShareRoleErrors((prev) => ({ ...prev, WRITER: "WRITER supera 100%. Ajusta porcentajes." }));
+      setShareRoleErrors((prev) => ({
+        ...prev,
+        WRITER: "WRITER supera 100%. Ajusta porcentajes.",
+      }));
       setShareError("WRITER supera 100%. Ajusta porcentajes.");
       return;
     }
@@ -240,10 +266,11 @@ export function usePublishingShares({ trackId, initialShares }: UsePublishingSha
     }
     setShareRoleErrors({});
     setShareError(null);
-    const savingSetter = role === "WRITER" ? setSavingWriter : setSavingPublisher;
+    const savingSetter =
+      role === "WRITER" ? setSavingWriter : setSavingPublisher;
     const resetSetter = role === "WRITER" ? setNewWriter : setNewPublisher;
     savingSetter(true);
-    persistShares(ordered).finally(() => savingSetter(false));
+    void persistShares(ordered).finally(() => savingSetter(false));
     setShares(ordered);
     resetSetter((prev) => ({
       ...prev,

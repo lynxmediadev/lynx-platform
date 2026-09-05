@@ -8,9 +8,7 @@ import { Button } from "@/components/ui/button";
 import { TrackAnalyzeHeaderButtons } from "@/components/admin/AnalyzeActions";
 import { TrackEditShell } from "@/components/admin/track/edit/TrackEditShell";
 import { getTrackEditModuleNavItems } from "@/components/admin/track/edit/module-nav";
-import {
-  getTrackOverviewPageData,
-} from "@/server/track-edit/queries";
+import { getTrackOverviewPageData } from "@/server/track-edit/queries";
 
 export default async function AdminTrackEditReviewPage({
   params,
@@ -24,14 +22,20 @@ export default async function AdminTrackEditReviewPage({
     notFound();
   }
 
-  const modules = getTrackEditModuleNavItems(trackOverview.id, { includeFull: true });
+  const modules = getTrackEditModuleNavItems(trackOverview.id);
 
   const assignedMoods =
-    trackOverview.tags?.filter((t) => t.tag.type === "MOOD").map((c) => c.tag.name) ?? [];
+    trackOverview.tags
+      ?.filter((t) => t.tag.type === "MOOD")
+      .map((c) => c.tag.name) ?? [];
   const assignedUses =
-    trackOverview.tags?.filter((t) => t.tag.type === "USE").map((c) => c.tag.name) ?? [];
+    trackOverview.tags
+      ?.filter((t) => t.tag.type === "USE")
+      .map((c) => c.tag.name) ?? [];
   const assignedCategories =
-    trackOverview.tags?.filter((t) => t.tag.type === "CATALOG").map((c) => c.tag.name) ?? [];
+    trackOverview.tags
+      ?.filter((t) => t.tag.type === "CATALOG")
+      .map((c) => c.tag.name) ?? [];
 
   const writerTotal = trackOverview.publishingShares
     .filter((item) => item.role === "WRITER")
@@ -57,33 +61,32 @@ export default async function AdminTrackEditReviewPage({
             id={trackOverview.id}
             audioUrl={trackOverview.audioUrl}
           />
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${trackOverview.id}/edit/full`}>Vista completa</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${trackOverview.id}/edit`}>Overview</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="w-full text-xs sm:w-auto">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full text-xs sm:w-auto"
+          >
             <Link href="/admin/tracks">Volver al listado</Link>
           </Button>
         </>
       }
     >
-      <section className="rounded-lg border border-border bg-card/50 p-4">
-        <h2 className="text-sm font-semibold text-foreground">
+      <section className="border-border bg-card/50 rounded-lg border p-4">
+        <h2 className="text-foreground text-sm font-semibold">
           Revision consolidada
         </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs">
           Verifica estado final antes de publicar o exportar payload.
         </p>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <article className="rounded-lg border border-border bg-card/50 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <article className="border-border bg-card/50 rounded-lg border p-4">
+          <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             Creativo
           </h3>
-          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+          <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
             <li>Titulo: {trackOverview.title ?? "-"}</li>
             <li>Artista: {trackOverview.artist ?? "-"}</li>
             <li>Moods: {assignedMoods.length}</li>
@@ -92,11 +95,11 @@ export default async function AdminTrackEditReviewPage({
           </ul>
         </article>
 
-        <article className="rounded-lg border border-border bg-card/50 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <article className="border-border bg-card/50 rounded-lg border p-4">
+          <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             Derechos
           </h3>
-          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+          <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
             <li>Writer total: {writerTotal}%</li>
             <li>Publisher total: {publisherTotal}%</li>
             <li>Master total: {masterTotal}%</li>
@@ -105,11 +108,11 @@ export default async function AdminTrackEditReviewPage({
           </ul>
         </article>
 
-        <article className="rounded-lg border border-border bg-card/50 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <article className="border-border bg-card/50 rounded-lg border p-4">
+          <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
             Metadata y entrega
           </h3>
-          <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+          <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
             <li>ISRC: {trackOverview.isrc ?? "-"}</li>
             <li>ISWC: {trackOverview.iswc ?? "-"}</li>
             <li>UPC: {trackOverview.upc ?? "-"}</li>

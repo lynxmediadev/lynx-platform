@@ -23,17 +23,43 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { TagType } from "@prisma/client";
-import { APP_SESSION_COOKIE, getSessionUserFromCookie } from "@/lib/account-auth/session";
+import {
+  APP_SESSION_COOKIE,
+  getSessionUserFromCookie,
+} from "@/lib/account-auth/session";
 import { getRequestAuthUser } from "@/lib/account-auth/request-auth";
 import { slugify } from "@/lib/slugify";
 import { syncTrackTagsByType } from "@/server/tags/syncTrackTagsByType";
 import { db } from "@/server/db";
 
-const TRACK_TYPE_VALUES = ["INSTRUMENTAL", "VOCAL", "VOCAL_INSTRUMENTAL", "OTHER"] as const;
+const TRACK_TYPE_VALUES = [
+  "INSTRUMENTAL",
+  "VOCAL",
+  "VOCAL_INSTRUMENTAL",
+  "OTHER",
+] as const;
 const PRICING_TIER_VALUES = ["LOW", "MID", "HIGH", "BESPOKE"] as const;
-const LICENSE_TYPE_VALUES = ["NON_EXCLUSIVE", "EXCLUSIVE", "LIMITED_EXCLUSIVE", "BUYOUT"] as const;
-const VERSION_KIND_VALUES = ["FULL", "CUTDOWN", "ALT_MIX", "INSTRUMENTAL", "VOCAL", "OTHER"] as const;
-const STEM_GROUP_VALUES = ["INSTRUMENT", "VOCAL", "FX", "PERCUSSION", "OTHER"] as const;
+const LICENSE_TYPE_VALUES = [
+  "NON_EXCLUSIVE",
+  "EXCLUSIVE",
+  "LIMITED_EXCLUSIVE",
+  "BUYOUT",
+] as const;
+const VERSION_KIND_VALUES = [
+  "FULL",
+  "CUTDOWN",
+  "ALT_MIX",
+  "INSTRUMENTAL",
+  "VOCAL",
+  "OTHER",
+] as const;
+const STEM_GROUP_VALUES = [
+  "INSTRUMENT",
+  "VOCAL",
+  "FX",
+  "PERCUSSION",
+  "OTHER",
+] as const;
 const CURRENCY_VALUES = ["CLP", "USD", "EUR"] as const;
 
 const trackTypeSchema = z.enum(TRACK_TYPE_VALUES);
@@ -166,7 +192,9 @@ function normalizeNullableInt(raw: unknown): number | null {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-function normalizeVersions(values: z.infer<typeof versionSchema>[] | undefined) {
+function normalizeVersions(
+  values: z.infer<typeof versionSchema>[] | undefined,
+) {
   if (!Array.isArray(values)) return [];
   return values
     .map((version) => ({
@@ -252,7 +280,9 @@ function normalizeIncoming(input: z.infer<typeof incomingTrackSchema>) {
       : 0;
 
   const bpm =
-    typeof input.bpm === "number" && Number.isFinite(input.bpm) ? input.bpm : null;
+    typeof input.bpm === "number" && Number.isFinite(input.bpm)
+      ? input.bpm
+      : null;
   const key = normalizeText(input.key);
   const trackType = input.trackType ?? null;
   const genres = normalizeStringArray(input.genres);
@@ -263,9 +293,15 @@ function normalizeIncoming(input: z.infer<typeof incomingTrackSchema>) {
   const oneStop = typeof input.oneStop === "boolean" ? input.oneStop : null;
   const clearedForSync =
     typeof input.clearedForSync === "boolean" ? input.clearedForSync : null;
-  const exclusiveTerritories = normalizeStringArray(input.exclusiveTerritories, true);
+  const exclusiveTerritories = normalizeStringArray(
+    input.exclusiveTerritories,
+    true,
+  );
   const exclusiveTermMonths = normalizeNullableInt(input.exclusiveTermMonths);
-  const restrictedTerritories = normalizeStringArray(input.restrictedTerritories, true);
+  const restrictedTerritories = normalizeStringArray(
+    input.restrictedTerritories,
+    true,
+  );
   const restrictedIndustries = normalizeStringArray(input.restrictedIndustries);
   const restrictedPlatforms = normalizeStringArray(input.restrictedPlatforms);
   const restrictedBrands = normalizeStringArray(input.restrictedBrands);
@@ -327,7 +363,9 @@ async function resolveOwnerUserIdForCreate(params: {
 
   // Fallback temporal para sesiones legacy admin.
   if (params.authUser.role === "ADMIN" || params.authUser.role === "STAFF") {
-    const bootstrapEmail = (process.env.AUTH_BOOTSTRAP_ADMIN_EMAIL ?? "admin@lynx.local")
+    const bootstrapEmail = (
+      process.env.AUTH_BOOTSTRAP_ADMIN_EMAIL ?? "admin@lynx.local"
+    )
       .trim()
       .toLowerCase();
     if (!bootstrapEmail) return null;
@@ -349,7 +387,10 @@ export async function POST(req: NextRequest) {
   try {
     const authUser = await getRequestAuthUser(req);
     if (!authUser) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 },
+      );
     }
 
     const cookieStore = await cookies();
@@ -476,11 +517,23 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const authUser = await getRequestAuthUser(req);
+    if (!authUser) {
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 },
+      );
+    }
     const { searchParams } = new URL(req.url);
     const view = searchParams.get("view");
 
-    const moods = searchParams.getAll("mood").map((m) => m.trim()).filter(Boolean);
-    const uses = searchParams.getAll("use").map((u) => u.trim()).filter(Boolean);
+    const moods = searchParams
+      .getAll("mood")
+      .map((m) => m.trim())
+      .filter(Boolean);
+    const uses = searchParams
+      .getAll("use")
+      .map((u) => u.trim())
+      .filter(Boolean);
     const artist = searchParams.get("artist")?.trim() ?? "";
     const q = searchParams.get("q")?.trim() ?? "";
 
@@ -498,7 +551,9 @@ export async function GET(req: NextRequest) {
     const orderParam = searchParams.get("order");
     const dirParam = searchParams.get("dir");
     const order =
-      orderParam === "title" || orderParam === "artist" || orderParam === "createdAt"
+      orderParam === "title" ||
+      orderParam === "artist" ||
+      orderParam === "createdAt"
         ? orderParam
         : "createdAt";
     const dir = dirParam === "asc" || dirParam === "desc" ? dirParam : "desc";
@@ -537,7 +592,10 @@ export async function GET(req: NextRequest) {
         });
       }
     }
-    if (artist) filters.push({ artist: { contains: artist, mode: "insensitive" as const } });
+    if (artist)
+      filters.push({
+        artist: { contains: artist, mode: "insensitive" as const },
+      });
     if (q) {
       filters.push({
         OR: [
@@ -581,8 +639,12 @@ export async function GET(req: NextRequest) {
       const nextCursor = nextOffset < totalCount ? String(nextOffset) : null;
 
       const mappedItems = items.map((item) => {
-        const moods = item.tags.filter((t) => t.tag.type === TagType.MOOD).map((t) => t.tag.name);
-        const uses = item.tags.filter((t) => t.tag.type === TagType.USE).map((t) => t.tag.name);
+        const moods = item.tags
+          .filter((t) => t.tag.type === TagType.MOOD)
+          .map((t) => t.tag.name);
+        const uses = item.tags
+          .filter((t) => t.tag.type === TagType.USE)
+          .map((t) => t.tag.name);
         return {
           id: item.id,
           title: item.title,
@@ -604,7 +666,10 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ ok: true, tracks }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { ok: true, tracks },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (err) {
     console.error("[api/tracks:GET] error inesperado:", err);
     return NextResponse.json(

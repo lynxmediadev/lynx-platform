@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Las portadas provienen de URLs dinámicas de R2. */
 
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -16,7 +17,13 @@ import {
 } from "lucide-react";
 import WaveformScrubber from "@/components/public/WaveformScrubber";
 import LoopingText from "@/components/common/LoopingText";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -65,9 +72,9 @@ function ActionTooltip({
       {children}
       <span
         className={cn(
-          "pointer-events-none absolute -top-8 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded border px-2 py-0.5 text-[12px] font-semibold opacity-0 shadow transition-opacity duration-150",
-          "border-black/80 bg-foreground/90 text-background dark:border-white/80 dark:bg-white dark:text-black",
-          "group-hover:opacity-100 group-focus-within:opacity-100",
+          "pointer-events-none absolute -top-8 left-1/2 z-20 -translate-x-1/2 rounded border px-2 py-0.5 text-[12px] font-semibold whitespace-nowrap opacity-0 shadow transition-opacity duration-150",
+          "bg-foreground/90 text-background border-black/80 dark:border-white/80 dark:bg-white dark:text-black",
+          "group-focus-within:opacity-100 group-hover:opacity-100",
           forceVisible && "opacity-100",
         )}
       >
@@ -155,24 +162,33 @@ export default function CatalogBottomPlayerV2({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[90] w-full overflow-x-clip border-t border-border/90 bg-background/95 shadow-[0_-8px_30px_rgba(0,0,0,0.38)] backdrop-blur-md supports-[backdrop-filter]:bg-background/88">
+    <div className="border-border/90 bg-background/95 supports-[backdrop-filter]:bg-background/88 fixed inset-x-0 bottom-0 z-[90] w-full overflow-x-clip border-t shadow-[0_-8px_30px_rgba(0,0,0,0.38)] backdrop-blur-md">
       <div className="mx-auto grid w-[90vw] max-w-[1700px] min-w-0 grid-cols-[auto_minmax(0,1fr)_110px_auto] items-center gap-2 py-2 sm:grid-cols-[76px_170px_minmax(130px,1fr)_auto] md:grid-cols-[84px_200px_minmax(170px,1fr)_auto] lg:grid-cols-[92px_235px_minmax(205px,1fr)_auto] xl:grid-cols-[96px_255px_minmax(225px,1fr)_auto]">
         <div className="flex min-w-0 items-center gap-2">
           <Link
             href={`/track/${trackId}`}
-            className="relative hidden h-9 w-9 shrink-0 overflow-hidden rounded border border-border bg-card transition hover:border-foreground/70 sm:block"
+            className="border-border bg-card hover:border-foreground/70 relative hidden h-9 w-9 shrink-0 overflow-hidden rounded border transition sm:block"
             aria-label={`Ver track ${title}`}
           >
-            <img src={coverUrl} alt={`Cover de ${title}`} className="h-full w-full object-cover" loading="lazy" />
+            <img
+              src={coverUrl}
+              alt={`Cover de ${title}`}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
           </Link>
 
           <button
             type="button"
             onClick={onTogglePlay}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-foreground transition hover:border-foreground/70 hover:bg-foreground hover:text-background"
+            className="border-border bg-card text-foreground hover:border-foreground/70 hover:bg-foreground hover:text-background inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border transition"
             aria-label={isPlaying ? "Pausar reproducción" : "Reproducir track"}
           >
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
+            {isPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="ml-0.5 h-4 w-4" />
+            )}
           </button>
         </div>
 
@@ -184,7 +200,7 @@ export default function CatalogBottomPlayerV2({
           >
             <LoopingText
               text={title}
-              className="text-left text-[11px] font-semibold leading-tight text-foreground sm:text-[12px]"
+              className="text-foreground text-left text-[11px] leading-tight font-semibold sm:text-[12px]"
               speedPxPerSecond={34}
               forceLoopOnMobile
             />
@@ -196,7 +212,7 @@ export default function CatalogBottomPlayerV2({
           >
             <LoopingText
               text={artist || "Artista"}
-              className="text-left text-[9px] leading-tight text-muted-foreground sm:text-[10px]"
+              className="text-muted-foreground text-left text-[9px] leading-tight sm:text-[10px]"
               speedPxPerSecond={30}
               forceLoopOnMobile
             />
@@ -215,10 +231,13 @@ export default function CatalogBottomPlayerV2({
                   height={18}
                   className="w-full"
                   frameClassName="relative select-none rounded border-x border-border/70 bg-card/20"
-                  colors={{ base: "__theme_base__", progress: "__theme_progress__" }}
+                  colors={{
+                    base: "__theme_base__",
+                    progress: "__theme_progress__",
+                  }}
                 />
               </div>
-              <div className="hidden shrink-0 text-[10px] tabular-nums text-muted-foreground sm:block">
+              <div className="text-muted-foreground hidden shrink-0 text-[10px] tabular-nums sm:block">
                 {formatTime(currentSec)} / {formatTime(durationSec)}
               </div>
             </div>
@@ -236,7 +255,7 @@ export default function CatalogBottomPlayerV2({
                 "hidden h-8 w-8 items-center justify-center rounded border transition lg:inline-flex",
                 hasPrev
                   ? "border-border bg-card text-foreground hover:border-foreground/70 hover:bg-muted"
-                  : "cursor-not-allowed border-border/70 bg-card text-muted-foreground/55",
+                  : "border-border/70 bg-card text-muted-foreground/55 cursor-not-allowed",
               )}
               aria-label="Skip anterior"
             >
@@ -253,7 +272,7 @@ export default function CatalogBottomPlayerV2({
                 "hidden h-8 w-8 items-center justify-center rounded border transition lg:inline-flex",
                 hasNext
                   ? "border-border bg-card text-foreground hover:border-foreground/70 hover:bg-muted"
-                  : "cursor-not-allowed border-border/70 bg-card text-muted-foreground/55",
+                  : "border-border/70 bg-card text-muted-foreground/55 cursor-not-allowed",
               )}
               aria-label="Skip siguiente"
             >
@@ -264,7 +283,7 @@ export default function CatalogBottomPlayerV2({
           <ActionTooltip label="Abrir track">
             <Link
               href={`/track/${trackId}`}
-              className="hidden h-8 w-8 items-center justify-center rounded border border-border bg-card text-foreground transition hover:border-foreground/70 hover:bg-muted md:inline-flex"
+              className="border-border bg-card text-foreground hover:border-foreground/70 hover:bg-muted hidden h-8 w-8 items-center justify-center rounded border transition md:inline-flex"
               aria-label="Abrir ficha del track"
             >
               <ExternalLink className="h-3.5 w-3.5" />
@@ -276,7 +295,7 @@ export default function CatalogBottomPlayerV2({
               <DialogTrigger asChild>
                 <button
                   type="button"
-                  className="hidden h-8 w-8 items-center justify-center rounded border border-border bg-card text-foreground transition hover:border-foreground/70 hover:bg-muted md:inline-flex"
+                  className="border-border bg-card text-foreground hover:border-foreground/70 hover:bg-muted hidden h-8 w-8 items-center justify-center rounded border transition md:inline-flex"
                   aria-label="Ver licencias"
                 >
                   <FileText className="h-3.5 w-3.5" />
@@ -291,21 +310,31 @@ export default function CatalogBottomPlayerV2({
                 {PLAYER_LICENSE_PREVIEW.map((license) => (
                   <article
                     key={license.id}
-                    className="rounded border border-border bg-card/70 p-3"
+                    className="border-border bg-card/70 rounded border p-3"
                   >
-                    <p className="text-sm font-semibold text-foreground">{license.title}</p>
-                    <p className="mt-2 text-xl font-semibold leading-none text-foreground">{license.price}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">{license.detail}</p>
+                    <p className="text-foreground text-sm font-semibold">
+                      {license.title}
+                    </p>
+                    <p className="text-foreground mt-2 text-xl leading-none font-semibold">
+                      {license.price}
+                    </p>
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      {license.detail}
+                    </p>
                   </article>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Vista previa con dummy data para validar UI/UX. Los valores reales vendrán desde catálogo/licenciamiento.
+              <p className="text-muted-foreground text-xs">
+                Vista previa con dummy data para validar UI/UX. Los valores
+                reales vendrán desde catálogo/licenciamiento.
               </p>
             </DialogContent>
           </Dialog>
 
-          <ActionTooltip label={didCopyTrackUrl ? "Copiado" : "Copiar URL"} forceVisible={didCopyTrackUrl} >
+          <ActionTooltip
+            label={didCopyTrackUrl ? "Copiado" : "Copiar URL"}
+            forceVisible={didCopyTrackUrl}
+          >
             <button
               type="button"
               onClick={(event) => {
@@ -328,10 +357,14 @@ export default function CatalogBottomPlayerV2({
             <button
               type="button"
               onClick={onToggleMute}
-              className="inline-flex h-8 w-8 items-center justify-center rounded border border-border bg-card text-foreground transition hover:border-foreground/70 hover:bg-muted"
+              className="border-border bg-card text-foreground hover:border-foreground/70 hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded border transition"
               aria-label={isMuted ? "Activar audio" : "Silenciar audio"}
             >
-              {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              {isMuted ? (
+                <VolumeX className="h-3.5 w-3.5" />
+              ) : (
+                <Volume2 className="h-3.5 w-3.5" />
+              )}
             </button>
           </ActionTooltip>
 
@@ -342,7 +375,7 @@ export default function CatalogBottomPlayerV2({
             step={0.005}
             value={Math.max(0, Math.min(1, volume))}
             onChange={(event) => onVolumeChange(Number(event.target.value))}
-            className="hidden h-2 w-20 cursor-pointer accent-foreground xl:block"
+            className="accent-foreground hidden h-2 w-20 cursor-pointer xl:block"
             aria-label="Volumen general"
           />
 
@@ -350,7 +383,7 @@ export default function CatalogBottomPlayerV2({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded border border-border bg-card text-foreground transition hover:border-foreground/70 hover:bg-muted"
+              className="border-border bg-card text-foreground hover:border-foreground/70 hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded border transition"
               aria-label="Cerrar reproductor"
             >
               <X className="h-3.5 w-3.5" />

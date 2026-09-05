@@ -19,7 +19,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import HomeDotsNav from "@/components/home/HomeDotsNav";
-import { SECTIONS, type SectionDef } from "@/components/home/homeSections";
+import { SECTIONS } from "@/components/home/homeSections";
 import { usePrefersReducedMotion } from "@/components/home/usePrefersReducedMotion";
 
 import HeroSection from "@/components/home/HeroSection";
@@ -38,7 +38,7 @@ export default function HomeSnap() {
   // 1 pantalla visible debajo del header (sin overlay)
   const panelStyle = useMemo(
     () => ({ height: "calc(100dvh - var(--header-h))" as const }),
-    []
+    [],
   );
 
   /**
@@ -101,7 +101,7 @@ export default function HomeSnap() {
     if (!scroller) return;
 
     const els = SECTIONS.map((s) =>
-      scroller.querySelector<HTMLElement>(`#${CSS.escape(s.id)}`)
+      scroller.querySelector<HTMLElement>(`#${CSS.escape(s.id)}`),
     ).filter(Boolean) as HTMLElement[];
 
     if (els.length === 0) return;
@@ -111,13 +111,12 @@ export default function HomeSnap() {
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort(
-            (a, b) =>
-              (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0)
+            (a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0),
           );
 
         if (visible[0]?.target?.id) setActiveId(visible[0].target.id);
       },
-      { root: scroller, threshold: [0.55, 0.65, 0.75] }
+      { root: scroller, threshold: [0.55, 0.65, 0.75] },
     );
 
     els.forEach((el) => io.observe(el));

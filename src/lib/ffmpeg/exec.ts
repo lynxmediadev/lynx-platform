@@ -32,7 +32,7 @@ export function getFfprobePath() {
 export function run(
   cmd: string,
   args: string[],
-  { timeoutMs = 60_000 }: { timeoutMs?: number } = {}
+  { timeoutMs = 60_000 }: { timeoutMs?: number } = {},
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -40,7 +40,11 @@ export function run(
     let stderr = "";
 
     const t = setTimeout(() => {
-      try { child.kill("SIGKILL"); } catch {}
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        /* El proceso ya terminó. */
+      }
     }, timeoutMs);
 
     child.stdout.setEncoding("utf8");
@@ -48,7 +52,10 @@ export function run(
     child.stdout.on("data", (d) => (stdout += d));
     child.stderr.on("data", (d) => (stderr += d));
     child.on("error", reject);
-    child.on("close", (code) => { clearTimeout(t); resolve({ code, stdout, stderr }); });
+    child.on("close", (code) => {
+      clearTimeout(t);
+      resolve({ code, stdout, stderr });
+    });
   });
 }
 
@@ -56,7 +63,7 @@ export function run(
 export function runStderr(
   cmd: string,
   args: string[],
-  { timeoutMs = 60_000 }: { timeoutMs?: number } = {}
+  { timeoutMs = 60_000 }: { timeoutMs?: number } = {},
 ): Promise<{ code: number | null; stderr: string }> {
   return new Promise((resolve, reject) => {
     // stdout -> ignore; sólo capturamos stderr
@@ -64,12 +71,19 @@ export function runStderr(
     let stderr = "";
 
     const t = setTimeout(() => {
-      try { child.kill("SIGKILL"); } catch {}
+      try {
+        child.kill("SIGKILL");
+      } catch {
+        /* El proceso ya terminó. */
+      }
     }, timeoutMs);
 
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (d) => (stderr += d));
     child.on("error", reject);
-    child.on("close", (code) => { clearTimeout(t); resolve({ code, stderr }); });
+    child.on("close", (code) => {
+      clearTimeout(t);
+      resolve({ code, stderr });
+    });
   });
 }

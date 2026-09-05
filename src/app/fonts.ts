@@ -6,7 +6,6 @@ import {
   Dancing_Script,
   Anton,
 } from "next/font/google";
-import localFont from "next/font/local";
 
 /** INTER — títulos/menú (variable + italic) */
 export const inter = Inter({
@@ -43,8 +42,8 @@ export const dancingScript = Dancing_Script({
 });
 
 export const anton = Anton({
-  subsets: ["latin"],   // puedes agregar "latin-ext" si necesitas soporte extendido
-  weight: "400",        // único peso disponible
+  subsets: ["latin"], // puedes agregar "latin-ext" si necesitas soporte extendido
+  weight: "400", // único peso disponible
   variable: "--font-anton", // lo registras como variable CSS para usar en Tailwind
-  display: "swap",      // buena práctica para evitar FOUT
+  display: "swap", // buena práctica para evitar FOUT
 });

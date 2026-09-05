@@ -1,21 +1,21 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- Las portadas y campañas usan URLs dinámicas de R2. */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Play,
-} from "lucide-react";
-import { TrackCollectionBrowser, type CatalogTrack, type ProgressMap } from "@/components/catalog/adapters";
+  TrackCollectionBrowser,
+  type CatalogTrack,
+  type ProgressMap,
+} from "@/components/catalog/adapters";
 import {
   useGlobalPlayer,
   useGlobalPlayerState,
   type GlobalPlayerTrack,
 } from "@/components/player/global-player-context";
 import { cn } from "@/lib/utils";
-import type { Track } from "@/lib/catalog/types";
 import type { CatalogHeroSlide } from "@/lib/banner-promotions/types";
 
 type Props = {
@@ -53,6 +53,8 @@ const FALLBACK_BANNER_IMAGES = [
 ];
 const MIN_BANNER_SLIDES = 10;
 const VIEW_MODE_STORAGE_KEY = "catalog:view-mode";
+const INITIAL_TRACK_LIMIT = 30;
+const TRACK_BATCH_SIZE = 30;
 
 type CatalogViewMode = "grid" | "list";
 
@@ -89,7 +91,11 @@ function parseOptionalNumber(value: string): number | null {
 
 function resolveDuration(track: CatalogTrack | null): number {
   if (!track) return 0;
-  if (track.durationSec && Number.isFinite(track.durationSec) && track.durationSec > 0) {
+  if (
+    track.durationSec &&
+    Number.isFinite(track.durationSec) &&
+    track.durationSec > 0
+  ) {
     return Math.floor(track.durationSec);
   }
   return parseDurationSeconds(track.duration);
@@ -107,7 +113,11 @@ function hashToPositiveInt(value: string): number {
 function resolveCatalogCoverUrl(track: CatalogTrack): string {
   const cleanCover = track.coverUrl?.trim();
   if (cleanCover) return cleanCover;
-  return `https://loremflickr.com/640/640/kitten?lock=${hashToPositiveInt(track.id)}`;
+  return (
+    FALLBACK_BANNER_IMAGES[
+      hashToPositiveInt(track.id) % FALLBACK_BANNER_IMAGES.length
+    ] ?? FALLBACK_BANNER_IMAGES[0]!
+  );
 }
 
 function toGlobalPlayerTrack(track: CatalogTrack): GlobalPlayerTrack {
@@ -191,9 +201,13 @@ type CatalogLicenseCard = {
 
 function deriveCatalogLicenseCards(track: CatalogTrack): CatalogLicenseCard[] {
   const min =
-    typeof track.budgetMin === "number" && Number.isFinite(track.budgetMin) ? track.budgetMin : null;
+    typeof track.budgetMin === "number" && Number.isFinite(track.budgetMin)
+      ? track.budgetMin
+      : null;
   const max =
-    typeof track.budgetMax === "number" && Number.isFinite(track.budgetMax) ? track.budgetMax : null;
+    typeof track.budgetMax === "number" && Number.isFinite(track.budgetMax)
+      ? track.budgetMax
+      : null;
 
   let standard = min;
   let premium: number | null = null;
@@ -276,15 +290,23 @@ export default function CatalogClient({
     durationSec: globalDurationSec,
     progress: globalProgress,
   } = useGlobalPlayerState();
-  const { playTrack: playGlobalTrack, togglePlay, seekByRatio } = useGlobalPlayer();
+  const {
+    playTrack: playGlobalTrack,
+    togglePlay,
+    seekByRatio,
+  } = useGlobalPlayer();
   const bannerSessionIdRef = useRef<string>(
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `banner-${Date.now()}`,
   );
 
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(tracks[0]?.id ?? null);
-  const [activeCat, setActiveCat] = useState<string | null>(catalogSlug ?? null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(
+    tracks[0]?.id ?? null,
+  );
+  const [activeCat, setActiveCat] = useState<string | null>(
+    catalogSlug ?? null,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [activeMood, setActiveMood] = useState("all");
   const [activeUse, setActiveUse] = useState("all");
@@ -292,9 +314,11 @@ export default function CatalogClient({
   const [bpmMin, setBpmMin] = useState("");
   const [bpmMax, setBpmMax] = useState("");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState<CatalogViewMode>("grid");
+  const [visibleTrackLimit, setVisibleTrackLimit] =
+    useState(INITIAL_TRACK_LIMIT);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
   const shouldShowFilteringControls = showFilteringControls ?? !compact;
   const effectiveViewMode: CatalogViewMode = compact ? "grid" : viewMode;
@@ -339,16 +363,20 @@ export default function CatalogClient({
   }, [tracks]);
 
   const visibleTracks = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    const query = deferredSearchTerm.trim().toLowerCase();
     const rawMin = parseOptionalNumber(bpmMin);
     const rawMax = parseOptionalNumber(bpmMax);
-    const minBpm = rawMin !== null && rawMax !== null ? Math.min(rawMin, rawMax) : rawMin;
-    const maxBpm = rawMin !== null && rawMax !== null ? Math.max(rawMin, rawMax) : rawMax;
+    const minBpm =
+      rawMin !== null && rawMax !== null ? Math.min(rawMin, rawMax) : rawMin;
+    const maxBpm =
+      rawMin !== null && rawMax !== null ? Math.max(rawMin, rawMax) : rawMax;
 
     return tracks.filter((track) => {
       const matchesMood =
         activeMood === "all" ||
-        track.moods.some((mood) => mood.toLowerCase() === activeMood.toLowerCase());
+        track.moods.some(
+          (mood) => mood.toLowerCase() === activeMood.toLowerCase(),
+        );
       if (!matchesMood) return false;
 
       const matchesUse =
@@ -359,22 +387,39 @@ export default function CatalogClient({
       const trackGenres = track.genres ?? [];
       const matchesGenre =
         activeGenre === "all" ||
-        trackGenres.some((genre) => genre.toLowerCase() === activeGenre.toLowerCase());
+        trackGenres.some(
+          (genre) => genre.toLowerCase() === activeGenre.toLowerCase(),
+        );
       if (!matchesGenre) return false;
 
       if (minBpm !== null || maxBpm !== null) {
-        if (typeof track.bpm !== "number" || !Number.isFinite(track.bpm)) return false;
+        if (typeof track.bpm !== "number" || !Number.isFinite(track.bpm))
+          return false;
         if (minBpm !== null && track.bpm < minBpm) return false;
         if (maxBpm !== null && track.bpm > maxBpm) return false;
       }
 
       if (!query) return true;
-      const haystack = `${track.title} ${track.artist} ${track.moods.join(" ")} ${track.uses.join(
-        " ",
-      )} ${trackGenres.join(" ")} ${track.bpm ?? ""}`.toLowerCase();
+      const haystack =
+        `${track.title} ${track.artist} ${track.moods.join(" ")} ${track.uses.join(
+          " ",
+        )} ${trackGenres.join(" ")} ${track.bpm ?? ""}`.toLowerCase();
       return haystack.includes(query);
     });
-  }, [tracks, searchTerm, activeMood, activeUse, activeGenre, bpmMin, bpmMax]);
+  }, [
+    tracks,
+    deferredSearchTerm,
+    activeMood,
+    activeUse,
+    activeGenre,
+    bpmMin,
+    bpmMax,
+  ]);
+
+  const displayedTracks = useMemo(
+    () => visibleTracks.slice(0, visibleTrackLimit),
+    [visibleTracks, visibleTrackLimit],
+  );
 
   const bannerSourceTracks = useMemo(
     () => (visibleTracks.length > 0 ? visibleTracks : tracks),
@@ -399,7 +444,9 @@ export default function CatalogClient({
           ctaHref: slide.ctaHref,
           ctaLabel: slide.ctaLabel,
           durationMs: slide.durationMs,
-          track: slide.playableTrackId ? trackById.get(slide.playableTrackId) ?? null : null,
+          track: slide.playableTrackId
+            ? (trackById.get(slide.playableTrackId) ?? null)
+            : null,
           promotionItemId: slide.promotionItemId ?? null,
         })),
       );
@@ -425,7 +472,10 @@ export default function CatalogClient({
       const usedTrackIds = new Set(
         slides
           .map((slide) => slide.track?.id)
-          .filter((trackId): trackId is string => typeof trackId === "string" && trackId.length > 0),
+          .filter(
+            (trackId): trackId is string =>
+              typeof trackId === "string" && trackId.length > 0,
+          ),
       );
 
       for (const track of bannerSourceTracks) {
@@ -453,8 +503,9 @@ export default function CatalogClient({
       let fallbackIndex = 0;
       while (slides.length < MIN_BANNER_SLIDES) {
         const imageUrl =
-          FALLBACK_BANNER_IMAGES[fallbackIndex % FALLBACK_BANNER_IMAGES.length] ??
-          FALLBACK_BANNER_IMAGES[0]!;
+          FALLBACK_BANNER_IMAGES[
+            fallbackIndex % FALLBACK_BANNER_IMAGES.length
+          ] ?? FALLBACK_BANNER_IMAGES[0]!;
         const nextIndex = slides.length + 1;
         slides.push({
           id: `autofill-fallback-${nextIndex}`,
@@ -474,7 +525,8 @@ export default function CatalogClient({
     return slides;
   }, [heroSlides, trackById, bannerSourceTracks, title, subtitle]);
 
-  const activeBannerSlide = bannerSlides[activeSlideIndex] ?? bannerSlides[0] ?? null;
+  const activeBannerSlide =
+    bannerSlides[activeSlideIndex] ?? bannerSlides[0] ?? null;
 
   const selectedTrack = useMemo(
     () =>
@@ -503,6 +555,10 @@ export default function CatalogClient({
   }, [catalogSlug]);
 
   useEffect(() => {
+    setVisibleTrackLimit(INITIAL_TRACK_LIMIT);
+  }, [deferredSearchTerm, activeMood, activeUse, activeGenre, bpmMin, bpmMax]);
+
+  useEffect(() => {
     if (compact || typeof window === "undefined") return;
     try {
       const storedValue = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -513,15 +569,6 @@ export default function CatalogClient({
       // ignore storage access issues
     }
   }, [compact]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mediaQuery = window.matchMedia("(max-width: 639px)");
-    const update = () => setIsMobileViewport(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, []);
 
   useEffect(() => {
     if (bannerSlides.length === 0) {
@@ -551,7 +598,7 @@ export default function CatalogClient({
   useEffect(() => {
     if (!activeBannerSlide) return;
     trackHeroEvent("VIEW", activeBannerSlide);
-  }, [activeBannerSlide?.id]);
+  }, [activeBannerSlide]);
 
   const playTrack = (track: CatalogTrack) => {
     if (currentTrackId === track.id) {
@@ -606,14 +653,18 @@ export default function CatalogClient({
     }
   };
 
-  const trackHeroEvent = (eventType: "VIEW" | "CLICK_CTA" | "CLICK_PLAY", slide: BannerSlideView | null) => {
+  const trackHeroEvent = (
+    eventType: "VIEW" | "CLICK_CTA" | "CLICK_PLAY",
+    slide: BannerSlideView | null,
+  ) => {
     if (!slide?.promotionItemId) return;
     const payload = {
       placement: "CATALOG_HERO" as const,
       itemId: slide.promotionItemId,
       eventType,
       sessionId: bannerSessionIdRef.current,
-      path: typeof window !== "undefined" ? window.location.pathname : "/catalog",
+      path:
+        typeof window !== "undefined" ? window.location.pathname : "/catalog",
     };
 
     void fetch("/api/catalog/hero-events", {
@@ -631,7 +682,9 @@ export default function CatalogClient({
 
   const goPrevSlide = () => {
     if (bannerSlides.length <= 1) return;
-    setActiveSlideIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length);
+    setActiveSlideIndex(
+      (prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length,
+    );
   };
 
   const goNextSlide = () => {
@@ -659,7 +712,9 @@ export default function CatalogClient({
       setMobileFiltersOpen(true);
       requestAnimationFrame(() => {
         const searchInputs = Array.from(
-          document.querySelectorAll<HTMLInputElement>('input[data-catalog-search="true"]'),
+          document.querySelectorAll<HTMLInputElement>(
+            'input[data-catalog-search="true"]',
+          ),
         );
         const visibleSearchInput = searchInputs.find(
           (input) => input.offsetParent !== null && !input.disabled,
@@ -673,9 +728,15 @@ export default function CatalogClient({
     selectedTrack && selectedTrack.id === currentTrackId
       ? globalDurationSec || resolveDuration(selectedTrack)
       : resolveDuration(selectedTrack);
-  const panelProgress = selectedTrack ? (selectedTrack.id === currentTrackId ? globalProgress : 0) : 0;
-  const panelCurrentSec = selectedTrack && selectedTrack.id === currentTrackId ? globalCurrentSec : 0;
-  const panelTrackIsPlaying = !!selectedTrack && selectedTrack.id === currentTrackId && isPlaying;
+  const panelProgress = selectedTrack
+    ? selectedTrack.id === currentTrackId
+      ? globalProgress
+      : 0
+    : 0;
+  const panelCurrentSec =
+    selectedTrack && selectedTrack.id === currentTrackId ? globalCurrentSec : 0;
+  const panelTrackIsPlaying =
+    !!selectedTrack && selectedTrack.id === currentTrackId && isPlaying;
   const selectedTrackGenres = normalizeTags(selectedTrack?.genres ?? [], 4);
   const selectedTrackMoods = normalizeTags(selectedTrack?.moods ?? [], 5);
   const selectedTrackUses = normalizeTags(selectedTrack?.uses ?? [], 5);
@@ -685,43 +746,52 @@ export default function CatalogClient({
     typeof selectedTrack?.bpm === "number" && Number.isFinite(selectedTrack.bpm)
       ? Math.round(selectedTrack.bpm)
       : null;
-  const selectedTrackBpmBadge = selectedTrackBpmValue ? `BPM: ${selectedTrackBpmValue}` : "BPM: —";
+  const selectedTrackBpmBadge = selectedTrackBpmValue
+    ? `BPM: ${selectedTrackBpmValue}`
+    : "BPM: —";
   const selectedTrackLicenseLabel =
     formatLicenseTypeLabel(selectedTrack?.licenseType) ?? "No definida";
   const selectedTrackSyncLabel =
-    selectedTrack?.clearedForSync === false ? "Sync bajo revisión" : "Sync disponible";
-  const selectedTrackLicenseCards = selectedTrack ? deriveCatalogLicenseCards(selectedTrack) : [];
-  const activeSlideIsExternal = !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
+    selectedTrack?.clearedForSync === false
+      ? "Sync bajo revisión"
+      : "Sync disponible";
+  const selectedTrackLicenseCards = selectedTrack
+    ? deriveCatalogLicenseCards(selectedTrack)
+    : [];
+  const activeSlideIsExternal =
+    !!activeBannerSlide && isExternalHref(activeBannerSlide.ctaHref);
   const filterSelectClass =
     "h-7 w-full appearance-none rounded border border-border bg-background px-2 pr-9 text-xs text-foreground focus:border-foreground focus:outline-none";
 
   return (
-    <div className="overflow-x-clip bg-background text-foreground">
+    <div className="bg-background text-foreground overflow-x-clip">
       <div
         className={cn(
           embedded
-            ? "w-full min-w-0 max-w-none overflow-x-visible"
+            ? "w-full max-w-none min-w-0 overflow-x-visible"
             : "mx-auto w-[90vw] max-w-[1700px] min-w-0 overflow-x-clip",
           compact ? "py-4" : "pt-2 pb-6 sm:pt-3 sm:pb-8",
         )}
       >
         {!hideHeader && activeBannerSlide && (
           <header className="mb-2.5 min-w-0">
-            <div className="relative overflow-hidden rounded-lg border border-border bg-background">
+            <div className="border-border bg-background relative overflow-hidden rounded-lg border">
               <img
                 src={activeBannerSlide.imageUrl}
                 alt={`Banner ${activeBannerSlide.title}`}
                 className="h-[170px] w-full object-cover sm:h-[185px] md:h-[205px]"
                 loading="eager"
+                decoding="async"
+                fetchPriority="high"
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/80 via-black/65 to-black/20" />
 
               <div className="absolute inset-0 flex items-end">
                 <div className="w-full max-w-3xl px-4 py-3 sm:px-5 sm:py-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/80">
+                  <p className="text-[10px] font-semibold tracking-[0.18em] text-white/80 uppercase">
                     {eyebrow}
                   </p>
-                  <h1 className="mt-1 line-clamp-2 text-xl font-semibold leading-tight text-white sm:text-2xl">
+                  <h1 className="mt-1 line-clamp-2 text-xl leading-tight font-semibold text-white sm:text-2xl">
                     {activeBannerSlide.title}
                   </h1>
                   <p className="mt-1 line-clamp-2 text-xs text-white/90 sm:text-sm">
@@ -758,7 +828,9 @@ export default function CatalogClient({
                         href={activeBannerSlide.ctaHref}
                         target="_blank"
                         rel="noreferrer"
-                        onClick={() => trackHeroEvent("CLICK_CTA", activeBannerSlide)}
+                        onClick={() =>
+                          trackHeroEvent("CLICK_CTA", activeBannerSlide)
+                        }
                         className="inline-flex h-9 items-center rounded border border-white/90 bg-black/20 px-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white hover:text-black"
                       >
                         {activeBannerSlide.ctaLabel}
@@ -766,7 +838,9 @@ export default function CatalogClient({
                     ) : (
                       <Link
                         href={activeBannerSlide.ctaHref}
-                        onClick={() => trackHeroEvent("CLICK_CTA", activeBannerSlide)}
+                        onClick={() =>
+                          trackHeroEvent("CLICK_CTA", activeBannerSlide)
+                        }
                         className="inline-flex h-9 items-center rounded border border-white/90 bg-black/20 px-3 text-sm font-semibold text-white transition hover:border-white hover:bg-white hover:text-black"
                       >
                         {activeBannerSlide.ctaLabel}
@@ -799,7 +873,7 @@ export default function CatalogClient({
                   <button
                     type="button"
                     onClick={goPrevSlide}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground transition hover:border-foreground/70 hover:text-foreground"
+                    className="border-border text-muted-foreground hover:border-foreground/70 hover:text-foreground inline-flex h-6 w-6 items-center justify-center rounded border transition"
                     aria-label="Slide anterior"
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
@@ -807,7 +881,7 @@ export default function CatalogClient({
                   <button
                     type="button"
                     onClick={goNextSlide}
-                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground transition hover:border-foreground/70 hover:text-foreground"
+                    className="border-border text-muted-foreground hover:border-foreground/70 hover:text-foreground inline-flex h-6 w-6 items-center justify-center rounded border transition"
                     aria-label="Siguiente slide"
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
@@ -824,7 +898,7 @@ export default function CatalogClient({
               type="button"
               onClick={() => handleCategoryChange(null)}
               className={cn(
-                "h-7 rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition",
+                "h-7 rounded-full border px-2.5 text-[10px] font-semibold tracking-[0.12em] uppercase transition",
                 !activeCat
                   ? "border-foreground bg-foreground text-background"
                   : "border-border text-foreground hover:border-foreground/70",
@@ -838,7 +912,7 @@ export default function CatalogClient({
                 type="button"
                 onClick={() => handleCategoryChange(category.slug)}
                 className={cn(
-                  "h-7 rounded-full border px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition",
+                  "h-7 rounded-full border px-2.5 text-[10px] font-semibold tracking-[0.12em] uppercase transition",
                   activeCat === category.slug
                     ? "border-foreground bg-foreground text-background"
                     : "border-border text-foreground hover:border-foreground/70",
@@ -850,14 +924,13 @@ export default function CatalogClient({
           </div>
         )}
 
-                <TrackCollectionBrowser
-          tracks={visibleTracks}
-          totalTracks={tracks.length}
+        <TrackCollectionBrowser
+          tracks={displayedTracks}
+          totalTracks={visibleTracks.length}
           selectedTrack={selectedTrack}
           currentTrackId={currentTrackId}
           isPlaying={isPlaying}
           progressMap={progressMap}
-          isMobileViewport={isMobileViewport}
           showDetailPanel={showDetailPanel}
           viewMode={effectiveViewMode}
           onViewModeChange={handleViewModeChange}
@@ -902,8 +975,21 @@ export default function CatalogClient({
           selectedTrackUses={selectedTrackUses}
           selectedTrackLicenseCards={selectedTrackLicenseCards}
         />
-      </div>
 
+        {displayedTracks.length < visibleTracks.length ? (
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              onClick={() =>
+                setVisibleTrackLimit((current) => current + TRACK_BATCH_SIZE)
+              }
+              className="border-border text-foreground hover:border-foreground inline-flex h-10 items-center rounded border px-5 text-sm font-semibold transition"
+            >
+              Ver más tracks ({visibleTracks.length - displayedTracks.length})
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

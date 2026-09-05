@@ -4,7 +4,6 @@
 import * as React from "react";
 import {
   AudioLines,
-  ArrowDown,
   Disc3,
   Film,
   Radio,
@@ -36,8 +35,9 @@ function iconForCondition(label: string): LucideIcon {
 }
 
 export default function TrackLicensesOverview({ licenses }: Props) {
-  const [selectedId, setSelectedId] = React.useState<string | null>(licenses[0]?.id ?? null);
-  const MAX_LICENSE_SLOTS = 6;
+  const [selectedId, setSelectedId] = React.useState<string | null>(
+    licenses[0]?.id ?? null,
+  );
 
   React.useEffect(() => {
     if (!licenses.length) {
@@ -49,13 +49,12 @@ export default function TrackLicensesOverview({ licenses }: Props) {
     }
   }, [licenses, selectedId]);
 
-  const selected = licenses.find((license) => license.id === selectedId) ?? licenses[0] ?? null;
+  const selected =
+    licenses.find((license) => license.id === selectedId) ??
+    licenses[0] ??
+    null;
   const snapshotRows = selected ? getLicenseSnapshotConditions(selected) : [];
   const visibleLicenses = licenses.slice(0, 6);
-  const paddedLicenses = [
-    ...visibleLicenses,
-    ...Array.from({ length: Math.max(0, MAX_LICENSE_SLOTS - visibleLicenses.length) }, () => null),
-  ];
   const selectedFormats = selected?.formats.join(", ") || "Sin formatos";
   const selectedPrice = selected
     ? formatLicenseAmount(selected.priceAmount, selected.currency)
@@ -63,73 +62,61 @@ export default function TrackLicensesOverview({ licenses }: Props) {
 
   return (
     <section className="mt-2 w-full">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-2">
-        <h2 className="text-lg font-bold uppercase tracking-[0.16em] text-foreground">
+      <div className="border-border/70 flex flex-wrap items-center gap-2 border-b pb-2">
+        <h2 className="text-foreground text-lg font-bold tracking-[0.16em] uppercase">
           Licencias
         </h2>
-        <span aria-hidden className="text-xs text-muted-foreground">
+        <span aria-hidden className="text-muted-foreground text-xs">
           ·
         </span>
-        <span className="rounded border border-border bg-background/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <span className="border-border bg-background/70 text-muted-foreground rounded border px-2 py-0.5 text-[10px] font-semibold tracking-[0.12em] uppercase">
           {licenses.length} {licenses.length === 1 ? "opción" : "opciones"}
         </span>
       </div>
       {licenses.length === 0 ? (
-        <div className="mt-3 rounded border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+        <div className="border-border bg-background/70 text-muted-foreground mt-3 rounded border px-3 py-2 text-xs">
           No hay licencias configuradas para este track.
         </div>
       ) : (
         <>
-          <div className="mt-2 grid gap-3 lg:grid-cols-2">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground/80" aria-hidden />
-              <p>Selecciona un tipo de licencia para revisar su alcance y términos base.</p>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <ArrowDown className="h-3 w-3 shrink-0 text-muted-foreground/80" aria-hidden />
-              <p>Condiciones principales de la licencia seleccionada.</p>
-            </div>
-          </div>
+          <p className="text-muted-foreground mt-2 text-xs">
+            Selecciona una opción para comparar precio, formatos y condiciones
+            principales.
+          </p>
 
-          <div className="mt-2.5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] lg:items-stretch">
-          <div className="grid h-full grid-cols-2 content-start gap-1.5">
-            {paddedLicenses.map((license, index) => {
-                if (!license) {
-                  return (
-                    <div
-                      key={`license-slot-empty-${index}`}
-                      aria-hidden
-                      className="pointer-events-none min-h-[86px] rounded border border-transparent"
-                    />
-                  );
-                }
+          <div className="mt-2.5 grid gap-3 lg:grid-cols-[minmax(220px,0.7fr)_minmax(0,1.3fr)] lg:items-stretch">
+            <div className="grid content-start gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
+              {visibleLicenses.map((license) => {
                 const isActive = selected?.id === license.id;
                 return (
                   <button
                     key={`license-slot-${license.id}`}
                     type="button"
                     onClick={() => setSelectedId(license.id)}
-                  className={cn(
-                    "min-h-[86px] rounded border px-2.5 py-2 text-left transition duration-400",
-                    isActive
-                      ? "border-foreground bg-card/85"
-                      : "border-border bg-card/15 hover:border-foreground/70 hover:bg-card/70",
-                  )}
-                >
+                    className={cn(
+                      "min-h-[74px] rounded border px-3 py-2.5 text-left transition duration-300",
+                      isActive
+                        ? "border-foreground bg-card/85"
+                        : "border-border bg-card/15 hover:border-foreground/70 hover:bg-card/70",
+                    )}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-xs font-semibold text-foreground sm:text-sm">
+                      <p className="text-foreground truncate text-xs font-semibold sm:text-sm">
                         {license.name}
                       </p>
                       {license.isPopular ? (
-                        <span className="rounded border border-foreground/50 px-1 py-0.5 text-[9px] uppercase tracking-[0.12em] text-foreground">
+                        <span className="border-foreground/50 text-foreground rounded border px-1 py-0.5 text-[9px] tracking-[0.12em] uppercase">
                           Top
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
-                      {formatLicenseAmount(license.priceAmount, license.currency)}
+                    <p className="text-foreground mt-1 text-sm font-semibold">
+                      {formatLicenseAmount(
+                        license.priceAmount,
+                        license.currency,
+                      )}
                     </p>
-                    <p className="mt-1 truncate text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <p className="text-muted-foreground mt-1 truncate text-[10px] tracking-[0.12em] uppercase">
                       {license.formats.join(", ") || "Sin formatos"}
                     </p>
                   </button>
@@ -137,24 +124,25 @@ export default function TrackLicensesOverview({ licenses }: Props) {
               })}
             </div>
 
-          <div className="hidden self-stretch bg-border/60 lg:block" aria-hidden />
-
-          <div className="rounded border border-border bg-background/70">
-            <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-              <p className="truncate text-sm font-semibold text-foreground">{selected?.name || "Licencia"}</p>
-              <span aria-hidden className="text-xs text-muted-foreground">
-                ·
-              </span>
-              <span className="rounded border border-border bg-card/80 px-2 py-0.5 text-xs font-semibold text-foreground">
-                {selectedPrice}
-              </span>
-            </div>
-              <div className="px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-                <span className="font-bold">Formatos · </span>{selectedFormats}
+            <div className="border-border bg-background/70 rounded border">
+              <div className="border-border flex flex-wrap items-center gap-2 border-b px-3 py-2">
+                <p className="text-foreground truncate text-sm font-semibold">
+                  {selected?.name || "Licencia"}
+                </p>
+                <span aria-hidden className="text-muted-foreground text-xs">
+                  ·
+                </span>
+                <span className="border-border bg-card/80 text-foreground rounded border px-2 py-0.5 text-xs font-semibold">
+                  {selectedPrice}
+                </span>
+              </div>
+              <div className="text-muted-foreground px-3 py-1.5 text-[11px] tracking-[0.12em] uppercase">
+                <span className="font-bold">Formatos · </span>
+                {selectedFormats}
               </div>
 
-              <div className="grid auto-rows-fr gap-1.5 border-t border-border p-1.5 sm:grid-cols-2">
-                {snapshotRows.map((row, index) => {
+              <div className="border-border grid auto-rows-fr gap-1.5 border-t p-1.5 sm:grid-cols-2">
+                {snapshotRows.slice(0, 4).map((row, index) => {
                   const Icon = iconForCondition(row.label);
                   return (
                     <InfoChip
@@ -162,10 +150,16 @@ export default function TrackLicensesOverview({ licenses }: Props) {
                       icon={Icon}
                       label={row.label}
                       value={row.value}
-                      className="h-full justify-between rounded border border-border/70 bg-background/80 px-3 py-2.5"
+                      className="border-border/70 bg-background/80 h-full justify-between rounded border px-3 py-2.5"
                     />
                   );
                 })}
+                {snapshotRows.length > 4 ? (
+                  <p className="text-muted-foreground col-span-full px-2 py-1 text-center text-xs">
+                    +{snapshotRows.length - 4} condiciones disponibles en “Ver
+                    licencias”.
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>

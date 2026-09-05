@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -33,7 +39,9 @@ export default function LoopingText({
       const isMobileViewport = window.matchMedia("(max-width: 768px)").matches;
       const hardOverflow = textWidth > containerWidth + 4;
       const nearOverflowOnMobile =
-        forceLoopOnMobile && isMobileViewport && textWidth > containerWidth - 10;
+        forceLoopOnMobile &&
+        isMobileViewport &&
+        textWidth > containerWidth - 10;
       const overflow = hardOverflow || nearOverflowOnMobile;
       setShouldLoop(overflow);
       if (overflow) {
@@ -67,9 +75,8 @@ export default function LoopingText({
     }
 
     // Font swap async puede cambiar el ancho real en mobile.
-    const fonts = document.fonts;
-    if (fonts?.ready) {
-      void fonts.ready.then(scheduleUpdate).catch(() => undefined);
+    if ("fonts" in document) {
+      void document.fonts.ready.then(scheduleUpdate).catch(() => undefined);
     }
 
     return () => {
@@ -95,7 +102,7 @@ export default function LoopingText({
         ref={measureRef}
         aria-hidden
         className={cn(
-          "pointer-events-none invisible absolute left-0 top-0 whitespace-nowrap px-0 text-left",
+          "pointer-events-none invisible absolute top-0 left-0 px-0 text-left whitespace-nowrap",
           className,
         )}
       >
@@ -104,15 +111,18 @@ export default function LoopingText({
       {shouldLoop ? (
         <div
           className={cn(
-            "flex w-max items-center whitespace-nowrap will-change-transform [transform:translate3d(0,0,0)]",
+            "flex w-max [transform:translate3d(0,0,0)] items-center whitespace-nowrap will-change-transform",
             className,
           )}
           style={loopStyle}
         >
-          <span className="inline-block shrink-0 whitespace-nowrap pr-6">
+          <span className="inline-block shrink-0 pr-6 whitespace-nowrap">
             {text}
           </span>
-          <span aria-hidden className="inline-block shrink-0 whitespace-nowrap pr-6">
+          <span
+            aria-hidden
+            className="inline-block shrink-0 pr-6 whitespace-nowrap"
+          >
             {text}
           </span>
         </div>

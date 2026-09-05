@@ -40,7 +40,13 @@ type CreateSlotForm = {
   description: string;
 };
 
-const FORMAT_OPTIONS: PromotionSlotFormat[] = ["HERO", "SLIDER", "STRIP", "GRID", "BANNER"];
+const FORMAT_OPTIONS: PromotionSlotFormat[] = [
+  "HERO",
+  "SLIDER",
+  "STRIP",
+  "GRID",
+  "BANNER",
+];
 
 function formatDate(iso: string | null | undefined) {
   if (!iso) return "-";
@@ -85,7 +91,8 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
     if (!q) return slots;
 
     return slots.filter((slot) => {
-      const haystack = `${slot.key} ${slot.name} ${slot.description ?? ""}`.toLowerCase();
+      const haystack =
+        `${slot.key} ${slot.name} ${slot.description ?? ""}`.toLowerCase();
       return haystack.includes(q);
     });
   }, [slots, query]);
@@ -123,7 +130,11 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
       await refreshSlots();
       setNotice("Slot creado");
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "No se pudo crear el slot");
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : "No se pudo crear el slot",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -144,7 +155,11 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
       await refreshSlots();
       setNotice(`Slot ${slot.isEnabled ? "deshabilitado" : "habilitado"}`);
     } catch (toggleError) {
-      setError(toggleError instanceof Error ? toggleError.message : "No se pudo actualizar el slot");
+      setError(
+        toggleError instanceof Error
+          ? toggleError.message
+          : "No se pudo actualizar el slot",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -152,7 +167,7 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
 
   async function deleteSlot(slot: ShowcaseSlotRow) {
     const confirmed = window.confirm(
-      `Eliminar slot \"${slot.name}\" (${slot.key})? Esta acción no se puede deshacer.`,
+      `Eliminar slot "${slot.name}" (${slot.key})? Esta acción no se puede deshacer.`,
     );
     if (!confirmed || isBusy) return;
 
@@ -167,7 +182,11 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
       await refreshSlots();
       setNotice("Slot eliminado");
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar el slot");
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar el slot",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -186,10 +205,15 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 px-4 py-4 sm:px-6">
       <header className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-        <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400">Admin / Showcase</p>
-        <h1 className="mt-1 text-xl font-semibold text-neutral-100">Showcase Slots</h1>
+        <p className="text-[10px] tracking-[0.2em] text-neutral-400 uppercase">
+          Admin / Showcase
+        </p>
+        <h1 className="mt-1 text-xl font-semibold text-neutral-100">
+          Showcase Slots
+        </h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Crea contenedores reutilizables (slot keys) para publicar promociones en distintos formatos.
+          Crea contenedores reutilizables (slot keys) para publicar promociones
+          en distintos formatos.
         </p>
       </header>
 
@@ -202,7 +226,10 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
           <input
             value={createForm.key}
             onChange={(event) =>
-              setCreateForm((prev) => ({ ...prev, key: event.target.value.toLowerCase() }))
+              setCreateForm((prev) => ({
+                ...prev,
+                key: event.target.value.toLowerCase(),
+              }))
             }
             placeholder="catalog.hero.main"
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
@@ -214,7 +241,9 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
           Nombre
           <input
             value={createForm.name}
-            onChange={(event) => setCreateForm((prev) => ({ ...prev, name: event.target.value }))}
+            onChange={(event) =>
+              setCreateForm((prev) => ({ ...prev, name: event.target.value }))
+            }
             placeholder="Catalog Hero Main"
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
             required
@@ -226,7 +255,10 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
           <select
             value={createForm.format}
             onChange={(event) =>
-              setCreateForm((prev) => ({ ...prev, format: event.target.value as PromotionSlotFormat }))
+              setCreateForm((prev) => ({
+                ...prev,
+                format: event.target.value as PromotionSlotFormat,
+              }))
             }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           >
@@ -243,7 +275,10 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
           <input
             value={createForm.description}
             onChange={(event) =>
-              setCreateForm((prev) => ({ ...prev, description: event.target.value }))
+              setCreateForm((prev) => ({
+                ...prev,
+                description: event.target.value,
+              }))
             }
             placeholder="Hero principal del catálogo"
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
@@ -263,12 +298,12 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
       <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <label className="relative block w-full max-w-sm">
-            <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-neutral-500" />
+            <Search className="pointer-events-none absolute top-2.5 left-2 h-4 w-4 text-neutral-500" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar por key o nombre"
-              className="h-9 w-full rounded border border-neutral-700 bg-neutral-900 pl-8 pr-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
+              className="h-9 w-full rounded border border-neutral-700 bg-neutral-900 pr-2 pl-8 text-sm text-neutral-100 outline-none focus:border-neutral-500"
             />
           </label>
 
@@ -291,7 +326,7 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
         <div className="mt-3 overflow-x-auto">
           <table className="min-w-full divide-y divide-neutral-800 text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wide text-neutral-500">
+              <tr className="text-left text-xs tracking-wide text-neutral-500 uppercase">
                 <th className="px-2 py-2">Slot</th>
                 <th className="px-2 py-2">Formato</th>
                 <th className="px-2 py-2">Estado</th>
@@ -305,16 +340,22 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
                 <tr key={slot.id}>
                   <td className="px-2 py-3">
                     <p className="font-medium text-neutral-100">{slot.name}</p>
-                    <p className="mt-0.5 font-mono text-xs text-neutral-500">{slot.key}</p>
+                    <p className="mt-0.5 font-mono text-xs text-neutral-500">
+                      {slot.key}
+                    </p>
                     {slot.description && (
-                      <p className="mt-1 max-w-sm text-xs text-neutral-400">{slot.description}</p>
+                      <p className="mt-1 max-w-sm text-xs text-neutral-400">
+                        {slot.description}
+                      </p>
                     )}
                   </td>
-                  <td className="px-2 py-3 text-xs text-neutral-300">{slot.format}</td>
+                  <td className="px-2 py-3 text-xs text-neutral-300">
+                    {slot.format}
+                  </td>
                   <td className="px-2 py-3">
                     <span
                       className={cn(
-                        "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                        "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
                         slot.isEnabled
                           ? "border-emerald-600/50 text-emerald-300"
                           : "border-neutral-700 text-neutral-500",
@@ -323,13 +364,21 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
                       {slot.isEnabled ? "Enabled" : "Disabled"}
                     </span>
                   </td>
-                  <td className="px-2 py-3 text-xs text-neutral-300">{slot.campaignCount}</td>
+                  <td className="px-2 py-3 text-xs text-neutral-300">
+                    {slot.campaignCount}
+                  </td>
                   <td className="px-2 py-3 text-xs text-neutral-300">
                     {slot.liveCampaign ? (
                       <div>
-                        <p className="font-medium text-neutral-100">{slot.liveCampaign.name}</p>
-                        <p className="text-neutral-500">Prioridad {slot.liveCampaign.priority}</p>
-                        <p className="text-neutral-500">Actualizado {formatDate(slot.liveCampaign.updatedAt)}</p>
+                        <p className="font-medium text-neutral-100">
+                          {slot.liveCampaign.name}
+                        </p>
+                        <p className="text-neutral-500">
+                          Prioridad {slot.liveCampaign.priority}
+                        </p>
+                        <p className="text-neutral-500">
+                          Actualizado {formatDate(slot.liveCampaign.updatedAt)}
+                        </p>
                       </div>
                     ) : (
                       <span className="text-neutral-500">Sin campaña LIVE</span>
@@ -376,7 +425,10 @@ export function ShowcaseSlotsManager({ initialSlots }: Props) {
 
               {visibleSlots.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-2 py-8 text-center text-sm text-neutral-500">
+                  <td
+                    colSpan={6}
+                    className="px-2 py-8 text-center text-sm text-neutral-500"
+                  >
                     No hay slots para mostrar.
                   </td>
                 </tr>

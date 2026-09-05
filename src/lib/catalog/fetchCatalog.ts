@@ -2,7 +2,10 @@ import prisma from "@/lib/prisma";
 import type { Track } from "@/lib/catalog/types";
 import type { Prisma } from "@prisma/client";
 
-type CatalogTrack = Track & { waveformB64?: string | null; durationSec?: number | null };
+type CatalogTrack = Track & {
+  waveformB64?: string | null;
+  durationSec?: number | null;
+};
 
 export type CatalogFilters = {
   catalogSlug?: string | null;
@@ -33,7 +36,7 @@ export async function fetchCatalogTracks({
   artist,
   q,
   limit = 50,
-  includeWaveform = true,
+  includeWaveform = false,
 }: CatalogFilters): Promise<CatalogTrack[]> {
   const whereAND: Prisma.TrackWhereInput[] = [];
 

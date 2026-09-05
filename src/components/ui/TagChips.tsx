@@ -85,16 +85,16 @@ export function TagChips({
 }: TagChipsProps) {
   const [query, setQuery] = React.useState("");
   const [suggestions, setSuggestions] = React.useState<TagChip[]>([]);
-  const [allItems, setAllItems] = React.useState<TagChip[]>(initialCatalogItems);
+  const [allItems, setAllItems] =
+    React.useState<TagChip[]>(initialCatalogItems);
   const [panelOpen, setPanelOpen] = React.useState(defaultOpen);
   const [loading, setLoading] = React.useState(false);
-  const [notice, setNotice] = React.useState<string | null>(null);
   const [hovered, setHovered] = React.useState<string | null>(null);
   const [confirmChip, setConfirmChip] = React.useState<TagChip | null>(null);
   const canAddMore = selected.length < maxItems;
   const selectedKeys = React.useMemo(
     () => new Set(selected.map((c) => (c.value ?? c.label).toLowerCase())),
-    [selected]
+    [selected],
   );
 
   // Items visibles en el catálogo (se filtran con el input)
@@ -102,29 +102,35 @@ export function TagChips({
   const filteredCatalog = React.useMemo(() => {
     const q = query.trim().toLowerCase();
     return (availableItems ?? [])
-      .filter((item) => !selectedKeys.has((item.value ?? item.label).toLowerCase()))
-      .filter((item) => (q ? (item.label ?? "").toLowerCase().includes(q) : true));
+      .filter(
+        (item) => !selectedKeys.has((item.value ?? item.label).toLowerCase()),
+      )
+      .filter((item) =>
+        q ? (item.label ?? "").toLowerCase().includes(q) : true,
+      );
   }, [availableItems, query, selectedKeys]);
 
   // debounce suggestions
   React.useEffect(() => {
     if (!fetchSuggestions) return;
     const controller = new AbortController();
-    const handle = setTimeout(async () => {
-      const q = query.trim();
-      if (!q) {
-        setSuggestions([]);
-        return;
-      }
-      try {
-        setLoading(true);
-        const res = await fetchSuggestions(q);
-        if (!controller.signal.aborted) setSuggestions(res ?? []);
-      } catch (_e) {
-        if (!controller.signal.aborted) setSuggestions([]);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
+    const handle = setTimeout(() => {
+      void (async () => {
+        const q = query.trim();
+        if (!q) {
+          setSuggestions([]);
+          return;
+        }
+        try {
+          setLoading(true);
+          const res = await fetchSuggestions(q);
+          if (!controller.signal.aborted) setSuggestions(res ?? []);
+        } catch {
+          if (!controller.signal.aborted) setSuggestions([]);
+        } finally {
+          if (!controller.signal.aborted) setLoading(false);
+        }
+      })();
     }, 200);
     return () => {
       controller.abort();
@@ -143,12 +149,12 @@ export function TagChips({
   React.useEffect(() => {
     if (!panelOpen || !fetchAll || allItems.length > 0) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       setLoading(true);
       try {
         const res = await fetchAll();
         if (!cancelled) setAllItems(res ?? []);
-      } catch (_e) {
+      } catch {
         if (!cancelled) setAllItems([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -159,37 +165,39 @@ export function TagChips({
     };
   }, [panelOpen, fetchAll, allItems.length]);
 
-  const upsertCatalogItem = React.useCallback(
-    (chip: TagChip) => {
-      const key = (chip.value ?? chip.label).toLowerCase();
-      setAllItems((prev) => {
-        if (prev.some((c) => (c.value ?? c.label).toLowerCase() === key)) return prev;
-        return [...prev, chip];
-      });
-      setSuggestions((prev) => {
-        if (prev.some((c) => (c.value ?? c.label).toLowerCase() === key)) return prev;
-        return [...prev, chip];
-      });
-    },
-    []
-  );
+  const upsertCatalogItem = React.useCallback((chip: TagChip) => {
+    const key = (chip.value ?? chip.label).toLowerCase();
+    setAllItems((prev) => {
+      if (prev.some((c) => (c.value ?? c.label).toLowerCase() === key))
+        return prev;
+      return [...prev, chip];
+    });
+    setSuggestions((prev) => {
+      if (prev.some((c) => (c.value ?? c.label).toLowerCase() === key))
+        return prev;
+      return [...prev, chip];
+    });
+  }, []);
 
   const addChip = (raw: string | TagChip) => {
     if (!canAddMore) return;
     const chip = typeof raw === "string" ? normalize(raw) : raw;
     if (!chip) return;
     const valueKey = (chip.value ?? chip.label).toLowerCase();
-    const exists = selected.some((c) => (c.value ?? c.label).toLowerCase() === valueKey);
+    const exists = selected.some(
+      (c) => (c.value ?? c.label).toLowerCase() === valueKey,
+    );
     if (exists) return;
     onChange([...selected, chip]);
     upsertCatalogItem(chip);
     setQuery("");
-    setNotice(null);
   };
 
   const removeChip = (chip: TagChip) => {
     const valueKey = (chip.value ?? chip.label).toLowerCase();
-    onChange(selected.filter((c) => (c.value ?? c.label).toLowerCase() !== valueKey));
+    onChange(
+      selected.filter((c) => (c.value ?? c.label).toLowerCase() !== valueKey),
+    );
   };
 
   const handleEnter: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
@@ -213,7 +221,7 @@ export function TagChips({
       try {
         const res = await fetchAll();
         setAllItems(res ?? []);
-      } catch (_e) {
+      } catch {
         setAllItems([]);
       } finally {
         setLoading(false);
@@ -222,21 +230,21 @@ export function TagChips({
   };
 
   return (
-    <div className="space-y-3 h-full flex flex-col">
+    <div className="flex h-full flex-col space-y-3">
       {!canAddMore && (
-        <p className="text-xs text-destructive">Máximo {maxItems} elementos.</p>
+        <p className="text-destructive text-xs">Máximo {maxItems} elementos.</p>
       )}
 
-      <div className="space-y-2 rounded-md border border-border/70 bg-card/60 p-3">
+      <div className="border-border/70 bg-card/60 space-y-2 rounded-md border p-3">
         {renderAboveAssigned}
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-[11px] font-semibold text-muted-foreground">
+          <Label className="text-muted-foreground text-[11px] font-semibold">
             {headingAssigned}
           </Label>
         </div>
         <div className="flex flex-wrap gap-2">
           {selected.length === 0 && (
-            <span className="text-xs text-muted-foreground">Vacío.</span>
+            <span className="text-muted-foreground text-xs">Vacío.</span>
           )}
           {selected.map((chip) => {
             const keyVal = (chip.value ?? chip.label).toLowerCase();
@@ -246,7 +254,7 @@ export function TagChips({
             return (
               <span
                 key={keyVal}
-                className={`group/chip inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-colors border ${
+                className={`group/chip inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-colors ${
                   isHover
                     ? "text-destructive border-destructive bg-destructive/20"
                     : "text-foreground border-border bg-muted/40 dark:bg-muted/30"
@@ -276,10 +284,10 @@ export function TagChips({
             variant="ghost"
             size="sm"
             type="button"
-            onClick={togglePanel}
-            className="h-7 px-3 border border-current w-full justify-center items-center text-foreground bg-transparent hover:bg-foreground/10 dark:hover:bg-foreground/15 transition-colors"
+            onClick={() => void togglePanel()}
+            className="text-foreground hover:bg-foreground/10 dark:hover:bg-foreground/15 h-7 w-full items-center justify-center border border-current bg-transparent px-3 transition-colors"
           >
-            <Plus className="h-2.5 w-3.5 mr-[-5px]" /> {toggleLabel}
+            <Plus className="mr-[-5px] h-2.5 w-3.5" /> {toggleLabel}
           </Button>
         </div>
       )}
@@ -288,21 +296,24 @@ export function TagChips({
       )}
 
       {panelOpen && (
-        <div className="space-y-3 rounded-md border border-border/70 bg-card/70 p-3 w-full overflow-hidden md:flex-1 md:flex md:flex-col md:min-h-0">
-          <div className="flex items-start gap-2 w-full">
-            <div className="relative flex-1 min-w-0">
+        <div className="border-border/70 bg-card/70 w-full space-y-3 overflow-hidden rounded-md border p-3 md:flex md:min-h-0 md:flex-1 md:flex-col">
+          <p className="text-muted-foreground text-[11px] font-semibold">
+            {headingSuggestions}
+          </p>
+          <div className="flex w-full items-start gap-2">
+            <div className="relative min-w-0 flex-1">
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleEnter}
                 placeholder={placeholder}
-                className="h-9 text-sm pr-8"
+                className="h-9 pr-8 text-sm"
               />
               {query && (
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-2 flex items-center transition-colors"
                   aria-label="Limpiar búsqueda"
                 >
                   <X className="h-4 w-4" />
@@ -316,31 +327,42 @@ export function TagChips({
               disabled={!query.trim() || !canAddMore}
               className="h-9 px-3"
             >
-              <Plus className="h-4 w-4 mr-1" /> Añadir
+              <Plus className="mr-1 h-4 w-4" /> Añadir
             </Button>
           </div>
 
-          {allowCreate && onCreate && query.trim().length > 0 && filteredCatalog.length === 0 && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Button variant="ghost" size="sm" type="button" onClick={handleCreate} disabled={!canAddMore}>
-                <Sparkles className="h-4 w-4 mr-1" /> Crear y añadir
-              </Button>
-              {loading && <span>Buscando…</span>}
-            </div>
-          )}
+          {allowCreate &&
+            onCreate &&
+            query.trim().length > 0 &&
+            filteredCatalog.length === 0 && (
+              <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  onClick={() => void handleCreate()}
+                  disabled={!canAddMore}
+                >
+                  <Sparkles className="mr-1 h-4 w-4" /> Crear y añadir
+                </Button>
+                {loading && <span>Buscando…</span>}
+              </div>
+            )}
 
           {fetchAll && (
-            <div className="max-h-[40vh] overflow-auto border-t border-border/60 pt-2 md:max-h-none md:flex-1 md:min-h-0">
-              <div className="flex flex-wrap gap-2 max-w-full">
+            <div className="border-border/60 max-h-[40vh] overflow-auto border-t pt-2 md:max-h-none md:min-h-0 md:flex-1">
+              <div className="flex max-w-full flex-wrap gap-2">
                 {filteredCatalog.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Sin items para mostrar.</p>
+                  <p className="text-muted-foreground text-xs">
+                    Sin items para mostrar.
+                  </p>
                 ) : (
                   filteredCatalog.map((item) => {
                     const key = (item.value ?? item.label).toLowerCase();
                     return (
                       <div
                         key={key}
-                        className="group relative inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/60 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-sm transition-colors hover:bg-foreground/10 dark:hover:bg-foreground/20"
+                        className="group border-border/70 bg-card/60 text-foreground hover:bg-foreground/10 dark:hover:bg-foreground/20 relative inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-colors"
                       >
                         <button
                           type="button"
@@ -357,7 +379,7 @@ export function TagChips({
                               e.stopPropagation();
                               setConfirmChip(item);
                             }}
-                            className="text-inherit opacity-70 transition-colors hover:text-destructive hover:opacity-100"
+                            className="hover:text-destructive text-inherit opacity-70 transition-colors hover:opacity-100"
                             title="Eliminar del catálogo"
                           >
                             <X className="h-3 w-3" />
@@ -374,18 +396,23 @@ export function TagChips({
       )}
 
       {allowDeleteCatalog && confirmChip && (
-        <Dialog open={!!confirmChip} onOpenChange={(open) => !open && setConfirmChip(null)}>
-          <DialogContent className="bg-card border border-border text-foreground">
+        <Dialog
+          open={!!confirmChip}
+          onOpenChange={(open) => !open && setConfirmChip(null)}
+        >
+          <DialogContent className="bg-card border-border text-foreground border">
             <DialogHeader>
               <DialogTitle>Confirmar eliminación</DialogTitle>
               <DialogDescription>
-                {deleteConfirmText ?? `Eliminar “${confirmChip.label}” del catálogo.`}
+                {deleteConfirmText ??
+                  `Eliminar “${confirmChip.label}” del catálogo.`}
               </DialogDescription>
             </DialogHeader>
-            <div className="rounded-md border border-border/60 bg-background px-3 py-2 text-sm">
+            <div className="border-border/60 bg-background rounded-md border px-3 py-2 text-sm">
               <div className="font-semibold">{confirmChip.label}</div>
-              {(confirmChip.value ?? confirmChip.label) !== confirmChip.label ? (
-                <div className="text-xs text-muted-foreground">
+              {(confirmChip.value ?? confirmChip.label) !==
+              confirmChip.label ? (
+                <div className="text-muted-foreground text-xs">
                   Valor: {confirmChip.value}
                 </div>
               ) : null}
@@ -406,11 +433,23 @@ export function TagChips({
                 size="sm"
                 className="h-8"
                 onClick={async () => {
-                  const proceed = onDeleteCatalog ? await onDeleteCatalog(confirmChip) : true;
+                  const proceed = onDeleteCatalog
+                    ? await onDeleteCatalog(confirmChip)
+                    : true;
                   if (proceed === false) return;
-                  const key = (confirmChip.value ?? confirmChip.label).toLowerCase();
-                  setAllItems((prev) => prev.filter((c) => (c.value ?? c.label).toLowerCase() !== key));
-                  setSuggestions((prev) => prev.filter((c) => (c.value ?? c.label).toLowerCase() !== key));
+                  const key = (
+                    confirmChip.value ?? confirmChip.label
+                  ).toLowerCase();
+                  setAllItems((prev) =>
+                    prev.filter(
+                      (c) => (c.value ?? c.label).toLowerCase() !== key,
+                    ),
+                  );
+                  setSuggestions((prev) =>
+                    prev.filter(
+                      (c) => (c.value ?? c.label).toLowerCase() !== key,
+                    ),
+                  );
                   setConfirmChip(null);
                 }}
               >

@@ -6,13 +6,11 @@ import NumericSelectInput from "@/components/admin/ui/NumericSelectInput";
 import type { Share } from "./types";
 
 type Role = "WRITER" | "PUBLISHER";
-type LongPressState =
-  | { type: "share" | "master"; index: number; direction: "up" | "down" }
-  | null;
-
 const PRO_OPTIONS = ["ASCAP", "BMI", "SCD"] as const;
 const normalizeProValue = (value?: string | null) =>
-  PRO_OPTIONS.includes((value ?? "").toUpperCase() as (typeof PRO_OPTIONS)[number])
+  PRO_OPTIONS.includes(
+    (value ?? "").toUpperCase() as (typeof PRO_OPTIONS)[number],
+  )
     ? (value ?? "").toUpperCase()
     : "";
 
@@ -21,7 +19,6 @@ type Props = {
   roleShares: Share[];
   shareBusy: boolean;
   pendingShares: boolean;
-  longPress: LongPressState;
   onLongPressStart: (
     type: "share",
     index: number,
@@ -45,7 +42,6 @@ export function PublishingCards({
   roleShares,
   shareBusy,
   pendingShares,
-  longPress,
   onLongPressStart,
   onLongPressCancel,
   moveShare,
@@ -57,7 +53,10 @@ export function PublishingCards({
   const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
   const [posValues, setPosValues] = React.useState<Record<string, string>>({});
   const positionSignature = React.useMemo(
-    () => roleShares.map((s, i) => `${s.id ?? `${role}-${i}`}-${s.sortOrder ?? i}`).join("|"),
+    () =>
+      roleShares
+        .map((s, i) => `${s.id ?? `${role}-${i}`}-${s.sortOrder ?? i}`)
+        .join("|"),
     [role, roleShares],
   );
 
@@ -67,7 +66,7 @@ export function PublishingCards({
 
   if (roleShares.length === 0) {
     return (
-      <div className="rounded-lg border border-border/70 bg-card/60 p-3 text-xs text-muted-foreground">
+      <div className="border-border/70 bg-card/60 text-muted-foreground rounded-lg border p-3 text-xs">
         Sin {role === "WRITER" ? "writers" : "publishers"}.
       </div>
     );
@@ -81,7 +80,10 @@ export function PublishingCards({
         const pctLabel =
           typeof share.sharePct === "number" ? `${share.sharePct}%` : "—%";
         return (
-          <div key={rowId} className="rounded-md border border-border/60 bg-card/40">
+          <div
+            key={rowId}
+            className="border-border/60 bg-card/40 rounded-md border"
+          >
             <button
               type="button"
               onClick={() =>
@@ -94,22 +96,24 @@ export function PublishingCards({
               aria-expanded={isOpen}
               aria-label="Ver detalles del titular"
             >
-              <span className="text-sm font-semibold break-words whitespace-normal leading-tight">
+              <span className="text-sm leading-tight font-semibold break-words whitespace-normal">
                 {share.name || "Sin nombre"}
               </span>
-              <span className="rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground">
+              <span className="border-border text-foreground rounded-md border px-2 py-1 text-[11px] font-medium">
                 {pctLabel}
               </span>
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border/70 text-muted-foreground">
+              <span className="border-border/70 text-muted-foreground inline-flex h-8 w-8 items-center justify-center rounded-md border">
                 <Eye className="h-4 w-4" />
               </span>
             </button>
 
             {isOpen && (
-              <div className="space-y-3 border-t border-border/60 p-3">
+              <div className="border-border/60 space-y-3 border-t p-3">
                 <div className="grid grid-cols-[1fr_auto] items-end gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Posición</Label>
+                    <Label className="text-muted-foreground text-[11px]">
+                      Posición
+                    </Label>
                     <NumericSelectInput
                       key={`pos-${rowId}`}
                       min={1}
@@ -124,7 +128,11 @@ export function PublishingCards({
                       disabled={shareBusy}
                       onBlur={(e) => {
                         const val = Number(e.target.value);
-                        if (!Number.isInteger(val) || val < 1 || val > roleShares.length) {
+                        if (
+                          !Number.isInteger(val) ||
+                          val < 1 ||
+                          val > roleShares.length
+                        ) {
                           e.target.classList.add("border-destructive");
                           return;
                         }
@@ -135,12 +143,22 @@ export function PublishingCards({
                       onKeyDown={(e) => {
                         if (e.key !== "Enter") return;
                         e.preventDefault();
-                        const val = Number((e.target as HTMLInputElement).value);
-                        if (!Number.isInteger(val) || val < 1 || val > roleShares.length) {
-                          (e.target as HTMLInputElement).classList.add("border-destructive");
+                        const val = Number(
+                          (e.target as HTMLInputElement).value,
+                        );
+                        if (
+                          !Number.isInteger(val) ||
+                          val < 1 ||
+                          val > roleShares.length
+                        ) {
+                          (e.target as HTMLInputElement).classList.add(
+                            "border-destructive",
+                          );
                           return;
                         }
-                        (e.target as HTMLInputElement).classList.remove("border-destructive");
+                        (e.target as HTMLInputElement).classList.remove(
+                          "border-destructive",
+                        );
                         moveShareTo(idx, val - 1);
                         setPosValues({});
                       }}
@@ -150,22 +168,26 @@ export function PublishingCards({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onPointerDown={(e) => onLongPressStart("share", idx, "up", e)}
+                      onPointerDown={(e) =>
+                        onLongPressStart("share", idx, "up", e)
+                      }
                       onPointerUp={onLongPressCancel}
                       onPointerCancel={onLongPressCancel}
                       onClick={(e) => moveShare(idx, e.shiftKey ? -3 : -1)}
-                      className="inline-flex h-8 w-10 items-center justify-center rounded-md border border-border bg-card"
+                      className="border-border bg-card inline-flex h-8 w-10 items-center justify-center rounded-md border"
                       disabled={shareBusy}
                     >
                       <ArrowUp className="h-3.5 w-3.5" />
                     </button>
                     <button
                       type="button"
-                      onPointerDown={(e) => onLongPressStart("share", idx, "down", e)}
+                      onPointerDown={(e) =>
+                        onLongPressStart("share", idx, "down", e)
+                      }
                       onPointerUp={onLongPressCancel}
                       onPointerCancel={onLongPressCancel}
                       onClick={(e) => moveShare(idx, e.shiftKey ? 3 : 1)}
-                      className="inline-flex h-8 w-10 items-center justify-center rounded-md border border-border bg-card"
+                      className="border-border bg-card inline-flex h-8 w-10 items-center justify-center rounded-md border"
                       disabled={shareBusy}
                     >
                       <ArrowDown className="h-3.5 w-3.5" />
@@ -175,7 +197,9 @@ export function PublishingCards({
 
                 <div className="grid grid-cols-1 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Nombre</Label>
+                    <Label className="text-muted-foreground text-[11px]">
+                      Nombre
+                    </Label>
                     <EditableIconInput
                       value={share.name}
                       onChange={(value) => onChange(idx, "name", value)}
@@ -186,19 +210,25 @@ export function PublishingCards({
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">% </Label>
+                    <Label className="text-muted-foreground text-[11px]">
+                      %{" "}
+                    </Label>
                     <NumericSelectInput
                       min={0}
                       max={100}
                       value={share.sharePct ?? ""}
                       onChange={(value) => onChange(idx, "sharePct", value)}
-                      onCommit={(value) => onCommitChange(idx, "sharePct", value)}
+                      onCommit={(value) =>
+                        onCommitChange(idx, "sharePct", value)
+                      }
                       disabled={shareBusy}
                       className="h-8 text-xs"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">PRO</Label>
+                    <Label className="text-muted-foreground text-[11px]">
+                      PRO
+                    </Label>
                     <select
                       value={normalizeProValue(share.pro)}
                       onChange={(e) => {
@@ -207,7 +237,7 @@ export function PublishingCards({
                         void onCommitChange(idx, "pro", nextValue);
                       }}
                       disabled={shareBusy}
-                      className="h-8 w-full rounded-md border border-border bg-background px-2 text-xs"
+                      className="border-border bg-background h-8 w-full rounded-md border px-2 text-xs"
                     >
                       <option value="">—</option>
                       {PRO_OPTIONS.map((pro) => (
@@ -219,22 +249,30 @@ export function PublishingCards({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">IPI</Label>
+                      <Label className="text-muted-foreground text-[11px]">
+                        IPI
+                      </Label>
                       <EditableIconInput
                         value={share.ipiNumber ?? ""}
                         onChange={(value) => onChange(idx, "ipiNumber", value)}
-                        onCommit={(value) => onCommitChange(idx, "ipiNumber", value)}
+                        onCommit={(value) =>
+                          onCommitChange(idx, "ipiNumber", value)
+                        }
                         disabled={shareBusy}
                         placeholder="-"
                         iconAriaLabel="Editar IPI"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">CAE</Label>
+                      <Label className="text-muted-foreground text-[11px]">
+                        CAE
+                      </Label>
                       <EditableIconInput
                         value={share.caeNumber ?? ""}
                         onChange={(value) => onChange(idx, "caeNumber", value)}
-                        onCommit={(value) => onCommitChange(idx, "caeNumber", value)}
+                        onCommit={(value) =>
+                          onCommitChange(idx, "caeNumber", value)
+                        }
                         disabled={shareBusy}
                         placeholder="-"
                         iconAriaLabel="Editar CAE"
@@ -247,7 +285,7 @@ export function PublishingCards({
                   <button
                     type="button"
                     onClick={() => onDelete(idx)}
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-destructive/60 bg-card text-destructive hover:border-destructive"
+                    className="border-destructive/60 bg-card text-destructive hover:border-destructive inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border"
                     aria-label="Eliminar share"
                     disabled={pendingShares || shareBusy}
                   >

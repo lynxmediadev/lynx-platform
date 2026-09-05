@@ -33,7 +33,9 @@ export function publicUrlToKey(url: string): string | null {
   return key || null;
 }
 
-export async function getObjectReadableFromPublicUrl(publicUrl: string): Promise<Readable | null> {
+export async function getObjectReadableFromPublicUrl(
+  publicUrl: string,
+): Promise<Readable | null> {
   const key = publicUrlToKey(publicUrl);
   if (!key || !BUCKET) return null;
   const s3 = getS3();
@@ -50,16 +52,20 @@ export async function getObjectReadableFromPublicUrl(publicUrl: string): Promise
   return null;
 }
 
-export async function getReadableEither(publicUrl: string): Promise<Readable | null> {
+export async function getReadableEither(
+  publicUrl: string,
+): Promise<Readable | null> {
   // 1) Preferimos R2 (SDK)
-  const s3Readable = await getObjectReadableFromPublicUrl(publicUrl).catch(() => null);
+  const s3Readable = await getObjectReadableFromPublicUrl(publicUrl).catch(
+    () => null,
+  );
   if (s3Readable) return s3Readable;
 
   // 2) Fallback: fetch directo
   try {
     const res = await fetch(publicUrl);
     if (!res.ok || !res.body) return null;
-    // @ts-ignore Node >=18
+    // @ts-expect-error Node y DOM usan tipos distintos para ReadableStream.
     return Readable.fromWeb(res.body);
   } catch {
     return null;

@@ -18,9 +18,14 @@ type Props = {
   initialValue: string;
 };
 
-export default function InternalNotesEditor({ requestId, initialValue }: Props) {
+export default function InternalNotesEditor({
+  requestId,
+  initialValue,
+}: Props) {
   const [value, setValue] = React.useState(initialValue);
-  const [status, setStatus] = React.useState<"idle"|"saving"|"saved"|"error">("idle");
+  const [status, setStatus] = React.useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const controllerRef = React.useRef<AbortController | null>(null);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -58,12 +63,12 @@ export default function InternalNotesEditor({ requestId, initialValue }: Props) 
     const next = e.target.value;
     setValue(next);
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => doSave(next), 600);
+    timerRef.current = setTimeout(() => void doSave(next), 600);
   }
 
   return (
     <div className="space-y-2">
-      <label className="block text-xs uppercase tracking-wide text-muted-foreground">
+      <label className="text-muted-foreground block text-xs tracking-wide uppercase">
         Notas internas
       </label>
 
@@ -72,21 +77,24 @@ export default function InternalNotesEditor({ requestId, initialValue }: Props) 
         onChange={onChange}
         placeholder="Resumen breve de la gestión, next steps, objeciones, etc."
         rows={6}
-        className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-[0.95rem] leading-6 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="border-border bg-muted focus-visible:ring-ring w-full rounded-lg border px-3 py-2.5 text-[0.95rem] leading-6 outline-none focus-visible:ring-2"
       />
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-2 text-xs">
         <button
           type="button"
-          className="rounded border border-border bg-card px-2 py-1 hover:bg-accent"
-          onClick={() => doSave(value)}
+          className="border-border bg-card hover:bg-accent rounded border px-2 py-1"
+          onClick={() => void doSave(value)}
         >
           Guardar ahora
         </button>
         <button
           type="button"
-          className="rounded border border-border bg-card px-2 py-1 hover:bg-accent"
-          onClick={() => { setValue(""); void doSave(""); }}
+          className="border-border bg-card hover:bg-accent rounded border px-2 py-1"
+          onClick={() => {
+            setValue("");
+            void doSave("");
+          }}
         >
           Limpiar
         </button>

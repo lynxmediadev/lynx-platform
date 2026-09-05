@@ -10,7 +10,10 @@ type UseMasterSharesArgs = {
 
 type SaveFeedback = { status: "saving" | "ok" | "error"; code?: string } | null;
 
-export function useMasterShares({ trackId, initialMasterShares }: UseMasterSharesArgs) {
+export function useMasterShares({
+  trackId,
+  initialMasterShares,
+}: UseMasterSharesArgs) {
   const [masterShares, setMasterShares] = React.useState<MasterShare[]>(
     (initialMasterShares ?? []).slice().sort(sortByOrder),
   );
@@ -18,7 +21,9 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
   const [savingMaster, setSavingMaster] = React.useState(false);
   const [reorderMasterPending, setReorderMasterPending] = React.useState(false);
   const [saveFeedback, setSaveFeedback] = React.useState<SaveFeedback>(null);
-  const saveFeedbackTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveFeedbackTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const [newMaster, setNewMaster] = React.useState<{
     name: string;
     sharePct: number | null;
@@ -41,7 +46,9 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
       .filter((s) => typeof s.sharePct === "number")
       .reduce((acc, s) => acc + (s.sharePct ?? 0), 0);
     if (total > 100) {
-      setMasterError("AJUSTAR PORCENTAJES (%). MASTER NO PUEDE SUPERAR EL 100%");
+      setMasterError(
+        "AJUSTAR PORCENTAJES (%). MASTER NO PUEDE SUPERAR EL 100%",
+      );
       return false;
     }
     setMasterError(null);
@@ -50,13 +57,15 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
 
   React.useEffect(
     () => () => {
-      if (saveFeedbackTimerRef.current) clearTimeout(saveFeedbackTimerRef.current);
+      if (saveFeedbackTimerRef.current)
+        clearTimeout(saveFeedbackTimerRef.current);
     },
     [],
   );
 
   const showSaveFeedback = (next: SaveFeedback, durationMs?: number) => {
-    if (saveFeedbackTimerRef.current) clearTimeout(saveFeedbackTimerRef.current);
+    if (saveFeedbackTimerRef.current)
+      clearTimeout(saveFeedbackTimerRef.current);
     setSaveFeedback(next);
     if (durationMs && durationMs > 0) {
       saveFeedbackTimerRef.current = setTimeout(() => {
@@ -75,7 +84,9 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
         shares: ordered.map((s) => ({
           name: s.name,
           sharePct:
-            s.sharePct === null || Number.isNaN(Number(s.sharePct)) ? null : Number(s.sharePct),
+            s.sharePct === null || Number.isNaN(Number(s.sharePct))
+              ? null
+              : Number(s.sharePct),
           contact: s.contact ?? null,
           notes: s.notes ?? null,
           sortOrder: s.sortOrder ?? null,
@@ -94,7 +105,10 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
       showSaveFeedback({ status: "ok" }, 1000);
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error inesperado al guardar master.";
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Error inesperado al guardar master.";
       setMasterError(msg);
       const code = msg.includes("Failed to find Server Action")
         ? "MASTER_ACTION_STALE"
@@ -134,7 +148,8 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
   };
 
   const moveMasterTop = (idx: number) => moveMasterTo(idx, 0);
-  const moveMasterBottom = (idx: number) => moveMasterTo(idx, masterShares.length - 1);
+  const moveMasterBottom = (idx: number) =>
+    moveMasterTo(idx, masterShares.length - 1);
 
   const addMaster = () => {
     if (!newMaster.name.trim()) {
@@ -161,7 +176,7 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
     const ordered = applyMasterOrders(next);
     if (!validateMasterTotal(ordered)) return;
     setSavingMaster(true);
-    persistMaster(ordered).finally(() => setSavingMaster(false));
+    void persistMaster(ordered).finally(() => setSavingMaster(false));
     setMasterShares(ordered);
     setNewMaster({ name: "", sharePct: 100, contact: "", notes: "" });
   };
@@ -173,13 +188,21 @@ export function useMasterShares({ trackId, initialMasterShares }: UseMasterShare
     if (ok) setMasterShares(ordered);
   };
 
-  const handleMasterChange = (idx: number, field: keyof typeof newMaster, value: string) => {
+  const handleMasterChange = (
+    idx: number,
+    field: keyof typeof newMaster,
+    value: string,
+  ) => {
     const next = masterShares.map((s, i) =>
       i === idx
         ? {
             ...s,
             [field]:
-              field === "sharePct" ? (value === "" ? null : Number(value)) : value,
+              field === "sharePct"
+                ? value === ""
+                  ? null
+                  : Number(value)
+                : value,
           }
         : s,
     );

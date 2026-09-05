@@ -319,7 +319,10 @@ export const rightsFormSchema = rightsFormBaseSchema.transform((values) => {
     sortOrder?: number | null;
   }[] = [];
 
-  if (typeof values.publishingShares === "string" && values.publishingShares.trim() !== "") {
+  if (
+    typeof values.publishingShares === "string" &&
+    values.publishingShares.trim() !== ""
+  ) {
     try {
       const arr = JSON.parse(values.publishingShares);
       if (Array.isArray(arr)) {
@@ -338,12 +341,15 @@ export const rightsFormSchema = rightsFormBaseSchema.transform((values) => {
           }))
           .filter((s) => s.name);
       }
-    } catch (err) {
+    } catch {
       // si falla, dejamos lista vacía
     }
   }
 
-  if (typeof values.masterShares === "string" && values.masterShares.trim() !== "") {
+  if (
+    typeof values.masterShares === "string" &&
+    values.masterShares.trim() !== ""
+  ) {
     try {
       const arr = JSON.parse(values.masterShares);
       if (Array.isArray(arr)) {
@@ -360,7 +366,7 @@ export const rightsFormSchema = rightsFormBaseSchema.transform((values) => {
           }))
           .filter((s) => s.name);
       }
-    } catch (err) {
+    } catch {
       // ignorar parse fail
     }
   }
@@ -387,9 +393,19 @@ export type RightsFormValues = z.infer<typeof rightsFormSchema>;
 // 4) Sync metadata (BPM, key, géneros, exclusividad, pricing)
 // ───────────────────────────────────────────────────────────────────────────────
 
-const TRACK_TYPE_VALUES = ["INSTRUMENTAL", "VOCAL", "VOCAL_INSTRUMENTAL", "OTHER"] as const;
+const TRACK_TYPE_VALUES = [
+  "INSTRUMENTAL",
+  "VOCAL",
+  "VOCAL_INSTRUMENTAL",
+  "OTHER",
+] as const;
 const PRICING_TIER_VALUES = ["LOW", "MID", "HIGH", "BESPOKE"] as const;
-const LICENSE_TYPE_VALUES = ["NON_EXCLUSIVE", "EXCLUSIVE", "LIMITED_EXCLUSIVE", "BUYOUT"] as const;
+const LICENSE_TYPE_VALUES = [
+  "NON_EXCLUSIVE",
+  "EXCLUSIVE",
+  "LIMITED_EXCLUSIVE",
+  "BUYOUT",
+] as const;
 const CURRENCY_VALUES = ["CLP", "USD", "EUR"] as const;
 
 const syncMetaFormBaseSchema = z.object({
@@ -402,7 +418,12 @@ const syncMetaFormBaseSchema = z.object({
   genres: z.union([z.string(), z.null(), z.undefined()]),
   subgenres: z.union([z.string(), z.null(), z.undefined()]),
   exclusiveTerritories: z.union([z.string(), z.null(), z.undefined()]),
-  exclusiveTermMonths: z.union([z.string(), z.number(), z.null(), z.undefined()]),
+  exclusiveTermMonths: z.union([
+    z.string(),
+    z.number(),
+    z.null(),
+    z.undefined(),
+  ]),
   restrictedTerritories: z.union([z.string(), z.null(), z.undefined()]),
   restrictedIndustries: z.union([z.string(), z.null(), z.undefined()]),
   restrictedPlatforms: z.union([z.string(), z.null(), z.undefined()]),
@@ -444,8 +465,21 @@ export type SyncMetaFormValues = z.infer<typeof syncMetaFormSchema>;
 // 5) Entregables (versiones y stems)
 // ───────────────────────────────────────────────────────────────────────────────
 
-const VERSION_KIND_VALUES = ["FULL", "CUTDOWN", "ALT_MIX", "INSTRUMENTAL", "VOCAL", "OTHER"] as const;
-const STEM_GROUP_VALUES = ["INSTRUMENT", "VOCAL", "FX", "PERCUSSION", "OTHER"] as const;
+const VERSION_KIND_VALUES = [
+  "FULL",
+  "CUTDOWN",
+  "ALT_MIX",
+  "INSTRUMENTAL",
+  "VOCAL",
+  "OTHER",
+] as const;
+const STEM_GROUP_VALUES = [
+  "INSTRUMENT",
+  "VOCAL",
+  "FX",
+  "PERCUSSION",
+  "OTHER",
+] as const;
 
 function parseVersionLines(raw: string | null | undefined) {
   if (typeof raw !== "string") return [];
@@ -490,12 +524,14 @@ const deliverablesFormBaseSchema = z.object({
   stems: z.union([z.string(), z.null(), z.undefined()]),
 });
 
-export const deliverablesFormSchema = deliverablesFormBaseSchema.transform((values) => {
-  return {
-    id: String(values.id),
-    versions: parseVersionLines(values.versions),
-    stems: parseStemLines(values.stems),
-  };
-});
+export const deliverablesFormSchema = deliverablesFormBaseSchema.transform(
+  (values) => {
+    return {
+      id: String(values.id),
+      versions: parseVersionLines(values.versions),
+      stems: parseStemLines(values.stems),
+    };
+  },
+);
 
 export type DeliverablesFormValues = z.infer<typeof deliverablesFormSchema>;

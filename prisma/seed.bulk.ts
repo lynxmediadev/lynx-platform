@@ -13,8 +13,27 @@ loadEnv({ path: ".env", quiet: true });
 
 const db = new PrismaClient();
 
-const MOODS = ["Epic","Emotional","Elegant","Atmospheric","Dark","Uplifting","Warm","Minimal","Intense"];
-const USES  = ["TV","Cine","Publicidad","Trailers","Series","Videojuegos","Documental","Streaming"];
+const MOODS = [
+  "Epic",
+  "Emotional",
+  "Elegant",
+  "Atmospheric",
+  "Dark",
+  "Uplifting",
+  "Warm",
+  "Minimal",
+  "Intense",
+];
+const USES = [
+  "TV",
+  "Cine",
+  "Publicidad",
+  "Trailers",
+  "Series",
+  "Videojuegos",
+  "Documental",
+  "Streaming",
+];
 
 function slugify(value: string) {
   return value
@@ -33,8 +52,30 @@ function pickSome<T>(arr: T[], min = 1, max = 3): T[] {
 }
 
 function titleFor(i: number): string {
-  const adj = ["Aurora","Crimson","Veridian","Obsidian","Saffron","Azure","Amber","Ivory","Magenta","Cobalt"];
-  const noun = ["Trail","Sky","Pulse","Horizon","Echo","River","Storm","Flare","Canvas","Voyage"];
+  const adj = [
+    "Aurora",
+    "Crimson",
+    "Veridian",
+    "Obsidian",
+    "Saffron",
+    "Azure",
+    "Amber",
+    "Ivory",
+    "Magenta",
+    "Cobalt",
+  ];
+  const noun = [
+    "Trail",
+    "Sky",
+    "Pulse",
+    "Horizon",
+    "Echo",
+    "River",
+    "Storm",
+    "Flare",
+    "Canvas",
+    "Voyage",
+  ];
   const a = adj[i % adj.length];
   const b = noun[(i * 7) % noun.length];
   return `${a} ${b} #${i.toString().padStart(3, "0")}`;
@@ -44,7 +85,11 @@ async function main() {
   // Lee el conteo: primero argv, luego env, default 25
   const argN = Number(process.argv[2]);
   const envN = Number(process.env.BULK_COUNT);
-  const COUNT = Number.isFinite(argN) ? argN : Number.isFinite(envN) ? envN : 25;
+  const COUNT = Number.isFinite(argN)
+    ? argN
+    : Number.isFinite(envN)
+      ? envN
+      : 25;
 
   const AUDIO = "/audio/demo.mp3";
   const COVER = "/images/hero/hero-bg-1.png";
@@ -122,7 +167,7 @@ async function main() {
   console.log(`✅ Bulk seed completado. Insertadas ${COUNT} pistas.`);
 }
 
-main()
+void main()
   .catch(async (e) => {
     console.error("❌ Bulk seed error:", e);
     await db.$disconnect();

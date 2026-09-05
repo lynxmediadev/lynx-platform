@@ -76,7 +76,11 @@ export default function MixFormClient() {
     style: "",
     notes: "",
   });
-  const [infoModal, setInfoModal] = useState<{ title: string; description: string; video: string } | null>(null);
+  const [infoModal, setInfoModal] = useState<{
+    title: string;
+    description: string;
+    video: string;
+  } | null>(null);
 
   const steps = useMemo(
     () => [
@@ -94,7 +98,9 @@ export default function MixFormClient() {
       return;
     }
     if (step === "details" && projectType === "single" && overMaxTracks) {
-      setErrors(["Tracks superiores a 72 requieren cotización manual. Ajusta la cantidad o continúa con contacto."]);
+      setErrors([
+        "Tracks superiores a 72 requieren cotización manual. Ajusta la cantidad o continúa con contacto.",
+      ]);
       setStep("details");
       return;
     }
@@ -117,7 +123,10 @@ export default function MixFormClient() {
 
   const pricing = useMemo(() => {
     if (projectType !== "single" || overMaxTracks) {
-      return { totalClp: null, breakdown: [] as Array<{ label: string; amount: number }> };
+      return {
+        totalClp: null,
+        breakdown: [] as Array<{ label: string; amount: number }>,
+      };
     }
     const breakdown: Array<{ label: string; amount: number }> = [];
     breakdown.push({ label: "Base (12 tracks)", amount: BASE_PRICE_CLP });
@@ -129,23 +138,47 @@ export default function MixFormClient() {
         amount: extraTracks * TRACK_PRICE_CLP,
       });
     }
-    if (drumQuantize) breakdown.push({ label: "Cuantización batería", amount: addons.drumQuantize });
+    if (drumQuantize)
+      breakdown.push({
+        label: "Cuantización batería",
+        amount: addons.drumQuantize,
+      });
     if (vocalTracks > 0) {
       breakdown.push({
         label: `Voz manual (${vocalTracks} track${vocalTracks > 1 ? "s" : ""})`,
         amount: vocalTracks * addons.vocalTunePerTrack,
       });
     }
-    if (addonChecks.acapella) breakdown.push({ label: "Acapella", amount: addons.acapella });
-    if (addonChecks.instrumental) breakdown.push({ label: "Instrumental", amount: addons.instrumental });
-    if (addonChecks.liveBacking) breakdown.push({ label: "Backing track live", amount: addons.liveBacking });
-    if (addonChecks.rush) breakdown.push({ label: "Entrega rápida (2 días hábiles)", amount: addons.rush });
+    if (addonChecks.acapella)
+      breakdown.push({ label: "Acapella", amount: addons.acapella });
+    if (addonChecks.instrumental)
+      breakdown.push({ label: "Instrumental", amount: addons.instrumental });
+    if (addonChecks.liveBacking)
+      breakdown.push({
+        label: "Backing track live",
+        amount: addons.liveBacking,
+      });
+    if (addonChecks.rush)
+      breakdown.push({
+        label: "Entrega rápida (2 días hábiles)",
+        amount: addons.rush,
+      });
     if (addonChecks.unlimitedRevs)
-      breakdown.push({ label: "Revisiones ilimitadas", amount: addons.unlimitedRevs });
+      breakdown.push({
+        label: "Revisiones ilimitadas",
+        amount: addons.unlimitedRevs,
+      });
 
     const totalClp = breakdown.reduce((acc, item) => acc + item.amount, 0);
     return { totalClp, breakdown };
-  }, [projectType, overMaxTracks, tracks, drumQuantize, vocalTracks, addonChecks]);
+  }, [
+    projectType,
+    overMaxTracks,
+    tracks,
+    drumQuantize,
+    vocalTracks,
+    addonChecks,
+  ]);
 
   const totalInCurrency = useMemo(() => {
     if (pricing.totalClp == null) return null;
@@ -241,453 +274,538 @@ export default function MixFormClient() {
   return (
     <TooltipProvider delayDuration={200}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10">
-      {/* Hero */}
-      <section className="rounded-[2px] border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-3">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-            Servicios · Mix &amp; Master
-          </p>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold leading-tight">Lleva tu mezcla al siguiente nivel</h1>
-              <p className="text-sm text-muted-foreground">
-                Single track o EP/Álbum. Selecciona tu ruta, define opciones y deja tus datos. Calcularemos o
-                coordinaremos una cotización según el proyecto.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setStep("project")}
-              className="inline-flex items-center gap-2 rounded-[2px] border border-border bg-foreground px-4 py-2 text-sm font-semibold text-background transition hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Comenzar
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Steps */}
-      <section className="rounded-[2px] border border-border bg-card p-4 shadow-sm">
-        <div className="grid gap-2 md:grid-cols-3">
-          {steps.map((s) => {
-            const isActive = s.id === step;
-            const isDone = steps.findIndex((x) => x.id === s.id) < steps.findIndex((x) => x.id === step);
-            return (
-              <div
-                key={s.id}
-                className={cn(
-                  "flex items-center justify-between rounded-[2px] border border-border px-3 py-2 text-sm transition",
-                  isActive ? "bg-foreground/10 text-foreground" : "bg-background/60 text-muted-foreground",
-                )}
-              >
-                <span className="truncate">{s.label}</span>
-                {isDone ? <CheckCircle2 className="h-4 w-4 text-foreground" /> : null}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Step content */}
-      <section className="rounded-[2px] border border-border bg-card p-5 shadow-sm">
-        {step === "project" && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold leading-tight">Selecciona el tipo de proyecto</h2>
-              <p className="text-sm text-muted-foreground">
-                Elige si calculamos rápido un Single Track o si coordinamos EP/Álbum para cotizar contigo.
-              </p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <ProjectCard
-                title="Single Track"
-                description="Cálculo rápido con tracks, add-ons y moneda seleccionable."
-                active={projectType === "single"}
-                onSelect={() => setProjectType("single")}
-              />
-              <ProjectCard
-                title="EP / Álbum"
-                description="Formulario simple y reunión para cotizar varias canciones."
-                active={projectType === "album"}
-                onSelect={() => setProjectType("album")}
-              />
-            </div>
-          </div>
-        )}
-
-        {step === "details" && (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold leading-tight">Configuración</h2>
-                <p className="text-sm text-muted-foreground">
-                  {projectType === "single"
-                    ? "Define tracks, add-ons y moneda (cálculo en tiempo real)."
-                    : "Cuéntanos sobre tu EP/Álbum para coordinar cotización."}
+        {/* Hero */}
+        <section className="border-border bg-card rounded-[2px] border p-6 shadow-sm">
+          <div className="flex flex-col gap-3">
+            <p className="text-muted-foreground text-[11px] tracking-[0.22em] uppercase">
+              Servicios · Mix &amp; Master
+            </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <h1 className="text-2xl leading-tight font-semibold">
+                  Lleva tu mezcla al siguiente nivel
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Single track o EP/Álbum. Selecciona tu ruta, define opciones y
+                  deja tus datos. Calcularemos o coordinaremos una cotización
+                  según el proyecto.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-muted-foreground" htmlFor="currency">
-                  Moneda
-                </label>
-                <select
-                  id="currency"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as typeof currency)}
-                  className="h-9 rounded-[2px] border border-border bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  <option value="CLP">CLP</option>
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                </select>
-              </div>
+              <button
+                type="button"
+                onClick={() => setStep("project")}
+                className="border-border bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-2 rounded-[2px] border px-4 py-2 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                Comenzar
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
-
-            {projectType === "single" ? (
-              <div className="grid gap-4 md:grid-cols-[1.2fr,0.8fr]">
-                <div className="space-y-4 rounded-[2px] border border-border bg-background/60 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-foreground">Tracks y cálculo base</h3>
-                        <InfoIconWithTooltip
-                          label="Cómo calculamos el precio por track"
-                          onClick={() =>
-                            setInfoModal(infoData.tracksBase ?? null)
-                          }
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Base ${BASE_PRICE_CLP.toLocaleString("es-CL")} por 12 tracks. Extra track: $
-                        {TRACK_PRICE_CLP.toLocaleString("es-CL")}.
-                      </p>
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">Max {MAX_TRACKS} tracks</span>
-                  </div>
-                  <label className="flex flex-col gap-2 text-sm">
-                    <span className="text-muted-foreground">Cantidad de tracks</span>
-                    <input
-                      type="number"
-                      min={12}
-                      max={99}
-                      value={tracks}
-                      onChange={(e) => setTracks(Number(e.target.value) || 0)}
-                      className={cn(
-                        "h-10 rounded-[2px] border bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                        tracks < 12 || overMaxTracks ? "border-amber-500/70" : "border-border",
-                      )}
-                    />
-                    {overMaxTracks ? (
-                      <p className="rounded-[2px] border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                        Para canciones con 73+ tracks, agenda una reunión para cotizar tu proyecto específico.
-                      </p>
-                    ) : null}
-                  </label>
-
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-foreground">Add-ons</h4>
-                    <label className="flex items-center gap-2 text-sm text-foreground">
-                      <input
-                        type="checkbox"
-                        checked={drumQuantize}
-                        onChange={(e) => setDrumQuantize(e.target.checked)}
-                        className="h-4 w-4 rounded-[2px] border border-border bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                        disabled={overMaxTracks}
-                      />
-                      Cuantización de batería (+${addons.drumQuantize.toLocaleString("es-CL")})
-                        <InfoIconWithTooltip
-                          label="Detalles de cuantización de batería"
-                          onClick={() => setInfoModal(infoData.drumQuantize ?? null)}
-                        />
-                    </label>
-
-                    <label className="flex flex-col gap-1 text-sm text-foreground">
-                      <span className="inline-flex items-center gap-2">
-                        Edición/afinación manual de voz
-                        <InfoIconWithTooltip
-                          label="Cómo afinamos la voz"
-                          onClick={() => setInfoModal(infoData.vocal ?? null)}
-                        />
-                      </span>
-                      <select
-                        value={vocalTracks}
-                        onChange={(e) => setVocalTracks(Number(e.target.value) || 0)}
-                        disabled={overMaxTracks}
-                        className="h-9 rounded-[2px] border border-border bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                      >
-                        {Array.from({ length: 11 }).map((_, idx) => {
-                          const val = idx;
-                          const extra = val * addons.vocalTunePerTrack;
-                          return (
-                            <option key={val} value={val}>
-                              {val === 0 ? "No" : `${val} Track${val > 1 ? "s" : ""} (+$${extra.toLocaleString("es-CL")})`}
-                            </option>
-                          );
-                        })}
-                      </select>
-                    </label>
-
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {(["acapella", "instrumental", "liveBacking", "rush", "unlimitedRevs"] as const).map((key) => (
-                        <label key={key} className="flex items-center gap-2 text-sm text-foreground">
-                          <input
-                            type="checkbox"
-                            checked={addonChecks[key]}
-                            onChange={(e) =>
-                              setAddonChecks((prev) => ({
-                                ...prev,
-                                [key]: e.target.checked,
-                              }))
-                            }
-                            className="h-4 w-4 rounded-[2px] border border-border bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                            disabled={overMaxTracks}
-                          />
-                          {addonLabel(key)}
-                          <InfoIconWithTooltip
-                            label="Ver detalles"
-                            onClick={() => setInfoModal(infoData[key] ?? null)}
-                          />
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex h-full flex-col justify-between rounded-[2px] border border-border bg-background/60 p-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">Resumen</h3>
-                    <p className="text-xs text-muted-foreground">Actualiza en tiempo real según tus selecciones.</p>
-                    {overMaxTracks ? (
-                      <p className="mt-3 rounded-[2px] border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                        Tracks superiores a 72 requieren cotización manual. Continúa y coordinaremos contigo.
-                      </p>
-                    ) : (
-                      <ul className="mt-3 space-y-2 text-sm">
-                        {pricing.breakdown.map((item) => (
-                          <li key={item.label} className="flex items-center justify-between text-foreground">
-                            <span>{item.label}</span>
-                            <span className="text-muted-foreground">
-                              ${item.amount.toLocaleString("es-CL")}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div className="mt-4 rounded-[2px] border border-border bg-card px-3 py-2">
-                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-                      <span>Total</span>
-                      <span>
-                        {pricing.totalClp == null
-                          ? "Cotizar manual"
-                          : formatCurrency(totalInCurrency ?? 0, currency)}
-                      </span>
-                    </div>
-                    {pricing.totalClp != null && currency !== "CLP" ? (
-                      <p className="text-xs text-muted-foreground">
-                        Base CLP ${pricing.totalClp.toLocaleString("es-CL")} · factor {currencyFactors[currency]}
-                      </p>
-                    ) : null}
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Pago en línea (próximamente). Por ahora coordinamos por correo con este valor estimado.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-[1.2fr,0.8fr]">
-                <div className="space-y-4 rounded-[2px] border border-border bg-background/60 p-4">
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-semibold text-foreground">Brief EP / Álbum</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Cuéntanos lo esencial para coordinar una reunión y cotizar a medida.
-                    </p>
-                  </div>
-                  <label className="flex flex-col gap-1 text-sm text-foreground">
-                    <span>Número de canciones</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={albumInfo.songs}
-                      onChange={(e) => setAlbumInfo((prev) => ({ ...prev, songs: Number(e.target.value) || 1 }))}
-                      className="h-10 rounded-[2px] border border-border bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm text-foreground">
-                    <span>Plazo deseado</span>
-                    <select
-                      value={albumInfo.timeline}
-                      onChange={(e) => setAlbumInfo((prev) => ({ ...prev, timeline: e.target.value }))}
-                      className="h-9 rounded-[2px] border border-border bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    >
-                      <option value="1 mes">1 mes (mínimo)</option>
-                      <option value="2 meses">2 meses</option>
-                      <option value="3 meses">3 meses</option>
-                      <option value="Mas tiempo">Más tiempo</option>
-                    </select>
-                  </label>
-                  <LabeledInput
-                    label="Estilo del álbum"
-                    value={albumInfo.style}
-                    onChange={(v) => setAlbumInfo((prev) => ({ ...prev, style: v }))}
-                    placeholder="Género/estilo (ej: indie, trap, orquestal...)"
-                  />
-                  <LabeledTextArea
-                    label="Notas relevantes"
-                    value={albumInfo.notes}
-                    onChange={(v) => setAlbumInfo((prev) => ({ ...prev, notes: v }))}
-                    placeholder="Contexto, referencias, expectativas."
-                  />
-                </div>
-
-                <div className="flex h-full flex-col justify-between rounded-[2px] border border-border bg-background/60 p-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">Cotización a medida</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Para EP/Álbum coordinamos reunión online, aclaramos alcance y enviamos propuesta.
-                    </p>
-                  </div>
-                  <div className="mt-4 rounded-[2px] border border-border bg-card px-3 py-2">
-                    <p className="text-sm font-semibold text-foreground">Agendar reunión / Solicitar cotización</p>
-                    <p className="text-xs text-muted-foreground">
-                      Continúa al Paso 3 y envía tus datos; coordinaremos fecha y hora contigo. Pago en línea se activará
-                      más adelante.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
-        )}
+        </section>
 
-        {step === "contact" && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold leading-tight">Datos de contacto</h2>
-              <p className="text-sm text-muted-foreground">
-                Recolectamos datos básicos para enviarte la propuesta. Valida tu email antes de enviar.
-              </p>
-              {errors.length ? (
-                <div className="rounded-[2px] border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                  {errors.map((e) => (
-                    <div key={e}>{e}</div>
-                  ))}
+        {/* Steps */}
+        <section className="border-border bg-card rounded-[2px] border p-4 shadow-sm">
+          <div className="grid gap-2 md:grid-cols-3">
+            {steps.map((s) => {
+              const isActive = s.id === step;
+              const isDone =
+                steps.findIndex((x) => x.id === s.id) <
+                steps.findIndex((x) => x.id === step);
+              return (
+                <div
+                  key={s.id}
+                  className={cn(
+                    "border-border flex items-center justify-between rounded-[2px] border px-3 py-2 text-sm transition",
+                    isActive
+                      ? "bg-foreground/10 text-foreground"
+                      : "bg-background/60 text-muted-foreground",
+                  )}
+                >
+                  <span className="truncate">{s.label}</span>
+                  {isDone ? (
+                    <CheckCircle2 className="text-foreground h-4 w-4" />
+                  ) : null}
                 </div>
-              ) : null}
-              {submitMessage ? (
-                <div className="rounded-[2px] border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
-                  {submitMessage}
-                </div>
-              ) : null}
-            </div>
+              );
+            })}
+          </div>
+        </section>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <LabeledInput
-                label="Nombre"
-                value={contact.name}
-                onChange={(v) => setContact((c) => ({ ...c, name: v }))}
-                placeholder="Tu nombre"
-                required
-              />
-              <LabeledInput
-                label="Email"
-                value={contact.email}
-                onChange={(v) => setContact((c) => ({ ...c, email: v }))}
-                placeholder="correo@dominio.com"
-                type="email"
-                required
-              />
-              <LabeledInput
-                label="Compañía (opcional)"
-                value={contact.company}
-                onChange={(v) => setContact((c) => ({ ...c, company: v }))}
-                placeholder="Productora / Agencia"
-              />
-              <LabeledInput
-                label="Teléfono (opcional)"
-                value={contact.phone}
-                onChange={(v) => setContact((c) => ({ ...c, phone: v }))}
-                placeholder="+56 9 ..."
-                type="tel"
-              />
-              <div className="md:col-span-2">
-                <LabeledTextArea
-                  label="Notas (opcional)"
-                  value={contact.notes}
-                  onChange={(v) => setContact((c) => ({ ...c, notes: v }))}
-                  placeholder="Detalles adicionales para la propuesta."
+        {/* Step content */}
+        <section className="border-border bg-card rounded-[2px] border p-5 shadow-sm">
+          {step === "project" && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-lg leading-tight font-semibold">
+                  Selecciona el tipo de proyecto
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  Elige si calculamos rápido un Single Track o si coordinamos
+                  EP/Álbum para cotizar contigo.
+                </p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <ProjectCard
+                  title="Single Track"
+                  description="Cálculo rápido con tracks, add-ons y moneda seleccionable."
+                  active={projectType === "single"}
+                  onSelect={() => setProjectType("single")}
+                />
+                <ProjectCard
+                  title="EP / Álbum"
+                  description="Formulario simple y reunión para cotizar varias canciones."
+                  active={projectType === "album"}
+                  onSelect={() => setProjectType("album")}
                 />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Footer de navegación */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={goBack}
-            disabled={step === "project"}
-            className="inline-flex items-center gap-2 rounded-[2px] border border-border bg-background px-3 py-2 text-sm text-foreground transition disabled:cursor-not-allowed disabled:opacity-50 hover:bg-border/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-          >
-            Volver
-          </button>
-          <div className="flex items-center gap-2">
+          {step === "details" && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg leading-tight font-semibold">
+                    Configuración
+                  </h2>
+                  <p className="text-muted-foreground text-sm">
+                    {projectType === "single"
+                      ? "Define tracks, add-ons y moneda (cálculo en tiempo real)."
+                      : "Cuéntanos sobre tu EP/Álbum para coordinar cotización."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label
+                    className="text-muted-foreground text-sm"
+                    htmlFor="currency"
+                  >
+                    Moneda
+                  </label>
+                  <select
+                    id="currency"
+                    value={currency}
+                    onChange={(e) =>
+                      setCurrency(e.target.value as typeof currency)
+                    }
+                    className="border-border bg-background focus-visible:ring-ring focus-visible:ring-offset-background h-9 rounded-[2px] border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  >
+                    <option value="CLP">CLP</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                  </select>
+                </div>
+              </div>
+
+              {projectType === "single" ? (
+                <div className="grid gap-4 md:grid-cols-[1.2fr,0.8fr]">
+                  <div className="border-border bg-background/60 space-y-4 rounded-[2px] border p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-foreground text-sm font-semibold">
+                            Tracks y cálculo base
+                          </h3>
+                          <InfoIconWithTooltip
+                            label="Cómo calculamos el precio por track"
+                            onClick={() =>
+                              setInfoModal(infoData.tracksBase ?? null)
+                            }
+                          />
+                        </div>
+                        <p className="text-muted-foreground text-xs">
+                          Base ${BASE_PRICE_CLP.toLocaleString("es-CL")} por 12
+                          tracks. Extra track: $
+                          {TRACK_PRICE_CLP.toLocaleString("es-CL")}.
+                        </p>
+                      </div>
+                      <span className="text-muted-foreground text-[11px]">
+                        Max {MAX_TRACKS} tracks
+                      </span>
+                    </div>
+                    <label className="flex flex-col gap-2 text-sm">
+                      <span className="text-muted-foreground">
+                        Cantidad de tracks
+                      </span>
+                      <input
+                        type="number"
+                        min={12}
+                        max={99}
+                        value={tracks}
+                        onChange={(e) => setTracks(Number(e.target.value) || 0)}
+                        className={cn(
+                          "bg-background text-foreground focus-visible:ring-ring focus-visible:ring-offset-background h-10 rounded-[2px] border px-3 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                          tracks < 12 || overMaxTracks
+                            ? "border-amber-500/70"
+                            : "border-border",
+                        )}
+                      />
+                      {overMaxTracks ? (
+                        <p className="rounded-[2px] border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                          Para canciones con 73+ tracks, agenda una reunión para
+                          cotizar tu proyecto específico.
+                        </p>
+                      ) : null}
+                    </label>
+
+                    <div className="space-y-2">
+                      <h4 className="text-foreground text-sm font-semibold">
+                        Add-ons
+                      </h4>
+                      <label className="text-foreground flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={drumQuantize}
+                          onChange={(e) => setDrumQuantize(e.target.checked)}
+                          className="border-border bg-background text-foreground focus-visible:ring-ring focus-visible:ring-offset-background h-4 w-4 rounded-[2px] border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                          disabled={overMaxTracks}
+                        />
+                        Cuantización de batería (+$
+                        {addons.drumQuantize.toLocaleString("es-CL")})
+                        <InfoIconWithTooltip
+                          label="Detalles de cuantización de batería"
+                          onClick={() =>
+                            setInfoModal(infoData.drumQuantize ?? null)
+                          }
+                        />
+                      </label>
+
+                      <label className="text-foreground flex flex-col gap-1 text-sm">
+                        <span className="inline-flex items-center gap-2">
+                          Edición/afinación manual de voz
+                          <InfoIconWithTooltip
+                            label="Cómo afinamos la voz"
+                            onClick={() => setInfoModal(infoData.vocal ?? null)}
+                          />
+                        </span>
+                        <select
+                          value={vocalTracks}
+                          onChange={(e) =>
+                            setVocalTracks(Number(e.target.value) || 0)
+                          }
+                          disabled={overMaxTracks}
+                          className="border-border bg-background focus-visible:ring-ring focus-visible:ring-offset-background h-9 rounded-[2px] border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        >
+                          {Array.from({ length: 11 }).map((_, idx) => {
+                            const val = idx;
+                            const extra = val * addons.vocalTunePerTrack;
+                            return (
+                              <option key={val} value={val}>
+                                {val === 0
+                                  ? "No"
+                                  : `${val} Track${val > 1 ? "s" : ""} (+$${extra.toLocaleString("es-CL")})`}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </label>
+
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {(
+                          [
+                            "acapella",
+                            "instrumental",
+                            "liveBacking",
+                            "rush",
+                            "unlimitedRevs",
+                          ] as const
+                        ).map((key) => (
+                          <label
+                            key={key}
+                            className="text-foreground flex items-center gap-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={addonChecks[key]}
+                              onChange={(e) =>
+                                setAddonChecks((prev) => ({
+                                  ...prev,
+                                  [key]: e.target.checked,
+                                }))
+                              }
+                              className="border-border bg-background text-foreground focus-visible:ring-ring focus-visible:ring-offset-background h-4 w-4 rounded-[2px] border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                              disabled={overMaxTracks}
+                            />
+                            {addonLabel(key)}
+                            <InfoIconWithTooltip
+                              label="Ver detalles"
+                              onClick={() =>
+                                setInfoModal(infoData[key] ?? null)
+                              }
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-border bg-background/60 flex h-full flex-col justify-between rounded-[2px] border p-4">
+                    <div>
+                      <h3 className="text-foreground text-sm font-semibold">
+                        Resumen
+                      </h3>
+                      <p className="text-muted-foreground text-xs">
+                        Actualiza en tiempo real según tus selecciones.
+                      </p>
+                      {overMaxTracks ? (
+                        <p className="mt-3 rounded-[2px] border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                          Tracks superiores a 72 requieren cotización manual.
+                          Continúa y coordinaremos contigo.
+                        </p>
+                      ) : (
+                        <ul className="mt-3 space-y-2 text-sm">
+                          {pricing.breakdown.map((item) => (
+                            <li
+                              key={item.label}
+                              className="text-foreground flex items-center justify-between"
+                            >
+                              <span>{item.label}</span>
+                              <span className="text-muted-foreground">
+                                ${item.amount.toLocaleString("es-CL")}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="border-border bg-card mt-4 rounded-[2px] border px-3 py-2">
+                      <div className="text-foreground flex items-center justify-between text-sm font-semibold">
+                        <span>Total</span>
+                        <span>
+                          {pricing.totalClp == null
+                            ? "Cotizar manual"
+                            : formatCurrency(totalInCurrency ?? 0, currency)}
+                        </span>
+                      </div>
+                      {pricing.totalClp != null && currency !== "CLP" ? (
+                        <p className="text-muted-foreground text-xs">
+                          Base CLP ${pricing.totalClp.toLocaleString("es-CL")} ·
+                          factor {currencyFactors[currency]}
+                        </p>
+                      ) : null}
+                      <p className="text-muted-foreground mt-2 text-xs">
+                        Pago en línea (próximamente). Por ahora coordinamos por
+                        correo con este valor estimado.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-[1.2fr,0.8fr]">
+                  <div className="border-border bg-background/60 space-y-4 rounded-[2px] border p-4">
+                    <div className="space-y-1">
+                      <h3 className="text-foreground text-sm font-semibold">
+                        Brief EP / Álbum
+                      </h3>
+                      <p className="text-muted-foreground text-xs">
+                        Cuéntanos lo esencial para coordinar una reunión y
+                        cotizar a medida.
+                      </p>
+                    </div>
+                    <label className="text-foreground flex flex-col gap-1 text-sm">
+                      <span>Número de canciones</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={albumInfo.songs}
+                        onChange={(e) =>
+                          setAlbumInfo((prev) => ({
+                            ...prev,
+                            songs: Number(e.target.value) || 1,
+                          }))
+                        }
+                        className="border-border bg-background text-foreground focus-visible:ring-ring focus-visible:ring-offset-background h-10 rounded-[2px] border px-3 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                      />
+                    </label>
+                    <label className="text-foreground flex flex-col gap-1 text-sm">
+                      <span>Plazo deseado</span>
+                      <select
+                        value={albumInfo.timeline}
+                        onChange={(e) =>
+                          setAlbumInfo((prev) => ({
+                            ...prev,
+                            timeline: e.target.value,
+                          }))
+                        }
+                        className="border-border bg-background focus-visible:ring-ring focus-visible:ring-offset-background h-9 rounded-[2px] border px-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                      >
+                        <option value="1 mes">1 mes (mínimo)</option>
+                        <option value="2 meses">2 meses</option>
+                        <option value="3 meses">3 meses</option>
+                        <option value="Mas tiempo">Más tiempo</option>
+                      </select>
+                    </label>
+                    <LabeledInput
+                      label="Estilo del álbum"
+                      value={albumInfo.style}
+                      onChange={(v) =>
+                        setAlbumInfo((prev) => ({ ...prev, style: v }))
+                      }
+                      placeholder="Género/estilo (ej: indie, trap, orquestal...)"
+                    />
+                    <LabeledTextArea
+                      label="Notas relevantes"
+                      value={albumInfo.notes}
+                      onChange={(v) =>
+                        setAlbumInfo((prev) => ({ ...prev, notes: v }))
+                      }
+                      placeholder="Contexto, referencias, expectativas."
+                    />
+                  </div>
+
+                  <div className="border-border bg-background/60 flex h-full flex-col justify-between rounded-[2px] border p-4">
+                    <div>
+                      <h3 className="text-foreground text-sm font-semibold">
+                        Cotización a medida
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        Para EP/Álbum coordinamos reunión online, aclaramos
+                        alcance y enviamos propuesta.
+                      </p>
+                    </div>
+                    <div className="border-border bg-card mt-4 rounded-[2px] border px-3 py-2">
+                      <p className="text-foreground text-sm font-semibold">
+                        Agendar reunión / Solicitar cotización
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        Continúa al Paso 3 y envía tus datos; coordinaremos
+                        fecha y hora contigo. Pago en línea se activará más
+                        adelante.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === "contact" && (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-lg leading-tight font-semibold">
+                  Datos de contacto
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  Recolectamos datos básicos para enviarte la propuesta. Valida
+                  tu email antes de enviar.
+                </p>
+                {errors.length ? (
+                  <div className="rounded-[2px] border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    {errors.map((e) => (
+                      <div key={e}>{e}</div>
+                    ))}
+                  </div>
+                ) : null}
+                {submitMessage ? (
+                  <div className="rounded-[2px] border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-100">
+                    {submitMessage}
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <LabeledInput
+                  label="Nombre"
+                  value={contact.name}
+                  onChange={(v) => setContact((c) => ({ ...c, name: v }))}
+                  placeholder="Tu nombre"
+                  required
+                />
+                <LabeledInput
+                  label="Email"
+                  value={contact.email}
+                  onChange={(v) => setContact((c) => ({ ...c, email: v }))}
+                  placeholder="correo@dominio.com"
+                  type="email"
+                  required
+                />
+                <LabeledInput
+                  label="Compañía (opcional)"
+                  value={contact.company}
+                  onChange={(v) => setContact((c) => ({ ...c, company: v }))}
+                  placeholder="Productora / Agencia"
+                />
+                <LabeledInput
+                  label="Teléfono (opcional)"
+                  value={contact.phone}
+                  onChange={(v) => setContact((c) => ({ ...c, phone: v }))}
+                  placeholder="+56 9 ..."
+                  type="tel"
+                />
+                <div className="md:col-span-2">
+                  <LabeledTextArea
+                    label="Notas (opcional)"
+                    value={contact.notes}
+                    onChange={(v) => setContact((c) => ({ ...c, notes: v }))}
+                    placeholder="Detalles adicionales para la propuesta."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer de navegación */}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
             <button
               type="button"
-              onClick={() => setStep("project")}
-              className="inline-flex items-center gap-2 rounded-[2px] border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition hover:bg-border/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onClick={goBack}
+              disabled={step === "project"}
+              className="border-border bg-background text-foreground hover:bg-border/10 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-2 rounded-[2px] border px-3 py-2 text-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Paso 1
+              Volver
             </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setStep("project")}
+                className="border-border bg-background text-muted-foreground hover:bg-border/10 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-2 rounded-[2px] border px-3 py-2 text-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                Paso 1
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("details")}
+                className="border-border bg-background text-muted-foreground hover:bg-border/10 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-2 rounded-[2px] border px-3 py-2 text-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                Paso 2
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep("contact")}
+                className="border-border bg-background text-muted-foreground hover:bg-border/10 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-2 rounded-[2px] border px-3 py-2 text-sm transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                Paso 3
+              </button>
+            </div>
             <button
               type="button"
-              onClick={() => setStep("details")}
-              className="inline-flex items-center gap-2 rounded-[2px] border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition hover:bg-border/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onClick={goNext}
+              disabled={
+                step === "contact" ||
+                (projectType === "single" &&
+                  (tracks < 12 || tracks > MAX_TRACKS))
+              }
+              className="border-border bg-foreground text-background hover:bg-foreground/90 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-2 rounded-[2px] border px-4 py-2 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Paso 2
+              Siguiente
+              <ArrowRight className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              onClick={() => setStep("contact")}
-              className="inline-flex items-center gap-2 rounded-[2px] border border-border bg-background px-3 py-2 text-sm text-muted-foreground transition hover:bg-border/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              Paso 3
-            </button>
+            {step === "contact" ? (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="border-border bg-card text-foreground hover:bg-border/20 focus-visible:ring-ring focus-visible:ring-offset-background inline-flex items-center gap-2 rounded-[2px] border px-4 py-2 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Enviando..." : "Enviar (placeholder)"}
+              </button>
+            ) : null}
           </div>
-          <button
-            type="button"
-          onClick={goNext}
-          disabled={
-            step === "contact" ||
-            (projectType === "single" && (tracks < 12 || tracks > MAX_TRACKS))
-          }
-          className="inline-flex items-center gap-2 rounded-[2px] border border-border bg-foreground px-4 py-2 text-sm font-semibold text-background transition hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Siguiente
-          <ArrowRight className="h-4 w-4" />
-        </button>
-          {step === "contact" ? (
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-[2px] border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-border/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? "Enviando..." : "Enviar (placeholder)"}
-            </button>
-          ) : null}
-        </div>
-      </section>
+        </section>
       </div>
 
       {infoModal ? (
-        <InfoModal
-          data={infoModal}
-          onClose={() => setInfoModal(null)}
-        />
+        <InfoModal data={infoModal} onClose={() => setInfoModal(null)} />
       ) : null}
     </TooltipProvider>
   );
@@ -709,14 +827,14 @@ function ProjectCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex h-full flex-col items-start gap-2 rounded-[2px] border px-4 py-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "focus-visible:ring-ring focus-visible:ring-offset-background flex h-full flex-col items-start gap-2 rounded-[2px] border px-4 py-4 text-left transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
         active
           ? "border-foreground/50 bg-foreground/10 text-foreground"
           : "border-border bg-background text-foreground hover:border-border/70 hover:bg-border/10",
       )}
     >
       <span className="text-base font-semibold">{title}</span>
-      <span className="text-sm text-muted-foreground">{description}</span>
+      <span className="text-muted-foreground text-sm">{description}</span>
     </button>
   );
 }
@@ -745,7 +863,7 @@ function LabeledInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="h-9 rounded-[2px] border border-border bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring focus-visible:ring-offset-background h-9 rounded-[2px] border px-3 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       />
     </label>
   );
@@ -770,18 +888,9 @@ function LabeledTextArea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full rounded-[2px] border border-border bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="border-border bg-background text-foreground placeholder:text-muted-foreground focus-visible:ring-ring focus-visible:ring-offset-background w-full rounded-[2px] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       />
     </label>
-  );
-}
-
-function PlaceholderCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-[2px] border border-border bg-background/60 p-4">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <div className="mt-2 text-sm text-muted-foreground">{children}</div>
-    </div>
   );
 }
 
@@ -811,14 +920,20 @@ function addonLabel(key: keyof typeof addons) {
   }
 }
 
-function InfoIconWithTooltip({ label, onClick }: { label: string; onClick: () => void }) {
+function InfoIconWithTooltip({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
           onClick={onClick}
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="border-border bg-background text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background inline-flex h-6 w-6 items-center justify-center rounded-full border transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           aria-label={label}
         >
           <Info className="h-3.5 w-3.5" />
@@ -828,7 +943,7 @@ function InfoIconWithTooltip({ label, onClick }: { label: string; onClick: () =>
         side="top"
         align="center"
         sideOffset={4}
-        className="rounded-[2px] border border-border bg-card text-foreground shadow-sm"
+        className="border-border bg-card text-foreground rounded-[2px] border shadow-sm"
       >
         {label}
       </TooltipContent>
@@ -836,7 +951,13 @@ function InfoIconWithTooltip({ label, onClick }: { label: string; onClick: () =>
   );
 }
 
-function InfoModal({ data, onClose }: { data: { title: string; description: string; video: string }; onClose: () => void }) {
+function InfoModal({
+  data,
+  onClose,
+}: {
+  data: { title: string; description: string; video: string };
+  onClose: () => void;
+}) {
   function handleOverlayClick(e: React.MouseEvent<HTMLDivElement>) {
     if (e.target === e.currentTarget) onClose();
   }
@@ -848,26 +969,30 @@ function InfoModal({ data, onClose }: { data: { title: string; description: stri
       onClick={handleOverlayClick}
     >
       <div
-        className="w-full max-w-xl rounded-[2px] border border-border bg-card p-4 shadow-2xl"
+        className="border-border bg-card w-full max-w-xl rounded-[2px] border p-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Detalle del servicio</p>
-            <h3 className="text-lg font-semibold text-foreground">{data.title}</h3>
+            <p className="text-muted-foreground text-[11px] tracking-[0.18em] uppercase">
+              Detalle del servicio
+            </p>
+            <h3 className="text-foreground text-lg font-semibold">
+              {data.title}
+            </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-[2px] border border-border text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="border-border text-muted-foreground hover:text-foreground focus-visible:ring-ring focus-visible:ring-offset-background inline-flex h-8 w-8 items-center justify-center rounded-[2px] border transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             aria-label="Cerrar"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-[2px] border border-border bg-background">
-          <div className="aspect-video w-full bg-background/60">
+        <div className="border-border bg-background overflow-hidden rounded-[2px] border">
+          <div className="bg-background/60 aspect-video w-full">
             <iframe
               title={data.title}
               src={data.video}
@@ -877,13 +1002,16 @@ function InfoModal({ data, onClose }: { data: { title: string; description: stri
             />
           </div>
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">{data.description}</p>
+        <p className="text-muted-foreground mt-3 text-sm">{data.description}</p>
       </div>
     </div>
   );
 }
 
-const infoData: Record<string, { title: string; description: string; video: string }> = {
+const infoData: Record<
+  string,
+  { title: string; description: string; video: string }
+> = {
   tracksBase: {
     title: "Precio base por tracks",
     description:
@@ -904,27 +1032,32 @@ const infoData: Record<string, { title: string; description: string; video: stri
   },
   acapella: {
     title: "Acapella",
-    description: "Entrega del mix sin instrumentales para uso en ediciones, remixes o sincronía puntual.",
+    description:
+      "Entrega del mix sin instrumentales para uso en ediciones, remixes o sincronía puntual.",
     video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
   instrumental: {
     title: "Instrumental",
-    description: "Versión sin voces para usos alternativos (sync, live backings, stems parciales).",
+    description:
+      "Versión sin voces para usos alternativos (sync, live backings, stems parciales).",
     video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
   liveBacking: {
     title: "Backing track para vivo",
-    description: "Pista lista para presentaciones en vivo con balance y padding adecuados.",
+    description:
+      "Pista lista para presentaciones en vivo con balance y padding adecuados.",
     video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
   rush: {
     title: "Entrega rápida (2 días hábiles)",
-    description: "Priorizamos tu proyecto para entrega en 2 días hábiles. Sujeto a agenda y disponibilidad.",
+    description:
+      "Priorizamos tu proyecto para entrega en 2 días hábiles. Sujeto a agenda y disponibilidad.",
     video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
   unlimitedRevs: {
     title: "Revisiones ilimitadas",
-    description: "Incluye revisiones sin tope durante la ventana de trabajo, partiendo de 3 por defecto.",
+    description:
+      "Incluye revisiones sin tope durante la ventana de trabajo, partiendo de 3 por defecto.",
     video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
   },
 };

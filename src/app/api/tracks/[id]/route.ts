@@ -1,21 +1,44 @@
 // ================================================
 // File: src/app/api/tracks/[id]/route.ts
-// Título: API Track por ID con fallback a demo
-// Descripción: Intenta BD y, si falla o no existe, retorna un demo.
-// Qué hace: Garantiza que /player/api-demo no se rompa.
-// Peras y manzanas: “Si no está en la libreta, te muestro la muestra.”
+// Título: API Track por ID
+// Descripción: Entrega y actualiza un track autorizado.
 // ================================================
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/server/db";
-import { getTrackById as getDemo } from "@/mocks/track-store";
-import { canAccessTrackByRole, getRequestAuthUser } from "@/lib/account-auth/request-auth";
+import {
+  canAccessTrackByRole,
+  getRequestAuthUser,
+} from "@/lib/account-auth/request-auth";
 
-const TRACK_TYPE_VALUES = ["INSTRUMENTAL", "VOCAL", "VOCAL_INSTRUMENTAL", "OTHER"] as const;
+const TRACK_TYPE_VALUES = [
+  "INSTRUMENTAL",
+  "VOCAL",
+  "VOCAL_INSTRUMENTAL",
+  "OTHER",
+] as const;
 const PRICING_TIER_VALUES = ["LOW", "MID", "HIGH", "BESPOKE"] as const;
-const LICENSE_TYPE_VALUES = ["NON_EXCLUSIVE", "EXCLUSIVE", "LIMITED_EXCLUSIVE", "BUYOUT"] as const;
-const VERSION_KIND_VALUES = ["FULL", "CUTDOWN", "ALT_MIX", "INSTRUMENTAL", "VOCAL", "OTHER"] as const;
-const STEM_GROUP_VALUES = ["INSTRUMENT", "VOCAL", "FX", "PERCUSSION", "OTHER"] as const;
+const LICENSE_TYPE_VALUES = [
+  "NON_EXCLUSIVE",
+  "EXCLUSIVE",
+  "LIMITED_EXCLUSIVE",
+  "BUYOUT",
+] as const;
+const VERSION_KIND_VALUES = [
+  "FULL",
+  "CUTDOWN",
+  "ALT_MIX",
+  "INSTRUMENTAL",
+  "VOCAL",
+  "OTHER",
+] as const;
+const STEM_GROUP_VALUES = [
+  "INSTRUMENT",
+  "VOCAL",
+  "FX",
+  "PERCUSSION",
+  "OTHER",
+] as const;
 const CURRENCY_VALUES = ["CLP", "USD", "EUR"] as const;
 
 const trackTypeSchema = z.enum(TRACK_TYPE_VALUES);
@@ -121,9 +144,13 @@ function mapDb(row: any) {
           sharePct: share.sharePct ?? undefined,
         }))
       : [],
-  moods: row.moods ?? [],
-  uses: row.uses ?? [],
-    identifiers: { isrc: row.isrc ?? undefined, iswc: row.iswc ?? undefined, upc: row.upc ?? undefined },
+    moods: row.moods ?? [],
+    uses: row.uses ?? [],
+    identifiers: {
+      isrc: row.isrc ?? undefined,
+      iswc: row.iswc ?? undefined,
+      upc: row.upc ?? undefined,
+    },
     rights: {
       master: row.master ?? undefined,
       publishingSplit: row.publishingSplit ?? undefined,
@@ -152,8 +179,26 @@ function mapDb(row: any) {
   };
 }
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
+  const user = await getRequestAuthUser(req);
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
+  }
+  const allowed = await canAccessTrackByRole(user, id);
+  if (!allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Forbidden" },
+      { status: 403 },
+    );
+  }
+
   try {
     const row = await db.track.findUnique({
       where: { id },
@@ -163,15 +208,20 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         publishingShares: true,
       },
     });
-    if (row) return NextResponse.json(mapDb(row), { status: 200, headers: { "Cache-Control": "no-store" } });
+    if (!row) {
+      return NextResponse.json(
+        { error: "TRACK_NOT_FOUND", id },
+        { status: 404 },
+      );
+    }
+    return NextResponse.json(mapDb(row), {
+      status: 200,
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (e) {
     console.error("[GET /api/tracks/:id] DB error:", e);
+    return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
-
-  const demo = getDemo(id);
-  if (demo) return NextResponse.json(demo, { status: 200, headers: { "Cache-Control": "no-store" } });
-
-  return NextResponse.json({ error: "TRACK_NOT_FOUND", id }, { status: 404 });
 }
 
 function normalizeText(raw: unknown): string | null {
@@ -201,7 +251,9 @@ function normalizeNullableInt(raw: unknown): number | null {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-function normalizeVersions(values: z.infer<typeof versionSchema>[] | undefined) {
+function normalizeVersions(
+  values: z.infer<typeof versionSchema>[] | undefined,
+) {
   if (!Array.isArray(values)) return [];
   return values
     .map((version) => ({
@@ -245,15 +297,24 @@ function normalizePublishingShares(
     .filter((share) => share.name.length > 0);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const user = await getRequestAuthUser(req);
   if (!user) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
   const allowed = await canAccessTrackByRole(user, id);
   if (!allowed) {
-    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "Forbidden" },
+      { status: 403 },
+    );
   }
 
   try {
@@ -262,7 +323,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (!parsed.success) {
       return NextResponse.json(
-        { ok: false, error: "Payload inválido", issues: parsed.error.flatten() },
+        {
+          ok: false,
+          error: "Payload inválido",
+          issues: parsed.error.flatten(),
+        },
         { status: 400 },
       );
     }
@@ -278,37 +343,61 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     if (typeof input.bpm !== "undefined") {
       updateData.bpm =
-        typeof input.bpm === "number" && Number.isFinite(input.bpm) ? input.bpm : null;
+        typeof input.bpm === "number" && Number.isFinite(input.bpm)
+          ? input.bpm
+          : null;
     }
-    if (typeof input.key !== "undefined") updateData.key = normalizeText(input.key);
-    if (typeof input.trackType !== "undefined") updateData.trackType = input.trackType ?? null;
-    if (typeof input.genres !== "undefined") updateData.genres = normalizeStringArray(input.genres);
-    if (typeof input.subgenres !== "undefined") updateData.subgenres = normalizeStringArray(input.subgenres);
-    if (typeof input.oneStop !== "undefined") updateData.oneStop = input.oneStop;
+    if (typeof input.key !== "undefined")
+      updateData.key = normalizeText(input.key);
+    if (typeof input.trackType !== "undefined")
+      updateData.trackType = input.trackType ?? null;
+    if (typeof input.genres !== "undefined")
+      updateData.genres = normalizeStringArray(input.genres);
+    if (typeof input.subgenres !== "undefined")
+      updateData.subgenres = normalizeStringArray(input.subgenres);
+    if (typeof input.oneStop !== "undefined")
+      updateData.oneStop = input.oneStop;
     if (typeof input.clearedForSync !== "undefined") {
       updateData.clearedForSync = input.clearedForSync;
     }
     if (typeof input.exclusiveTerritories !== "undefined") {
-      updateData.exclusiveTerritories = normalizeStringArray(input.exclusiveTerritories, true);
+      updateData.exclusiveTerritories = normalizeStringArray(
+        input.exclusiveTerritories,
+        true,
+      );
     }
     if (typeof input.exclusiveTermMonths !== "undefined") {
-      updateData.exclusiveTermMonths = normalizeNullableInt(input.exclusiveTermMonths);
+      updateData.exclusiveTermMonths = normalizeNullableInt(
+        input.exclusiveTermMonths,
+      );
     }
     if (typeof input.restrictedTerritories !== "undefined") {
-      updateData.restrictedTerritories = normalizeStringArray(input.restrictedTerritories, true);
+      updateData.restrictedTerritories = normalizeStringArray(
+        input.restrictedTerritories,
+        true,
+      );
     }
     if (typeof input.restrictedIndustries !== "undefined") {
-      updateData.restrictedIndustries = normalizeStringArray(input.restrictedIndustries);
+      updateData.restrictedIndustries = normalizeStringArray(
+        input.restrictedIndustries,
+      );
     }
     if (typeof input.restrictedPlatforms !== "undefined") {
-      updateData.restrictedPlatforms = normalizeStringArray(input.restrictedPlatforms);
+      updateData.restrictedPlatforms = normalizeStringArray(
+        input.restrictedPlatforms,
+      );
     }
     if (typeof input.restrictedBrands !== "undefined") {
-      updateData.restrictedBrands = normalizeStringArray(input.restrictedBrands);
+      updateData.restrictedBrands = normalizeStringArray(
+        input.restrictedBrands,
+      );
     }
-    if (typeof input.pricingTier !== "undefined") updateData.pricingTier = input.pricingTier ?? null;
-    if (typeof input.budgetMin !== "undefined") updateData.budgetMin = normalizeNullableInt(input.budgetMin);
-    if (typeof input.budgetMax !== "undefined") updateData.budgetMax = normalizeNullableInt(input.budgetMax);
+    if (typeof input.pricingTier !== "undefined")
+      updateData.pricingTier = input.pricingTier ?? null;
+    if (typeof input.budgetMin !== "undefined")
+      updateData.budgetMin = normalizeNullableInt(input.budgetMin);
+    if (typeof input.budgetMax !== "undefined")
+      updateData.budgetMax = normalizeNullableInt(input.budgetMax);
     if (typeof input.budgetCurrency !== "undefined") {
       updateData.budgetCurrency = input.budgetCurrency ?? null;
     }

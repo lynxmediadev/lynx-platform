@@ -37,7 +37,11 @@ type Props = {
   barWidth?: number;
   gap?: number;
   onPlaybackChange?: (isPlaying: boolean) => void;
-  onReady?: (controls: { toggle: () => Promise<void> | void; play: () => Promise<void> | void; pause: () => void }) => void;
+  onReady?: (controls: {
+    toggle: () => Promise<void> | void;
+    play: () => Promise<void> | void;
+    pause: () => void;
+  }) => void;
   layout?: "stacked" | "inline";
 };
 
@@ -160,29 +164,35 @@ export default function PublicAudioBar({
   React.useEffect(() => {
     if (!onReady) return;
     onReady({ toggle, play, pause });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onReady, play, pause, toggle]);
 
   return (
-    <div className={cn("rounded-[2px] border border-border bg-card/80 p-3 shadow-sm", className)}>
+    <div
+      className={cn(
+        "border-border bg-card/80 rounded-[2px] border p-3 shadow-sm",
+        className,
+      )}
+    >
       {layout === "stacked" ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-[2px] border border-border bg-background text-sm font-medium transition",
+                "border-border bg-background flex h-10 w-10 items-center justify-center rounded-[2px] border text-sm font-medium transition",
                 disabled
                   ? "cursor-not-allowed opacity-70"
-                  : "text-foreground hover:bg-border/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  : "text-foreground hover:bg-border/20 focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
               )}
               onClick={toggle}
               disabled={disabled}
             >
-              <span className="sr-only">{isPlaying ? "Pausar" : "Reproducir"}</span>
+              <span className="sr-only">
+                {isPlaying ? "Pausar" : "Reproducir"}
+              </span>
               {isPlaying ? <Pause size={16} /> : <Play size={16} />}
             </button>
-            <div className="flex h-9 min-w-[92px] items-center justify-center rounded-[2px] border border-border bg-background/80 px-2 text-[11px] tabular-nums text-muted-foreground">
+            <div className="border-border bg-background/80 text-muted-foreground flex h-9 min-w-[92px] items-center justify-center rounded-[2px] border px-2 text-[11px] tabular-nums">
               {fmtTime(cur)} / {fmtTime(dur)}
             </div>
           </div>
@@ -207,7 +217,10 @@ export default function PublicAudioBar({
         </div>
       ) : (
         <div className="flex items-stretch gap-3">
-          <div className="flex min-w-0 flex-1 items-center" style={{ height: waveHeight }}>
+          <div
+            className="flex min-w-0 flex-1 items-center"
+            style={{ height: waveHeight }}
+          >
             <WaveformScrubber
               waveformB64={waveformB64}
               height={waveHeight}
@@ -229,13 +242,10 @@ export default function PublicAudioBar({
             className="flex items-center"
             style={{ height: waveHeight }}
           >
-            <div
-              className="w-px bg-border"
-              style={{ height: waveHeight }}
-            />
+            <div className="bg-border w-px" style={{ height: waveHeight }} />
           </div>
           <div
-            className="flex w-[132px] min-w-[120px] items-center justify-center rounded-[2px] border border-border bg-background/80 px-3 text-[12px] leading-none font-medium tabular-nums text-foreground"
+            className="border-border bg-background/80 text-foreground flex w-[132px] min-w-[120px] items-center justify-center rounded-[2px] border px-3 text-[12px] leading-none font-medium tabular-nums"
             style={{ height: waveHeight, minHeight: waveHeight }}
           >
             {fmtTime(cur)} / {fmtTime(dur)}

@@ -23,19 +23,31 @@ export default async function CatalogPage({
 }: {
   searchParams?: Promise<SearchParams>;
 }) {
-  const useLegacyCatalog = (process.env.CATALOG_USE_LEGACY ?? "").trim() === "1";
+  const useLegacyCatalog =
+    (process.env.CATALOG_USE_LEGACY ?? "").trim() === "1";
   if (useLegacyCatalog) {
     const sp = searchParams ? await searchParams : undefined;
-    const moods = toArray(sp?.mood).map((m) => m.trim()).filter(Boolean);
-    const uses = toArray(sp?.use).map((u) => u.trim()).filter(Boolean);
-    const categories = toArray(sp?.cat).map((c) => c.trim()).filter(Boolean);
+    const moods = toArray(sp?.mood)
+      .map((m) => m.trim())
+      .filter(Boolean);
+    const uses = toArray(sp?.use)
+      .map((u) => u.trim())
+      .filter(Boolean);
+    const categories = toArray(sp?.cat)
+      .map((c) => c.trim())
+      .filter(Boolean);
     const artist = pickFirst(sp?.artist)?.trim() ?? "";
     const q = pickFirst(sp?.q)?.trim() ?? "";
 
     return (
       <CatalogView
         catalogSlug={categories[0] ?? null}
-        filters={{ moods, uses, artist: artist || undefined, q: q || undefined }}
+        filters={{
+          moods,
+          uses,
+          artist: artist || undefined,
+          q: q || undefined,
+        }}
         eyebrow="ODR Records"
         title="Catálogo público (legacy)"
         subtitle="Modo compatibilidad temporal activado por CATALOG_USE_LEGACY=1."
@@ -48,11 +60,15 @@ export default async function CatalogPage({
   if (!playlist) {
     return (
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-10">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Catalog</p>
-        <h1 className="text-2xl font-semibold">Catálogo sin playlist principal</h1>
-        <p className="text-sm text-muted-foreground">
-          Define una playlist como principal desde el dashboard (`/admin/playlists`) para publicar
-          el catálogo en esta ruta.
+        <p className="text-muted-foreground text-xs tracking-[0.2em] uppercase">
+          Catalog
+        </p>
+        <h1 className="text-2xl font-semibold">
+          Catálogo sin playlist principal
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Define una playlist como principal desde el dashboard
+          (`/admin/playlists`) para publicar el catálogo en esta ruta.
         </p>
       </section>
     );
@@ -61,30 +77,35 @@ export default async function CatalogPage({
   if (playlist.visibility !== "PUBLIC" || playlist.status !== "PUBLISHED") {
     return (
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-10">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Catalog</p>
-        <h1 className="text-2xl font-semibold">El catálogo principal no está publicado</h1>
-        <p className="text-sm text-muted-foreground">
-          Publica la playlist principal (estado PUBLISHED + visibilidad PUBLIC) desde
-          `/admin/playlists`.
+        <p className="text-muted-foreground text-xs tracking-[0.2em] uppercase">
+          Catalog
+        </p>
+        <h1 className="text-2xl font-semibold">
+          El catálogo principal no está publicado
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Publica la playlist principal (estado PUBLISHED + visibilidad PUBLIC)
+          desde `/admin/playlists`.
         </p>
       </section>
     );
   }
 
-  const tracks = await fetchPlaylistCatalogTracks({
-    playlistId: playlist.id,
-    ownerUserId: playlist.ownerUserId,
-    isAutoAllTracks: playlist.isAutoAllTracks,
-    limit: 220,
-  });
-
-  const heroSlides = await resolveShowcaseSlides({
-    slotKey: "catalog.hero.main",
-    limit: 12,
-  });
+  const [tracks, heroSlides] = await Promise.all([
+    fetchPlaylistCatalogTracks({
+      playlistId: playlist.id,
+      ownerUserId: playlist.ownerUserId,
+      isAutoAllTracks: playlist.isAutoAllTracks,
+      limit: 120,
+    }),
+    resolveShowcaseSlides({
+      slotKey: "catalog.hero.main",
+      limit: 12,
+    }),
+  ]);
 
   return (
-    <section className="w-full bg-background pt-1 pb-4 sm:pt-2 sm:pb-6">
+    <section className="bg-background w-full pt-1 pb-4 sm:pt-2 sm:pb-6">
       <CatalogClient
         tracks={tracks}
         heroSlides={heroSlides}

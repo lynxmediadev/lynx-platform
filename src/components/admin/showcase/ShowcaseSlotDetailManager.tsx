@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { PromotionCampaignStatus, PromotionSlotFormat, type Prisma } from "@prisma/client";
+import {
+  PromotionCampaignStatus,
+  PromotionSlotFormat,
+  type Prisma,
+} from "@prisma/client";
 import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,20 +57,12 @@ type CreateCampaignForm = {
   notes: string;
 };
 
-const STATUS_OPTIONS: PromotionCampaignStatus[] = ["DRAFT", "LIVE", "PAUSED", "ARCHIVED"];
-
-function toLocalDatetime(value: string | null) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (!Number.isFinite(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-}
+const STATUS_OPTIONS: PromotionCampaignStatus[] = [
+  "DRAFT",
+  "LIVE",
+  "PAUSED",
+  "ARCHIVED",
+];
 
 function fromLocalDatetime(value: string) {
   const normalized = value.trim();
@@ -100,7 +96,10 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
-export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns }: Props) {
+export function ShowcaseSlotDetailManager({
+  slot: initialSlot,
+  initialCampaigns,
+}: Props) {
   const [slot, setSlot] = useState(initialSlot);
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [slotForm, setSlotForm] = useState<SlotForm>({
@@ -110,14 +109,15 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
     description: initialSlot.description ?? "",
     isEnabled: initialSlot.isEnabled,
   });
-  const [createCampaignForm, setCreateCampaignForm] = useState<CreateCampaignForm>({
-    name: "",
-    status: "DRAFT",
-    priority: "0",
-    startsAt: "",
-    endsAt: "",
-    notes: "",
-  });
+  const [createCampaignForm, setCreateCampaignForm] =
+    useState<CreateCampaignForm>({
+      name: "",
+      status: "DRAFT",
+      priority: "0",
+      startsAt: "",
+      endsAt: "",
+      notes: "",
+    });
 
   const [isBusy, setIsBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -140,22 +140,29 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
     setError(null);
 
     try {
-      const res = await readJson<{ ok: boolean; item: SlotView }>(`/api/admin/showcase/slots/${slot.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: slotForm.key,
-          name: slotForm.name,
-          format: slotForm.format,
-          description: slotForm.description,
-          isEnabled: slotForm.isEnabled,
-        }),
-      });
+      const res = await readJson<{ ok: boolean; item: SlotView }>(
+        `/api/admin/showcase/slots/${slot.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: slotForm.key,
+            name: slotForm.name,
+            format: slotForm.format,
+            description: slotForm.description,
+            isEnabled: slotForm.isEnabled,
+          }),
+        },
+      );
 
       setSlot((prev) => ({ ...prev, ...res.item }));
       setNotice("Slot actualizado");
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "No se pudo guardar el slot");
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "No se pudo guardar el slot",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -170,18 +177,21 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
     setError(null);
 
     try {
-      await readJson<{ ok: boolean }>(`/api/admin/showcase/slots/${slot.id}/campaigns`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: createCampaignForm.name,
-          status: createCampaignForm.status,
-          priority: Number(createCampaignForm.priority),
-          startsAt: fromLocalDatetime(createCampaignForm.startsAt),
-          endsAt: fromLocalDatetime(createCampaignForm.endsAt),
-          notes: createCampaignForm.notes,
-        }),
-      });
+      await readJson<{ ok: boolean }>(
+        `/api/admin/showcase/slots/${slot.id}/campaigns`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: createCampaignForm.name,
+            status: createCampaignForm.status,
+            priority: Number(createCampaignForm.priority),
+            startsAt: fromLocalDatetime(createCampaignForm.startsAt),
+            endsAt: fromLocalDatetime(createCampaignForm.endsAt),
+            notes: createCampaignForm.notes,
+          }),
+        },
+      );
 
       setCreateCampaignForm({
         name: "",
@@ -195,28 +205,42 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
       await refreshCampaigns();
       setNotice("Campaña creada");
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "No se pudo crear la campaña");
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : "No se pudo crear la campaña",
+      );
     } finally {
       setIsBusy(false);
     }
   }
 
-  async function setCampaignStatus(campaign: CampaignRow, status: PromotionCampaignStatus) {
+  async function setCampaignStatus(
+    campaign: CampaignRow,
+    status: PromotionCampaignStatus,
+  ) {
     if (isBusy) return;
     setIsBusy(true);
     setNotice(null);
     setError(null);
 
     try {
-      await readJson<{ ok: boolean }>(`/api/admin/showcase/campaigns/${campaign.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
+      await readJson<{ ok: boolean }>(
+        `/api/admin/showcase/campaigns/${campaign.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        },
+      );
       await refreshCampaigns();
-      setNotice(`Campaña \"${campaign.name}\" → ${status}`);
+      setNotice(`Campaña "${campaign.name}" → ${status}`);
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : "No se pudo actualizar estado");
+      setError(
+        statusError instanceof Error
+          ? statusError.message
+          : "No se pudo actualizar estado",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -224,7 +248,7 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
 
   async function deleteCampaign(campaign: CampaignRow) {
     const confirmed = window.confirm(
-      `Eliminar campaña \"${campaign.name}\"? Se eliminarán también sus slides.`,
+      `Eliminar campaña "${campaign.name}"? Se eliminarán también sus slides.`,
     );
     if (!confirmed || isBusy) return;
 
@@ -233,13 +257,20 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
     setError(null);
 
     try {
-      await readJson<{ ok: boolean }>(`/api/admin/showcase/campaigns/${campaign.id}`, {
-        method: "DELETE",
-      });
+      await readJson<{ ok: boolean }>(
+        `/api/admin/showcase/campaigns/${campaign.id}`,
+        {
+          method: "DELETE",
+        },
+      );
       await refreshCampaigns();
       setNotice("Campaña eliminada");
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar campaña");
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No se pudo eliminar campaña",
+      );
     } finally {
       setIsBusy(false);
     }
@@ -250,9 +281,15 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
       <header className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-400">Admin / Showcase / Slot</p>
-            <h1 className="mt-1 text-xl font-semibold text-neutral-100">{slot.name}</h1>
-            <p className="mt-1 font-mono text-xs text-neutral-500">{slot.key}</p>
+            <p className="text-[10px] tracking-[0.2em] text-neutral-400 uppercase">
+              Admin / Showcase / Slot
+            </p>
+            <h1 className="mt-1 text-xl font-semibold text-neutral-100">
+              {slot.name}
+            </h1>
+            <p className="mt-1 font-mono text-xs text-neutral-500">
+              {slot.key}
+            </p>
           </div>
 
           <Link
@@ -273,7 +310,12 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
           Key (ID técnico)
           <input
             value={slotForm.key}
-            onChange={(event) => setSlotForm((prev) => ({ ...prev, key: event.target.value.toLowerCase() }))}
+            onChange={(event) =>
+              setSlotForm((prev) => ({
+                ...prev,
+                key: event.target.value.toLowerCase(),
+              }))
+            }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
             required
           />
@@ -283,7 +325,9 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
           Nombre
           <input
             value={slotForm.name}
-            onChange={(event) => setSlotForm((prev) => ({ ...prev, name: event.target.value }))}
+            onChange={(event) =>
+              setSlotForm((prev) => ({ ...prev, name: event.target.value }))
+            }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
             required
           />
@@ -294,11 +338,22 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
           <select
             value={slotForm.format}
             onChange={(event) =>
-              setSlotForm((prev) => ({ ...prev, format: event.target.value as PromotionSlotFormat }))
+              setSlotForm((prev) => ({
+                ...prev,
+                format: event.target.value as PromotionSlotFormat,
+              }))
             }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           >
-            {(["HERO", "SLIDER", "STRIP", "GRID", "BANNER"] as PromotionSlotFormat[]).map((format) => (
+            {(
+              [
+                "HERO",
+                "SLIDER",
+                "STRIP",
+                "GRID",
+                "BANNER",
+              ] as PromotionSlotFormat[]
+            ).map((format) => (
               <option key={format} value={format}>
                 {format}
               </option>
@@ -311,7 +366,10 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
           <select
             value={slotForm.isEnabled ? "ENABLED" : "DISABLED"}
             onChange={(event) =>
-              setSlotForm((prev) => ({ ...prev, isEnabled: event.target.value === "ENABLED" }))
+              setSlotForm((prev) => ({
+                ...prev,
+                isEnabled: event.target.value === "ENABLED",
+              }))
             }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           >
@@ -324,13 +382,20 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
           Descripción
           <input
             value={slotForm.description}
-            onChange={(event) => setSlotForm((prev) => ({ ...prev, description: event.target.value }))}
+            onChange={(event) =>
+              setSlotForm((prev) => ({
+                ...prev,
+                description: event.target.value,
+              }))
+            }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           />
         </label>
 
-        <div className="md:col-span-2 flex items-center justify-between gap-3">
-          <p className="text-xs text-neutral-500">Actualizado {formatDate(slot.updatedAt)}</p>
+        <div className="flex items-center justify-between gap-3 md:col-span-2">
+          <p className="text-xs text-neutral-500">
+            Actualizado {formatDate(slot.updatedAt)}
+          </p>
           <button
             type="submit"
             disabled={isBusy}
@@ -351,7 +416,10 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
           <input
             value={createCampaignForm.name}
             onChange={(event) =>
-              setCreateCampaignForm((prev) => ({ ...prev, name: event.target.value }))
+              setCreateCampaignForm((prev) => ({
+                ...prev,
+                name: event.target.value,
+              }))
             }
             placeholder="Campaña marzo 2026"
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
@@ -385,7 +453,10 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
             type="number"
             value={createCampaignForm.priority}
             onChange={(event) =>
-              setCreateCampaignForm((prev) => ({ ...prev, priority: event.target.value }))
+              setCreateCampaignForm((prev) => ({
+                ...prev,
+                priority: event.target.value,
+              }))
             }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           />
@@ -397,7 +468,10 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
             type="datetime-local"
             value={createCampaignForm.startsAt}
             onChange={(event) =>
-              setCreateCampaignForm((prev) => ({ ...prev, startsAt: event.target.value }))
+              setCreateCampaignForm((prev) => ({
+                ...prev,
+                startsAt: event.target.value,
+              }))
             }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           />
@@ -409,7 +483,10 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
             type="datetime-local"
             value={createCampaignForm.endsAt}
             onChange={(event) =>
-              setCreateCampaignForm((prev) => ({ ...prev, endsAt: event.target.value }))
+              setCreateCampaignForm((prev) => ({
+                ...prev,
+                endsAt: event.target.value,
+              }))
             }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           />
@@ -429,7 +506,10 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
           <input
             value={createCampaignForm.notes}
             onChange={(event) =>
-              setCreateCampaignForm((prev) => ({ ...prev, notes: event.target.value }))
+              setCreateCampaignForm((prev) => ({
+                ...prev,
+                notes: event.target.value,
+              }))
             }
             className="h-9 rounded border border-neutral-700 bg-neutral-900 px-2 text-sm text-neutral-100 outline-none focus:border-neutral-500"
           />
@@ -450,7 +530,7 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
       <div className="overflow-x-auto rounded-lg border border-neutral-800 bg-neutral-950 p-4">
         <table className="min-w-full divide-y divide-neutral-800 text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-wide text-neutral-500">
+            <tr className="text-left text-xs tracking-wide text-neutral-500 uppercase">
               <th className="px-2 py-2">Campaña</th>
               <th className="px-2 py-2">Estado</th>
               <th className="px-2 py-2">Ventana</th>
@@ -463,16 +543,22 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
             {campaigns.map((campaign) => (
               <tr key={campaign.id}>
                 <td className="px-2 py-3">
-                  <p className="font-medium text-neutral-100">{campaign.name}</p>
-                  <p className="text-xs text-neutral-500">Prioridad {campaign.priority}</p>
+                  <p className="font-medium text-neutral-100">
+                    {campaign.name}
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    Prioridad {campaign.priority}
+                  </p>
                   {campaign.notes && (
-                    <p className="mt-1 max-w-xs text-xs text-neutral-400">{campaign.notes}</p>
+                    <p className="mt-1 max-w-xs text-xs text-neutral-400">
+                      {campaign.notes}
+                    </p>
                   )}
                 </td>
                 <td className="px-2 py-3">
                   <span
                     className={cn(
-                      "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                      "inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
                       campaign.status === "LIVE"
                         ? "border-emerald-600/50 text-emerald-300"
                         : campaign.status === "DRAFT"
@@ -489,8 +575,12 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
                   <p>Desde: {formatDate(campaign.startsAt)}</p>
                   <p>Hasta: {formatDate(campaign.endsAt)}</p>
                 </td>
-                <td className="px-2 py-3 text-xs text-neutral-300">{campaign.itemCount}</td>
-                <td className="px-2 py-3 text-xs text-neutral-300">{formatDate(campaign.updatedAt)}</td>
+                <td className="px-2 py-3 text-xs text-neutral-300">
+                  {campaign.itemCount}
+                </td>
+                <td className="px-2 py-3 text-xs text-neutral-300">
+                  {formatDate(campaign.updatedAt)}
+                </td>
                 <td className="px-2 py-3">
                   <div className="flex flex-wrap justify-end gap-1">
                     <button
@@ -537,7 +627,10 @@ export function ShowcaseSlotDetailManager({ slot: initialSlot, initialCampaigns 
 
             {campaigns.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-2 py-8 text-center text-sm text-neutral-500">
+                <td
+                  colSpan={6}
+                  className="px-2 py-8 text-center text-sm text-neutral-500"
+                >
                   No hay campañas en este slot.
                 </td>
               </tr>

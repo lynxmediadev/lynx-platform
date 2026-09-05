@@ -2,11 +2,6 @@
 "use client";
 
 import * as React from "react";
-import FormField from "../ui/FormField";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Building2, Disc3, User } from "lucide-react";
 import {
@@ -29,7 +24,7 @@ import { MasterNewForm } from "./rights/MasterNewForm";
 import { RightsToggles } from "./rights/RightsToggles";
 
 // Tipado de props
- type RightsTrackFormProps = {
+type RightsTrackFormProps = {
   trackId: string;
   track: {
     mfn: boolean;
@@ -46,35 +41,42 @@ import { RightsToggles } from "./rights/RightsToggles";
   fieldErrors?: Record<string, string[]>;
 };
 
-function firstError(fieldErrors: Record<string, string[]> | undefined, key: string) {
-  if (!fieldErrors) return null;
-  const arr = fieldErrors[key];
-  return arr && arr.length > 0 ? arr[0] : null;
-}
-
-export default function RightsFormClient({ trackId, track, fieldErrors }: RightsTrackFormProps) {
+export default function RightsFormClient({
+  trackId,
+  track,
+  fieldErrors,
+}: RightsTrackFormProps) {
   const serverErrors = fieldErrors ?? {};
 
   // Toggles
   const [mfnChecked, setMfnChecked] = React.useState(track.mfn);
   const [oneStopChecked, setOneStopChecked] = React.useState(track.oneStop);
-  const [clearedChecked, setClearedChecked] = React.useState(track.clearedForSync);
-  const [contentIdChecked, setContentIdChecked] = React.useState(track.contentIdEnrolled);
+  const [clearedChecked, setClearedChecked] = React.useState(
+    track.clearedForSync,
+  );
+  const [contentIdChecked, setContentIdChecked] = React.useState(
+    track.contentIdEnrolled,
+  );
 
   // Long press (compartido)
-  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [longPress, setLongPress] = React.useState<
-    | { type: "share" | "master"; index: number; direction: "up" | "down" }
-    | null
-  >(null);
+  const longPressTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const [longPress, setLongPress] = React.useState<{
+    type: "share" | "master";
+    index: number;
+    direction: "up" | "down";
+  } | null>(null);
   const handleLongPress = (
     type: "share" | "master",
     index: number,
     direction: "up" | "down",
-    e: React.PointerEvent,
   ) => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    longPressTimer.current = setTimeout(() => setLongPress({ type, index, direction }), 450);
+    longPressTimer.current = setTimeout(
+      () => setLongPress({ type, index, direction }),
+      450,
+    );
   };
   const cancelLongPress = () => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
@@ -83,10 +85,16 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
   };
 
   // Publishing hook
-  const pub = usePublishingShares({ trackId, initialShares: track.publishingShares });
+  const pub = usePublishingShares({
+    trackId,
+    initialShares: track.publishingShares,
+  });
 
   // Master hook
-  const mas = useMasterShares({ trackId, initialMasterShares: track.masterShares });
+  const mas = useMasterShares({
+    trackId,
+    initialMasterShares: track.masterShares,
+  });
 
   // Confirm delete dialog
   const [deleteTarget, setDeleteTarget] = React.useState<
@@ -96,21 +104,27 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
   >(null);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
 
-  const shareBusy = pub.reorderSharePending || pub.savingWriter || pub.savingPublisher || deleteLoading;
-  const masterBusy = mas.reorderMasterPending || mas.savingMaster || deleteLoading;
+  const shareBusy =
+    pub.reorderSharePending ||
+    pub.savingWriter ||
+    pub.savingPublisher ||
+    deleteLoading;
+  const masterBusy =
+    mas.reorderMasterPending || mas.savingMaster || deleteLoading;
 
   // Map roleIdx -> globalIdx
-  const roleIndexToGlobal = (role: "WRITER" | "PUBLISHER") => (roleIdx: number) => {
-    let count = -1;
-    for (let i = 0; i < pub.shares.length; i++) {
-      const share = pub.shares[i];
-      if (share?.role === role) {
-        count += 1;
-        if (count === roleIdx) return i;
+  const roleIndexToGlobal =
+    (role: "WRITER" | "PUBLISHER") => (roleIdx: number) => {
+      let count = -1;
+      for (let i = 0; i < pub.shares.length; i++) {
+        const share = pub.shares[i];
+        if (share?.role === role) {
+          count += 1;
+          if (count === roleIdx) return i;
+        }
       }
-    }
-    return -1;
-  };
+      return -1;
+    };
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -127,9 +141,6 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
     }
   };
 
-  // Enter control para evitar submits globales
-  const allowEnterAttr = { "data-allow-enter": "true" } as const;
-
   return (
     <div
       className="space-y-4"
@@ -143,13 +154,23 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
       }}
     >
       {/* Inputs ocultos para Save All */}
-      <input type="hidden" name="publishingShares" value={JSON.stringify(pub.shares)} />
-      <input type="hidden" name="masterShares" value={JSON.stringify(mas.masterShares)} />
+      <input
+        type="hidden"
+        name="publishingShares"
+        value={JSON.stringify(pub.shares)}
+      />
+      <input
+        type="hidden"
+        name="masterShares"
+        value={JSON.stringify(mas.masterShares)}
+      />
 
-      <div className="flex flex-col gap-2 border-b border-border pb-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-border flex flex-col gap-2 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-foreground">Derechos &amp; explotación</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <h2 className="text-foreground text-base font-semibold">
+            Derechos &amp; explotación
+          </h2>
+          <p className="text-muted-foreground mt-1 text-xs">
             Control de master, publishing y administración de Content ID.
           </p>
         </div>
@@ -157,9 +178,12 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
 
       {/* Publishing */}
       <div className="space-y-3 rounded-lg bg-transparent p-2">
-        <h3 className="text-sm font-semibold text-foreground">Master &amp; publishing</h3>
-        <p className="mb-2 text-[11px] text-muted-foreground">
-          Los titulares de master se administran en la tabla inferior. Puedes ingresar múltiples dueños y porcentajes.
+        <h3 className="text-foreground text-sm font-semibold">
+          Master &amp; publishing
+        </h3>
+        <p className="text-muted-foreground mb-2 text-[11px]">
+          Los titulares de master se administran en la tabla inferior. Puedes
+          ingresar múltiples dueños y porcentajes.
         </p>
         <div className="space-y-6">
           {(["WRITER", "PUBLISHER"] as const).map((role) => {
@@ -173,21 +197,25 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
             const toGlobal = roleIndexToGlobal(role);
             const roleLabel = role === "WRITER" ? "WRITER" : "PUBLISHER";
             const roleHint =
-              role === "WRITER" ? "Titulares de composición" : "Titulares de publishing";
+              role === "WRITER"
+                ? "Titulares de composición"
+                : "Titulares de publishing";
             const RoleIcon = role === "WRITER" ? User : Building2;
             return (
               <div
                 key={role}
-                className="space-y-3 rounded-lg border border-border/60 bg-card/25 p-3"
+                className="border-border/60 bg-card/25 space-y-3 rounded-lg border p-3"
               >
-                <div className="flex items-center justify-between border-b border-border/50 pb-2">
+                <div className="border-border/50 flex items-center justify-between border-b pb-2">
                   <div className="flex items-center gap-2">
-                    <RoleIcon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-semibold tracking-[0.08em] text-foreground">
+                    <RoleIcon className="text-muted-foreground h-4 w-4" />
+                    <span className="text-foreground text-xs font-semibold tracking-[0.08em]">
                       {roleLabel}
                     </span>
                   </div>
-                  <span className="text-[11px] text-muted-foreground">{roleHint}</span>
+                  <span className="text-muted-foreground text-[11px]">
+                    {roleHint}
+                  </span>
                 </div>
                 <PublishingTable
                   role={role}
@@ -199,8 +227,8 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
                   saveFeedback={pub.saveFeedback}
                   pendingShares={false}
                   longPress={longPress}
-                  onLongPressStart={(type, idx, dir, e) =>
-                    handleLongPress(type, toGlobal(idx), dir, e)
+                  onLongPressStart={(type, idx, dir) =>
+                    handleLongPress(type, toGlobal(idx), dir)
                   }
                   onLongPressCancel={cancelLongPress}
                   moveShare={(idx, delta) => {
@@ -230,7 +258,8 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
                   }}
                   onDelete={(idx) => {
                     const g = toGlobal(idx);
-                    if (g >= 0) setDeleteTarget({ type: "share", globalIdx: g });
+                    if (g >= 0)
+                      setDeleteTarget({ type: "share", globalIdx: g });
                   }}
                 />
 
@@ -240,9 +269,8 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
                     roleShares={roleShares}
                     shareBusy={shareBusy}
                     pendingShares={false}
-                    longPress={longPress}
-                    onLongPressStart={(type, idx, dir, e) =>
-                      handleLongPress(type, toGlobal(idx), dir, e)
+                    onLongPressStart={(type, idx, dir) =>
+                      handleLongPress(type, toGlobal(idx), dir)
                     }
                     onLongPressCancel={cancelLongPress}
                     moveShare={(idx, delta) => {
@@ -264,7 +292,8 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
                     }}
                     onDelete={(idx) => {
                       const g = toGlobal(idx);
-                      if (g >= 0) setDeleteTarget({ type: "share", globalIdx: g });
+                      if (g >= 0)
+                        setDeleteTarget({ type: "share", globalIdx: g });
                     }}
                   />
                 </div>
@@ -300,13 +329,17 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
       </div>
 
       {/* Master */}
-      <div className="space-y-3 rounded-lg border border-border/60 bg-card/25 p-3">
-        <div className="flex items-center justify-between border-b border-border/50 pb-2">
+      <div className="border-border/60 bg-card/25 space-y-3 rounded-lg border p-3">
+        <div className="border-border/50 flex items-center justify-between border-b pb-2">
           <div className="flex items-center gap-2">
-            <Disc3 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-semibold tracking-[0.08em] text-foreground">MASTER</span>
+            <Disc3 className="text-muted-foreground h-4 w-4" />
+            <span className="text-foreground text-xs font-semibold tracking-[0.08em]">
+              MASTER
+            </span>
           </div>
-          <span className="text-[11px] text-muted-foreground">Titulares de master</span>
+          <span className="text-muted-foreground text-[11px]">
+            Titulares de master
+          </span>
         </div>
         <MasterTable
           masterShares={mas.masterShares}
@@ -316,7 +349,7 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
           pendingMaster={false}
           saveFeedback={mas.saveFeedback}
           longPress={longPress}
-          onLongPressStart={(type, idx, dir, e) => handleLongPress(type, idx, dir, e)}
+          onLongPressStart={(type, idx, dir) => handleLongPress(type, idx, dir)}
           onLongPressCancel={cancelLongPress}
           moveMaster={mas.moveMaster}
           moveMasterTo={mas.moveMasterTo}
@@ -331,8 +364,9 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
             masterShares={mas.masterShares}
             masterBusy={masterBusy}
             pendingMaster={false}
-            longPress={longPress}
-            onLongPressStart={(type, idx, dir, e) => handleLongPress(type, idx, dir, e)}
+            onLongPressStart={(type, idx, dir) =>
+              handleLongPress(type, idx, dir)
+            }
             onLongPressCancel={cancelLongPress}
             moveMaster={mas.moveMaster}
             moveMasterTo={mas.moveMasterTo}
@@ -367,7 +401,9 @@ export default function RightsFormClient({ trackId, track, fieldErrors }: Rights
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmar eliminación</DialogTitle>
-            <DialogDescription>Esta acción eliminará el registro seleccionado.</DialogDescription>
+            <DialogDescription>
+              Esta acción eliminará el registro seleccionado.
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button

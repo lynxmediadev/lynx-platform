@@ -23,7 +23,10 @@ import { tmpdir } from "node:os";
 import { promises as fsp } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { measureEbuLoudnessFromLocalPath, probeLoudnormFromLocalPath } from "./lufs";
+import {
+  measureEbuLoudnessFromLocalPath,
+  probeLoudnormFromLocalPath,
+} from "./lufs";
 import { preflightAudioUrl, resolveAudioUrl } from "./audio-url";
 import { getFfprobePath, getFfmpegPath } from "./paths"; // ← FIX: nombres reales
 
@@ -38,7 +41,8 @@ type ProbeResult = {
 /** Descarga la URL pública a un archivo temporal. */
 async function downloadToTemp(url: string, extGuess = "mp3"): Promise<string> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to download: ${res.status} ${res.statusText}`);
+  if (!res.ok)
+    throw new Error(`Failed to download: ${res.status} ${res.statusText}`);
   const buf = Buffer.from(await res.arrayBuffer());
   const base = url.split("?")[0] ?? url;
   const match = base.match(/\.([a-z0-9]+)$/i);
@@ -52,38 +56,62 @@ async function downloadToTemp(url: string, extGuess = "mp3"): Promise<string> {
 function runFfprobeJson(filePath: string): Promise<ProbeResult> {
   return new Promise((resolve, reject) => {
     const bin = getFfprobePath(); // ← FIX: tu helper real
-    const args = ["-v", "error", "-of", "json", "-show_format", "-show_streams", filePath];
+    const args = [
+      "-v",
+      "error",
+      "-of",
+      "json",
+      "-show_format",
+      "-show_streams",
+      filePath,
+    ];
     const child = spawn(bin, args);
-    let out = ""; let err = "";
+    let out = "";
+    let err = "";
 
     child.stdout.on("data", (d) => (out += d.toString()));
     child.stderr.on("data", (d) => (err += d.toString()));
 
     child.on("error", (e) => {
-      reject(Object.assign(new Error(`ffprobe spawn failed: ${e.message}`), {
-        ffprobePath: bin, stdoutPreview: out.slice(0, 600), stderrPreview: err.slice(0, 600)
-      }));
+      reject(
+        Object.assign(new Error(`ffprobe spawn failed: ${e.message}`), {
+          ffprobePath: bin,
+          stdoutPreview: out.slice(0, 600),
+          stderrPreview: err.slice(0, 600),
+        }),
+      );
     });
 
     child.on("close", () => {
       try {
         const json = JSON.parse(out);
-        const stream = (json.streams || []).find((s: any) => s.codec_type === "audio") ?? {};
+        const stream =
+          (json.streams || []).find((s: any) => s.codec_type === "audio") ?? {};
         const fmt = json.format ?? {};
-        const durationSec = stream.duration ? Number(stream.duration)
-                         : fmt.duration ? Number(fmt.duration)
-                         : null;
-        const sampleRateHz = stream.sample_rate ? Number(stream.sample_rate) : null;
-        const channels     = stream.channels ? Number(stream.channels) : null;
-        const bitrateKbps  = stream.bit_rate ? Math.round(Number(stream.bit_rate) / 1000)
-                         : fmt.bit_rate ? Math.round(Number(fmt.bit_rate) / 1000)
-                         : null;
+        const durationSec = stream.duration
+          ? Number(stream.duration)
+          : fmt.duration
+            ? Number(fmt.duration)
+            : null;
+        const sampleRateHz = stream.sample_rate
+          ? Number(stream.sample_rate)
+          : null;
+        const channels = stream.channels ? Number(stream.channels) : null;
+        const bitrateKbps = stream.bit_rate
+          ? Math.round(Number(stream.bit_rate) / 1000)
+          : fmt.bit_rate
+            ? Math.round(Number(fmt.bit_rate) / 1000)
+            : null;
 
         resolve({ durationSec, sampleRateHz, channels, bitrateKbps, raw: out });
       } catch (e: any) {
-        reject(Object.assign(new Error(`ffprobe parse failed: ${e.message}`), {
-          ffprobePath: bin, stdoutPreview: out.slice(0, 600), stderrPreview: err.slice(0, 600)
-        }));
+        reject(
+          Object.assign(new Error(`ffprobe parse failed: ${e.message}`), {
+            ffprobePath: bin,
+            stdoutPreview: out.slice(0, 600),
+            stderrPreview: err.slice(0, 600),
+          }),
+        );
       }
     });
   });
@@ -93,15 +121,23 @@ function runFfprobeJson(filePath: string): Promise<ProbeResult> {
  * Decodifica a PCM s16le mono, 8 kHz, y resume a `points` picos absolutos.
  * Devuelve Buffer de Float32Array (Bytes para Prisma).
  */
-async function computeWaveformBytes(filePath: string, points = 256): Promise<{ bytes: Buffer; pointCount: number }> {
+async function computeWaveformBytes(
+  filePath: string,
+  points = 256,
+): Promise<{ bytes: Buffer; pointCount: number }> {
   const ffmpeg = getFfmpegPath(); // ← FIX
   const args = [
-    "-hide_banner", "-nostats",
-    "-i", filePath,
-    "-ac", "1",    // mono
-    "-ar", "8000", // 8 kHz (ligero)
-    "-f", "s16le", // PCM 16-bit LE
-    "-"            // stdout
+    "-hide_banner",
+    "-nostats",
+    "-i",
+    filePath,
+    "-ac",
+    "1", // mono
+    "-ar",
+    "8000", // 8 kHz (ligero)
+    "-f",
+    "s16le", // PCM 16-bit LE
+    "-", // stdout
   ];
 
   return await new Promise((resolve, reject) => {
@@ -110,40 +146,53 @@ async function computeWaveformBytes(filePath: string, points = 256): Promise<{ b
     let err = "";
 
     child.stdout.on("data", (d) => chunks.push(Buffer.from(d)));
-    child.stderr.on("data", (d) => { err += d.toString(); });
-    child.on("error", (e) => reject(new Error(`ffmpeg waveform spawn failed: ${e.message}`)));
+    child.stderr.on("data", (d) => {
+      err += d.toString();
+    });
+    child.on("error", (e) =>
+      reject(new Error(`ffmpeg waveform spawn failed: ${e.message}`)),
+    );
 
     child.on("close", () => {
       try {
         const pcm = Buffer.concat(chunks);
         const samples = new Int16Array(Math.floor(pcm.length / 2));
-        for (let i = 0; i < samples.length; i++) samples[i] = pcm.readInt16LE(i * 2);
+        for (let i = 0; i < samples.length; i++)
+          samples[i] = pcm.readInt16LE(i * 2);
 
         const window = Math.max(1, Math.floor(samples.length / points));
         const out = new Float32Array(points);
-      for (let i = 0; i < points; i++) {
-        const start = i * window;
-        const end   = (i + 1 === points) ? samples.length : (i + 1) * window;
-        let peak = 0;
-        for (let j = start; j < end; j++) {
-          const v = Math.abs(samples[j] ?? 0);
-          if (v > peak) peak = v;
+        for (let i = 0; i < points; i++) {
+          const start = i * window;
+          const end = i + 1 === points ? samples.length : (i + 1) * window;
+          let peak = 0;
+          for (let j = start; j < end; j++) {
+            const v = Math.abs(samples[j] ?? 0);
+            if (v > peak) peak = v;
+          }
+          out[i] = peak / 32768.0; // normaliza 0..1
         }
-        out[i] = peak / 32768.0; // normaliza 0..1
-      }
         resolve({ bytes: Buffer.from(out.buffer), pointCount: points });
       } catch (e: any) {
-        reject(new Error(`waveform build failed: ${e.message}\n${err.slice(0, 600)}`));
+        reject(
+          new Error(
+            `waveform build failed: ${e.message}\n${err.slice(0, 600)}`,
+          ),
+        );
       }
     });
   });
 }
 
 /** Sanity-check para decidir si un set ebur128 es creíble. */
-function isEbu128Sane(i: number | null, lra: number | null, tp: number | null): boolean {
-  if (i == null || i <= -60 || i >= -1) return false;     // I típico [-60..-5]
+function isEbu128Sane(
+  i: number | null,
+  lra: number | null,
+  tp: number | null,
+): boolean {
+  if (i == null || i <= -60 || i >= -1) return false; // I típico [-60..-5]
   if (lra == null || lra < 0.1 || lra > 35) return false; // LRA positivo y razonable
-  if (tp == null || tp < -40 || tp > 6) return false;     // True Peak razonable
+  if (tp == null || tp < -40 || tp > 6) return false; // True Peak razonable
   return true;
 }
 
@@ -175,11 +224,15 @@ export async function analyzeTrackById(id: string): Promise<{
 
     try {
       const meta = await runFfprobeJson(tmpFile);
-      debug.ffprobe = { code: 0, stdoutPreview: meta.raw?.slice(0, 600) ?? "", stderrPreview: "" };
-      durationSec  = meta.durationSec;
+      debug.ffprobe = {
+        code: 0,
+        stdoutPreview: meta.raw?.slice(0, 600) ?? "",
+        stderrPreview: "",
+      };
+      durationSec = meta.durationSec;
       sampleRateHz = meta.sampleRateHz;
-      channels     = meta.channels;
-      bitrateKbps  = meta.bitrateKbps;
+      channels = meta.channels;
+      bitrateKbps = meta.bitrateKbps;
     } catch (e: any) {
       warnings.push("ffprobe failed");
       debug.ffprobe = {
@@ -200,27 +253,38 @@ export async function analyzeTrackById(id: string): Promise<{
 
     try {
       const ebu = await measureEbuLoudnessFromLocalPath(tmpFile);
-      debug.ebur128 = { summaryPreview: ebu.rawSummary.slice(0, 800), ffmpegPath: getFfmpegPath() };
+      debug.ebur128 = {
+        summaryPreview: ebu.rawSummary.slice(0, 800),
+        ffmpegPath: getFfmpegPath(),
+      };
 
-      iLufs   = ebu.integratedLufs;
-      lraLu   = ebu.loudnessRangeLu;
-      lraLow  = ebu.lraLowLufs;
+      iLufs = ebu.integratedLufs;
+      lraLu = ebu.loudnessRangeLu;
+      lraLow = ebu.lraLowLufs;
       lraHigh = ebu.lraHighLufs;
-      truePeak= ebu.truePeakDbfs;
+      truePeak = ebu.truePeakDbfs;
 
       if (!isEbu128Sane(iLufs, lraLu, truePeak)) {
         // Fallback a loudnorm (JSON por stdout/err)
         const ln = await probeLoudnormFromLocalPath(tmpFile);
-        debug.loudnorm = { previewJson: (ln.rawJson || "").slice(0, 800), source: ln.source };
+        debug.loudnorm = {
+          previewJson: (ln.rawJson || "").slice(0, 800),
+          source: ln.source,
+        };
 
-        if (ln.integratedLufs != null && ln.loudnessRangeLu != null && ln.truePeakDbfs != null) {
+        if (
+          ln.integratedLufs != null &&
+          ln.loudnessRangeLu != null &&
+          ln.truePeakDbfs != null
+        ) {
           iLufs = ln.integratedLufs;
           lraLu = ln.loudnessRangeLu;
           truePeak = ln.truePeakDbfs;
           lufsSource = "loudnorm";
         } else {
           lufsSource = "skipped";
-          if (!warnings.includes("lufs skipped (out-of-range)")) warnings.push("lufs skipped (out-of-range)");
+          if (!warnings.includes("lufs skipped (out-of-range)"))
+            warnings.push("lufs skipped (out-of-range)");
         }
       } else {
         lufsSource = "ebur128";
@@ -229,9 +293,16 @@ export async function analyzeTrackById(id: string): Promise<{
       // Si ebur128 falla duro, intentamos loudnorm directo
       try {
         const ln = await probeLoudnormFromLocalPath(tmpFile);
-        debug.loudnorm = { previewJson: (ln.rawJson || "").slice(0, 800), source: ln.source };
+        debug.loudnorm = {
+          previewJson: (ln.rawJson || "").slice(0, 800),
+          source: ln.source,
+        };
 
-        if (ln.integratedLufs != null && ln.loudnessRangeLu != null && ln.truePeakDbfs != null) {
+        if (
+          ln.integratedLufs != null &&
+          ln.loudnessRangeLu != null &&
+          ln.truePeakDbfs != null
+        ) {
           iLufs = ln.integratedLufs;
           lraLu = ln.loudnessRangeLu;
           truePeak = ln.truePeakDbfs;
@@ -253,7 +324,11 @@ export async function analyzeTrackById(id: string): Promise<{
       const wf = await computeWaveformBytes(tmpFile, 256);
       waveformBytes = wf.bytes;
       waveformPoints = wf.pointCount;
-      debug.waveform = { computed: true, points: waveformPoints, bytesLen: waveformBytes.length };
+      debug.waveform = {
+        computed: true,
+        points: waveformPoints,
+        bytesLen: waveformBytes.length,
+      };
     } catch (e: any) {
       debug.waveform = { computed: false, error: e?.message ?? "failed" };
       warnings.push("waveform failed");
@@ -261,26 +336,27 @@ export async function analyzeTrackById(id: string): Promise<{
 
     // Debug extra
     debug.ffprobePath = getFfprobePath();
-    debug.ffmpegPath  = getFfmpegPath();
+    debug.ffmpegPath = getFfmpegPath();
     debug.audioUrl = track.audioUrl;
     debug.resolvedAudioUrl = resolvedAudioUrl;
-    debug.tmpFile  = tmpFile;
+    debug.tmpFile = tmpFile;
     debug.lufsSource = lufsSource;
 
     // 4) Guardado en Prisma (idempotente: solo escribimos valores válidos)
     const data: any = { analysisAt: new Date() };
-    if (durationSec  != null) data.durationSec      = durationSec;
-    if (sampleRateHz != null) data.sampleRateHz     = sampleRateHz;
-    if (channels     != null) data.channels         = channels;
-    if (bitrateKbps  != null) data.bitrateKbps      = bitrateKbps;
+    if (durationSec != null) data.durationSec = durationSec;
+    if (sampleRateHz != null) data.sampleRateHz = sampleRateHz;
+    if (channels != null) data.channels = channels;
+    if (bitrateKbps != null) data.bitrateKbps = bitrateKbps;
 
-    if (iLufs        != null) data.loudnessLufs     = iLufs;
-    if (lraLu        != null) data.loudnessRangeLu  = lraLu;
-    if (lraLow       != null) data.lraLowLufs       = lraLow;
-    if (lraHigh      != null) data.lraHighLufs      = lraHigh;
-    if (truePeak     != null) data.truePeakDbfs     = truePeak;
+    if (iLufs != null) data.loudnessLufs = iLufs;
+    if (lraLu != null) data.loudnessRangeLu = lraLu;
+    if (lraLow != null) data.lraLowLufs = lraLow;
+    if (lraHigh != null) data.lraHighLufs = lraHigh;
+    if (truePeak != null) data.truePeakDbfs = truePeak;
 
-    if (waveformBytes && waveformBytes.length > 0) data.waveform = { set: waveformBytes }; // Bytes
+    if (waveformBytes && waveformBytes.length > 0)
+      data.waveform = { set: waveformBytes }; // Bytes
 
     const updated = await db.track.update({
       where: { id },
@@ -303,6 +379,12 @@ export async function analyzeTrackById(id: string): Promise<{
     return { updated, warnings, debug };
   } finally {
     // 5) Limpieza del tmp
-    if (tmpFile) { try { await fsp.unlink(tmpFile); } catch {} }
+    if (tmpFile) {
+      try {
+        await fsp.unlink(tmpFile);
+      } catch {
+        // El archivo temporal pudo haber sido eliminado por el sistema.
+      }
+    }
   }
 }

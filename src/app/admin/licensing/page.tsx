@@ -34,7 +34,7 @@ function first(v?: string | string[]) {
 
 // Normaliza el status del query hacia el enum real (resistente a minúsculas)
 function normalizeStatusFromQS(
-  value: string | undefined
+  value: string | undefined,
 ): RequestStatus | undefined {
   if (!value) return undefined;
   const raw = value.trim();
@@ -54,7 +54,7 @@ function normalizeStatusFromQS(
 }
 
 function normalizePriorityFromQS(
-  value: string | undefined
+  value: string | undefined,
 ): RequestPriority | undefined {
   if (!value) return undefined;
   const raw = value.trim();
@@ -83,7 +83,10 @@ export default async function Page(props: {
   const priorityEnum = normalizePriorityFromQS(first(sp.priority));
 
   const page = Math.max(1, parseInt(first(sp.page) ?? "1", 10) || 1);
-  const per = Math.min(100, Math.max(1, parseInt(first(sp.per) ?? "20", 10) || 20));
+  const per = Math.min(
+    100,
+    Math.max(1, parseInt(first(sp.per) ?? "20", 10) || 20),
+  );
   const skip = (page - 1) * per;
 
   // Fechas de seguimiento (seguimos enviando ISO, no locales)
@@ -221,7 +224,10 @@ export default async function Page(props: {
       territories: Array.isArray(r.territories)
         ? r.territories
         : typeof r.territories === "string" && r.territories.trim().length
-          ? r.territories.split(",").map((t) => t.trim()).filter(Boolean)
+          ? r.territories
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
           : [],
     }));
 
@@ -230,7 +236,7 @@ export default async function Page(props: {
     cToday = today;
     cTomorrow = tomorrow;
     cWeek = week;
-  } catch (err) {
+  } catch {
     // Si algo falla, dejamos todo vacío y pasamos el error al cliente para mostrar banner
     return (
       <LicensingAdminClient

@@ -22,11 +22,11 @@ import type { UserRole } from "@prisma/client";
 export const adminDashboardSections: DashboardSection[] = [
   {
     id: "general",
-    label: "General",
+    label: "Inicio",
     items: [
       {
         id: "overview",
-        label: "Overview",
+        label: "Panel principal",
         href: "/admin",
         icon: Home,
         section: "general",
@@ -34,7 +34,7 @@ export const adminDashboardSections: DashboardSection[] = [
       },
       {
         id: "account",
-        label: "Account",
+        label: "Mi cuenta",
         href: "/admin/account",
         icon: UserCircle2,
         section: "general",
@@ -43,46 +43,46 @@ export const adminDashboardSections: DashboardSection[] = [
   },
   {
     id: "workspace",
-    label: "Workspace",
+    label: "Catálogo",
     items: [
       {
         id: "tracks",
-        label: "Tracks",
+        label: "Pistas",
         href: "/admin/tracks",
         icon: Music2,
         section: "workspace",
       },
       {
         id: "uploads",
-        label: "Uploads",
+        label: "Subir audio",
         href: "/admin/uploads",
         icon: SlidersHorizontal,
         section: "workspace",
       },
       {
         id: "playlists",
-        label: "Playlists",
+        label: "Colecciones",
         href: "/admin/playlists",
         icon: Library,
         section: "workspace",
       },
       {
         id: "sound-kits",
-        label: "Sound Kits",
+        label: "Sound kits",
         href: "/admin/sound-kits",
         icon: FolderKanban,
         section: "workspace",
       },
       {
         id: "services",
-        label: "Services",
+        label: "Servicios",
         href: "/admin/services",
         icon: BriefcaseBusiness,
         section: "workspace",
       },
       {
         id: "showcase",
-        label: "Showcase",
+        label: "Banner y drops",
         href: "/admin/showcase",
         icon: Megaphone,
         section: "workspace",
@@ -91,25 +91,25 @@ export const adminDashboardSections: DashboardSection[] = [
   },
   {
     id: "licensing",
-    label: "Licensing",
+    label: "Comercial",
     items: [
       {
         id: "licensing-requests",
-        label: "Licensing",
+        label: "Solicitudes de licencia",
         href: "/admin/licensing",
         icon: ClipboardList,
         section: "licensing",
       },
       {
         id: "license-templates",
-        label: "License Templates",
+        label: "Tipos de licencia",
         href: "/admin/license-templates",
         icon: FileText,
         section: "licensing",
       },
       {
         id: "contracts",
-        label: "Contracts",
+        label: "Contratos",
         href: "/admin/contracts",
         icon: Gavel,
         section: "licensing",
@@ -118,46 +118,46 @@ export const adminDashboardSections: DashboardSection[] = [
   },
   {
     id: "system",
-    label: "System",
+    label: "Más herramientas",
     items: [
       {
         id: "inbound-requests",
-        label: "Requests",
+        label: "Mensajes",
         href: "/admin/requests",
         icon: ScrollText,
         section: "system",
       },
       {
         id: "tickets",
-        label: "Tickets",
+        label: "Soporte",
         href: "/admin/tickets",
         icon: LifeBuoy,
         section: "system",
       },
       {
         id: "audit-log",
-        label: "Audit Log",
+        label: "Registro de actividad",
         href: "/admin/audit-log",
         icon: Shield,
         section: "system",
       },
       {
         id: "settings",
-        label: "Settings",
+        label: "Configuración",
         href: "/admin/settings",
         icon: Settings,
         section: "system",
       },
       {
         id: "users",
-        label: "Users",
+        label: "Usuarios",
         href: "/admin/users",
         icon: UserCircle2,
         section: "system",
       },
       {
         id: "roles",
-        label: "Roles",
+        label: "Roles y permisos",
         href: "/admin/users/roles",
         icon: UserCircle2,
         section: "system",
@@ -167,13 +167,17 @@ export const adminDashboardSections: DashboardSection[] = [
   },
 ];
 
-export function getAdminDashboardSectionsForRole(role: UserRole | null | undefined) {
+export function getAdminDashboardSectionsForRole(
+  role: UserRole | null | undefined,
+) {
   if (role === "ADMIN") return adminDashboardSections;
 
   if (role === "STAFF") {
     return adminDashboardSections.map((section) => ({
       ...section,
-      items: section.items.filter((item) => item.id !== "users" && item.id !== "roles"),
+      items: section.items.filter(
+        (item) => item.id !== "users" && item.id !== "roles",
+      ),
     }));
   }
 

@@ -13,11 +13,6 @@ function formatDurationSec(durationSec?: number | null): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function bytesToBase64(buf: Buffer | Uint8Array | null): string | null {
-  if (!buf) return null;
-  return Buffer.from(buf).toString("base64");
-}
-
 function mapTrackToCatalogTrack(track: {
   id: string;
   title: string;
@@ -34,7 +29,6 @@ function mapTrackToCatalogTrack(track: {
   audioUrl: string;
   coverUrl: string | null;
   durationSec: number | null;
-  waveform?: Buffer | Uint8Array | null;
   tags: Array<{ tag: { name: string; type: string } | null }>;
 }): CatalogTrack {
   return {
@@ -49,9 +43,7 @@ function mapTrackToCatalogTrack(track: {
       .filter((tagLink) => tagLink.tag?.type === "USE")
       .map((tagLink) => tagLink.tag?.name || "")
       .filter(Boolean),
-    genres: track.genres
-      .map((genre) => genre.trim())
-      .filter(Boolean),
+    genres: track.genres.map((genre) => genre.trim()).filter(Boolean),
     bpm: track.bpm ?? undefined,
     key: track.key ?? undefined,
     licenseType: track.licenseType,
@@ -64,7 +56,9 @@ function mapTrackToCatalogTrack(track: {
     duration: formatDurationSec(track.durationSec),
     audioUrl: track.audioUrl,
     coverUrl: track.coverUrl,
-    waveformB64: bytesToBase64((track.waveform as Buffer | null) ?? null),
+    // La grilla usa una forma de onda liviana de respaldo. La forma real se
+    // reserva para la ficha individual para no serializar cientos de KB.
+    waveformB64: null,
   };
 }
 
@@ -97,7 +91,6 @@ export async function fetchPlaylistCatalogTracks(params: {
         audioUrl: true,
         coverUrl: true,
         durationSec: true,
-        waveform: true,
         tags: {
           where: { tag: { type: { in: ["MOOD", "USE"] } } },
           select: { tag: { select: { name: true, type: true } } },
@@ -129,7 +122,6 @@ export async function fetchPlaylistCatalogTracks(params: {
           audioUrl: true,
           coverUrl: true,
           durationSec: true,
-          waveform: true,
           tags: {
             where: { tag: { type: { in: ["MOOD", "USE"] } } },
             select: { tag: { select: { name: true, type: true } } },

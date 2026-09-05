@@ -49,7 +49,7 @@ export function CategoryChips({
     initialCategories.map((c) => {
       const label = toUpper(c.name ?? "");
       return { id: c.id, label, value: label, meta: { slug: c.slug ?? label } };
-    })
+    }),
   );
 
   const catalog = useTagCatalog({
@@ -77,10 +77,12 @@ export function CategoryChips({
   }, []);
 
   // Rehidrata desde la API al montar sólo si venimos sin datos SSR (evita parpadeo cuando ya hay asignados)
+  const hasInitialCategories = initialCategories.length > 0;
+
   React.useEffect(() => {
-    if (!trackId || initialCategories.length > 0) return;
+    if (!trackId || hasInitialCategories) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch(`/api/tracks/${trackId}/categories`);
         const data = await res.json().catch(() => null);
@@ -99,7 +101,7 @@ export function CategoryChips({
     return () => {
       cancelled = true;
     };
-  }, [trackId]);
+  }, [hasInitialCategories, trackId]);
 
   return (
     <div className="space-y-2">
@@ -123,8 +125,11 @@ export function CategoryChips({
           const slug = (chip.meta as any)?.slug ?? chip.value ?? chip.label;
           const isAssigned = selected.some(
             (c) =>
-              ((c.meta as { slug?: string } | undefined)?.slug ?? c.value ?? c.label).toLowerCase() ===
-              slug.toLowerCase()
+              (
+                (c.meta as { slug?: string } | undefined)?.slug ??
+                c.value ??
+                c.label
+              ).toLowerCase() === slug.toLowerCase(),
           );
           if (isAssigned) return false;
           const res = await catalog.remove?.(chip.id ?? slug);
@@ -135,14 +140,18 @@ export function CategoryChips({
           return { id: c.id, label, value: label, meta: { slug: c.slug } };
         })}
         renderAboveToggle={
-          <div className="flex gap-2 mb-1 w-full">
+          <div className="mb-1 flex w-full gap-2">
             <button
               type="button"
               disabled={saving}
               onClick={async () => {
                 if (!trackId) return;
                 const slugs = selected
-                  .map((c) => (c.meta as { slug?: string } | undefined)?.slug ?? c.label)
+                  .map(
+                    (c) =>
+                      (c.meta as { slug?: string } | undefined)?.slug ??
+                      c.label,
+                  )
                   .map(slugify)
                   .filter(Boolean)
                   .sort();
@@ -151,13 +160,20 @@ export function CategoryChips({
                 try {
                   const res = await catalog.saveSelection?.(trackId, slugs);
                   if (res?.ok) {
-                    const payload = Array.isArray(res.data?.items) ? res.data.items : [];
+                    const payload = Array.isArray(res.data?.items)
+                      ? res.data.items
+                      : [];
                     const nextSelected =
                       payload.length > 0
                         ? payload.map((c: any) => {
                             const label = toUpper(c.name ?? c.slug ?? "");
                             const slug = c.slug ?? label;
-                            return { id: c.id, label, value: label, meta: { slug } };
+                            return {
+                              id: c.id,
+                              label,
+                              value: label,
+                              meta: { slug },
+                            };
                           })
                         : selected; // fallback optimista si API no devuelve items
                     setSelected(nextSelected);
@@ -167,13 +183,13 @@ export function CategoryChips({
                     onSaveState?.("error");
                     console.error("[CategoryChips] save failed", res);
                   }
-                } catch (_e) {
+                } catch {
                   onSaveState?.("error");
                 } finally {
                   setSaving(false);
                 }
               }}
-              className="h-7 px-3 border border-current w-full justify-center items-center text-foreground bg-transparent hover:bg-foreground/10 dark:hover:bg-foreground/15 transition-colors inline-flex text-xs font-semibold rounded-md"
+              className="text-foreground hover:bg-foreground/10 dark:hover:bg-foreground/15 inline-flex h-7 w-full items-center justify-center rounded-md border border-current bg-transparent px-3 text-xs font-semibold transition-colors"
             >
               {saving ? "Guardando…" : "Guardar Categorías"}
             </button>
@@ -184,10 +200,12 @@ export function CategoryChips({
         type="hidden"
         name={name}
         value={selected
-          .map((c) => ((c.meta as { slug?: string } | undefined)?.slug ?? c.label))
+          .map(
+            (c) => (c.meta as { slug?: string } | undefined)?.slug ?? c.label,
+          )
           .join("\n")}
       />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
   );
 }

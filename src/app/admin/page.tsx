@@ -4,28 +4,29 @@ import { Button } from "@/components/ui/button";
 
 const QUICK_LINKS = [
   {
-    title: "Tracks",
-    description: "Catalogo principal, edicion y flujo tecnico de tracks.",
-    href: "/admin/tracks",
-    cta: "Abrir tracks",
-  },
-  {
-    title: "Licensing Requests",
-    description: "Bandeja comercial de solicitudes y seguimiento operativo.",
-    href: "/admin/licensing",
-    cta: "Abrir licensing",
-  },
-  {
-    title: "Uploads",
-    description: "Ingreso rapido de assets de audio al sistema de catalogo.",
+    title: "1. Subir audio",
+    description: "Carga el archivo original y crea una pista en el catálogo.",
     href: "/admin/uploads",
-    cta: "Abrir uploads",
+    cta: "Subir una pista",
   },
   {
-    title: "Contact Inbox",
-    description: "Solicitudes generales recibidas desde formularios del sitio.",
-    href: "/admin/requests",
-    cta: "Abrir inbox",
+    title: "2. Completar metadata",
+    description:
+      "Ordena información creativa, técnica, derechos y entregables.",
+    href: "/admin/tracks",
+    cta: "Administrar pistas",
+  },
+  {
+    title: "3. Publicar el catálogo",
+    description: "Agrupa pistas en colecciones y define el catálogo público.",
+    href: "/admin/playlists",
+    cta: "Administrar colecciones",
+  },
+  {
+    title: "4. Gestionar licencias",
+    description: "Revisa solicitudes, cotizaciones y seguimiento comercial.",
+    href: "/admin/licensing",
+    cta: "Ver solicitudes",
   },
 ];
 
@@ -33,10 +34,11 @@ export default function AdminOverviewPage() {
   return (
     <section className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-foreground text-2xl font-semibold">Overview</h1>
+        <h1 className="text-foreground text-2xl font-semibold">
+          Panel principal
+        </h1>
         <p className="text-muted-foreground text-sm">
-          Punto de entrada del dashboard admin. Accesos directos a las areas
-          operativas.
+          El flujo principal del catálogo, de la carga al licenciamiento.
         </p>
       </header>
 

@@ -77,7 +77,9 @@ type GlobalPlayerContextValue = {
   actions: GlobalPlayerActions;
 };
 
-const GlobalPlayerContext = createContext<GlobalPlayerContextValue | null>(null);
+const GlobalPlayerContext = createContext<GlobalPlayerContextValue | null>(
+  null,
+);
 
 function clamp01(value: number) {
   if (!Number.isFinite(value)) return 0;
@@ -94,7 +96,9 @@ function normalizeTrack(input: GlobalPlayerTrack): GlobalPlayerTrack | null {
     coverUrl: input.coverUrl ?? null,
     waveformB64: input.waveformB64 ?? null,
     durationSec:
-      typeof input.durationSec === "number" && Number.isFinite(input.durationSec) && input.durationSec > 0
+      typeof input.durationSec === "number" &&
+      Number.isFinite(input.durationSec) &&
+      input.durationSec > 0
         ? Math.floor(input.durationSec)
         : null,
   };
@@ -120,8 +124,11 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
   const currentTrackIdRef = useRef<string | null>(null);
   const pendingSeekRatioRef = useRef<number | null>(null);
   const lastNonZeroVolumeRef = useRef(0.85);
+  const latestSnapshotRef = useRef<PersistedPlayerSnapshot | null>(null);
 
-  const [currentTrack, setCurrentTrack] = useState<GlobalPlayerTrack | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<GlobalPlayerTrack | null>(
+    null,
+  );
   const [queue, setQueue] = useState<GlobalPlayerTrack[]>([]);
   const [queueIndex, setQueueIndex] = useState(-1);
   const [queueSource, setQueueSource] = useState<string | null>(null);
@@ -139,11 +146,15 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
   }, [currentTrack?.id]);
 
   const mountTrack = useCallback(
-    async (track: GlobalPlayerTrack, options?: { seekRatio?: number | null; autoplay?: boolean }) => {
+    async (
+      track: GlobalPlayerTrack,
+      options?: { seekRatio?: number | null; autoplay?: boolean },
+    ) => {
       const audio = audioRef.current;
       if (!audio) return;
 
-      const normalizedSeek = options?.seekRatio == null ? null : clamp01(options.seekRatio);
+      const normalizedSeek =
+        options?.seekRatio == null ? null : clamp01(options.seekRatio);
       const autoplay = options?.autoplay ?? true;
 
       const isSameTrack = currentTrackIdRef.current === track.id;
@@ -189,7 +200,11 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
         setDurationSec(Math.floor(audio.duration));
       }
-      if (pendingSeekRatioRef.current !== null && Number.isFinite(audio.duration) && audio.duration > 0) {
+      if (
+        pendingSeekRatioRef.current !== null &&
+        Number.isFinite(audio.duration) &&
+        audio.duration > 0
+      ) {
         audio.currentTime = audio.duration * pendingSeekRatioRef.current;
         pendingSeekRatioRef.current = null;
       }
@@ -249,28 +264,57 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
   }, [volume]);
 
   useEffect(() => {
+    latestSnapshotRef.current = currentTrack
+      ? {
+          track: { ...currentTrack, waveformB64: null },
+          queue: queue.map((track) => ({ ...track, waveformB64: null })),
+          queueIndex,
+          queueSource,
+          isPlaying,
+          currentSec,
+          durationSec,
+          progress,
+          volume,
+        }
+      : null;
+  }, [
+    currentTrack,
+    queue,
+    queueIndex,
+    queueSource,
+    isPlaying,
+    currentSec,
+    durationSec,
+    progress,
+    volume,
+  ]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      if (!currentTrack) {
-        window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
-        return;
+
+    const persist = () => {
+      try {
+        const snapshot = latestSnapshotRef.current;
+        if (!snapshot) {
+          window.sessionStorage.removeItem(PLAYER_SESSION_KEY);
+          return;
+        }
+        window.sessionStorage.setItem(
+          PLAYER_SESSION_KEY,
+          JSON.stringify(snapshot),
+        );
+      } catch {
+        // Storage puede estar deshabilitado o sin cuota; el player sigue funcionando.
       }
-      const snapshot: PersistedPlayerSnapshot = {
-        track: currentTrack,
-        queue,
-        queueIndex,
-        queueSource,
-        isPlaying,
-        currentSec,
-        durationSec,
-        progress,
-        volume,
-      };
-      window.sessionStorage.setItem(PLAYER_SESSION_KEY, JSON.stringify(snapshot));
-    } catch {
-      // ignore
-    }
-  }, [currentTrack, queue, queueIndex, queueSource, isPlaying, currentSec, durationSec, progress, volume]);
+    };
+
+    const intervalId = window.setInterval(persist, 2000);
+    window.addEventListener("pagehide", persist);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("pagehide", persist);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -289,9 +333,7 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
 
     const restoredQueue = normalizeQueue(parsed.queue);
     const queueWithTrack =
-      restoredQueue.length > 0
-        ? restoredQueue
-        : [restoredTrack];
+      restoredQueue.length > 0 ? restoredQueue : [restoredTrack];
     const restoredIndex = Math.max(
       0,
       findTrackIndex(queueWithTrack, restoredTrack.id),
@@ -307,7 +349,9 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
     const restoreRatio =
       Number.isFinite(parsed.progress) && parsed.progress > 0
         ? clamp01(parsed.progress)
-        : Number.isFinite(parsed.currentSec) && Number.isFinite(parsed.durationSec) && parsed.durationSec > 0
+        : Number.isFinite(parsed.currentSec) &&
+            Number.isFinite(parsed.durationSec) &&
+            parsed.durationSec > 0
           ? clamp01(parsed.currentSec / parsed.durationSec)
           : 0;
 
@@ -340,13 +384,17 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
       };
 
       if (policy === "replace") {
-        const { built, index } = adoptQueue(incomingQueue.length > 0 ? incomingQueue : [track]);
+        const { built, index } = adoptQueue(
+          incomingQueue.length > 0 ? incomingQueue : [track],
+        );
         nextQueue = built;
         nextQueueIndex = index;
         nextQueueSource = options?.queueSource ?? null;
       } else if (policy === "if-empty") {
         if (queue.length === 0) {
-          const { built, index } = adoptQueue(incomingQueue.length > 0 ? incomingQueue : [track]);
+          const { built, index } = adoptQueue(
+            incomingQueue.length > 0 ? incomingQueue : [track],
+          );
           nextQueue = built;
           nextQueueIndex = index;
           nextQueueSource = options?.queueSource ?? null;
@@ -362,7 +410,9 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
         }
       } else {
         if (queue.length === 0) {
-          const { built, index } = adoptQueue(incomingQueue.length > 0 ? incomingQueue : [track]);
+          const { built, index } = adoptQueue(
+            incomingQueue.length > 0 ? incomingQueue : [track],
+          );
           nextQueue = built;
           nextQueueIndex = index;
           nextQueueSource = options?.queueSource ?? null;
@@ -404,31 +454,37 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
     setIsPlaying(false);
   }, [currentTrack]);
 
-  const seekByRatio = useCallback((ratio: number) => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
-    const normalized = clamp01(ratio);
-    const duration =
-      audio.duration && Number.isFinite(audio.duration) && audio.duration > 0
-        ? audio.duration
-        : durationSec;
-    if (!duration || !Number.isFinite(duration) || duration <= 0) return;
-    audio.currentTime = duration * normalized;
-    setCurrentSec(audio.currentTime);
-  }, [currentTrack, durationSec]);
+  const seekByRatio = useCallback(
+    (ratio: number) => {
+      const audio = audioRef.current;
+      if (!audio || !currentTrack) return;
+      const normalized = clamp01(ratio);
+      const duration =
+        audio.duration && Number.isFinite(audio.duration) && audio.duration > 0
+          ? audio.duration
+          : durationSec;
+      if (!duration || !Number.isFinite(duration) || duration <= 0) return;
+      audio.currentTime = duration * normalized;
+      setCurrentSec(audio.currentTime);
+    },
+    [currentTrack, durationSec],
+  );
 
-  const seekByTime = useCallback((seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
-    const duration =
-      audio.duration && Number.isFinite(audio.duration) && audio.duration > 0
-        ? audio.duration
-        : durationSec;
-    if (!duration || !Number.isFinite(duration) || duration <= 0) return;
-    const normalizedTime = Math.max(0, Math.min(duration, seconds));
-    audio.currentTime = normalizedTime;
-    setCurrentSec(audio.currentTime);
-  }, [currentTrack, durationSec]);
+  const seekByTime = useCallback(
+    (seconds: number) => {
+      const audio = audioRef.current;
+      if (!audio || !currentTrack) return;
+      const duration =
+        audio.duration && Number.isFinite(audio.duration) && audio.duration > 0
+          ? audio.duration
+          : durationSec;
+      if (!duration || !Number.isFinite(duration) || duration <= 0) return;
+      const normalizedTime = Math.max(0, Math.min(duration, seconds));
+      audio.currentTime = normalizedTime;
+      setCurrentSec(audio.currentTime);
+    },
+    [currentTrack, durationSec],
+  );
 
   const setVolume = useCallback((nextVolume: number) => {
     const normalized = clamp01(nextVolume);
@@ -556,7 +612,9 @@ export function GlobalPlayerProvider({ children }: { children: ReactNode }) {
 export function useGlobalPlayerState() {
   const context = useContext(GlobalPlayerContext);
   if (!context) {
-    throw new Error("useGlobalPlayerState must be used within GlobalPlayerProvider");
+    throw new Error(
+      "useGlobalPlayerState must be used within GlobalPlayerProvider",
+    );
   }
   return context.state;
 }

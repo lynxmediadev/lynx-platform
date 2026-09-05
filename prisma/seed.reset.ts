@@ -18,7 +18,7 @@ async function main() {
   if (process.env.RESET_CONFIRM !== "YES") {
     throw new Error(
       "Protección activa: define RESET_CONFIRM=YES para permitir el reset. " +
-      "Ejemplo: RESET_CONFIRM=YES npm run db:seed:reset"
+        "Ejemplo: RESET_CONFIRM=YES npm run db:seed:reset",
     );
   }
 
@@ -94,7 +94,7 @@ async function main() {
       audioUrl: AUDIO,
       coverUrl: COVER,
       moods: ["Elegant"],
-      uses: ["Publicidad","Videojuegos"],
+      uses: ["Publicidad", "Videojuegos"],
       isrc: null,
       iswc: null,
       upc: null,
@@ -121,8 +121,8 @@ async function main() {
       artist: "Lynx Music Collective",
       audioUrl: AUDIO,
       coverUrl: COVER,
-      moods: ["Atmospheric","Dark"],
-      uses: ["Cine","Series"],
+      moods: ["Atmospheric", "Dark"],
+      uses: ["Cine", "Series"],
       isrc: null,
       iswc: null,
       upc: null,
@@ -149,8 +149,8 @@ async function main() {
       artist: "Lynx Music Collective",
       audioUrl: AUDIO,
       coverUrl: COVER,
-      moods: ["Uplifting","Warm"],
-      uses: ["Publicidad","TV"],
+      moods: ["Uplifting", "Warm"],
+      uses: ["Publicidad", "TV"],
       isrc: null,
       iswc: null,
       upc: null,
@@ -177,10 +177,12 @@ async function main() {
     await db.track.create({ data: row });
   }
 
-  console.log("✅ Reset completado. Tabla Track repoblada con 5 registros base.");
+  console.log(
+    "✅ Reset completado. Tabla Track repoblada con 5 registros base.",
+  );
 }
 
-main()
+void main()
   .catch(async (e) => {
     console.error("❌ Reset error:", e);
     await db.$disconnect();

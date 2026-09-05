@@ -1,6 +1,10 @@
 "use client";
 
-import { CollectionBrowser, CollectionFilterShell, type CollectionViewMode } from "@/components/collection";
+import {
+  CollectionBrowser,
+  CollectionFilterShell,
+  type CollectionViewMode,
+} from "@/components/collection";
 import TrackFilterControls from "./TrackFilterControls";
 import TrackGridItem from "./TrackGridItem";
 import TrackListItem from "./TrackListItem";
@@ -14,7 +18,6 @@ type Props = {
   currentTrackId: string | null;
   isPlaying: boolean;
   progressMap: ProgressMap;
-  isMobileViewport: boolean;
   showDetailPanel: boolean;
   viewMode: CollectionViewMode;
   onViewModeChange: (next: CollectionViewMode) => void;
@@ -67,7 +70,6 @@ export default function TrackCollectionBrowser({
   currentTrackId,
   isPlaying,
   progressMap,
-  isMobileViewport,
   showDetailPanel,
   viewMode,
   onViewModeChange,
@@ -188,18 +190,18 @@ export default function TrackCollectionBrowser({
         ) : null
       }
       renderNoItemsState={
-        <div className="rounded-2xl border border-border bg-background/70 px-5 py-8 text-sm text-muted-foreground">
+        <div className="border-border bg-background/70 text-muted-foreground rounded-2xl border px-5 py-8 text-sm">
           No hay tracks disponibles en este catálogo.
         </div>
       }
       renderNoResultsState={
-        <div className="space-y-3 rounded-2xl border border-border bg-background/70 px-5 py-8 text-sm text-muted-foreground">
+        <div className="border-border bg-background/70 text-muted-foreground space-y-3 rounded-2xl border px-5 py-8 text-sm">
           <p>No encontramos tracks con esos filtros.</p>
           {hasActiveTrackFilters && (
             <button
               type="button"
               onClick={() => onClearTrackFilters({ focusSearch: true })}
-              className="rounded border border-foreground/70 px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-foreground"
+              className="border-foreground/70 text-foreground hover:border-foreground rounded border px-3 py-1.5 text-xs font-semibold transition"
             >
               Limpiar filtros
             </button>
@@ -234,7 +236,6 @@ export default function TrackCollectionBrowser({
             progress={progressMap[item.id] ?? 0}
             coverUrl={resolveCoverUrl(item)}
             durationLabel={getTrackDurationLabel(item)}
-            isMobileViewport={isMobileViewport}
             onSelect={select}
             onPlay={() => onPlayTrack(item)}
           />

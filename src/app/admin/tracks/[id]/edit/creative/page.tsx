@@ -21,21 +21,24 @@ export default async function AdminTrackEditCreativePage({
 }) {
   const { id } = await params;
 
-  const [trackCreative, tagOptions] =
-    await Promise.all([
-      getTrackCreativePageData(id),
-      getTagOptionsBundle(),
-    ]);
+  const [trackCreative, tagOptions] = await Promise.all([
+    getTrackCreativePageData(id),
+    getTagOptionsBundle(),
+  ]);
 
   if (!trackCreative) {
     notFound();
   }
 
-  const modules = getTrackEditModuleNavItems(trackCreative.id, { includeFull: true });
+  const modules = getTrackEditModuleNavItems(trackCreative.id);
   const assignedMoods =
-    trackCreative.tags?.filter((t) => t.tag.type === "MOOD").map((c) => c.tag.name) ?? [];
+    trackCreative.tags
+      ?.filter((t) => t.tag.type === "MOOD")
+      .map((c) => c.tag.name) ?? [];
   const assignedUses =
-    trackCreative.tags?.filter((t) => t.tag.type === "USE").map((c) => c.tag.name) ?? [];
+    trackCreative.tags
+      ?.filter((t) => t.tag.type === "USE")
+      .map((c) => c.tag.name) ?? [];
   const assignedCategories =
     trackCreative.tags
       ?.filter((t) => t.tag.type === "CATALOG")
@@ -54,13 +57,12 @@ export default async function AdminTrackEditCreativePage({
             id={trackCreative.id}
             audioUrl={trackCreative.audioUrl}
           />
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${trackCreative.id}/edit/full`}>Vista completa</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${trackCreative.id}/edit`}>Overview</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="w-full text-xs sm:w-auto">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full text-xs sm:w-auto"
+          >
             <Link href="/admin/tracks">Volver al listado</Link>
           </Button>
         </>

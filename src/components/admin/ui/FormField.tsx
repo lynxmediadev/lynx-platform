@@ -45,22 +45,25 @@ export default function FormField({
     <div className={rootClassName}>
       <Label
         htmlFor={htmlFor}
-        className="text-[11px] font-medium text-foreground/80"
+        className={clsx(
+          "text-foreground/80 text-[11px] font-medium",
+          titleClass,
+        )}
       >
         {label}
       </Label>
 
       {description && descriptionPosition === "above" && (
-        <p className="text-[11px] text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-[11px]">{description}</p>
       )}
 
       {children}
 
       {/* Mensaje de error, si existe */}
-      {error && <p className="mt-1 text-[11px] text-destructive">{error}</p>}
+      {error && <p className="text-destructive mt-1 text-[11px]">{error}</p>}
 
       {description && descriptionPosition === "below" && (
-        <p className="text-[11px] text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-[11px]">{description}</p>
       )}
     </div>
   );

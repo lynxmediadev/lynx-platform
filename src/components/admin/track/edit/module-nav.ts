@@ -19,7 +19,7 @@ export function getTrackEditModuleNavItems(
     allow.length > 0 && !disableAllExceptSet.has(id);
 
   const items: TrackEditModuleNavItem[] = [
-    { id: "overview", label: "Overview", href: `/admin/tracks/${trackId}/edit` },
+    { id: "overview", label: "Resumen", href: `/admin/tracks/${trackId}/edit` },
     {
       id: "creative",
       label: "Creativo",
@@ -46,7 +46,7 @@ export function getTrackEditModuleNavItems(
     },
     {
       id: "review",
-      label: "Review",
+      label: "Revisión",
       href: `/admin/tracks/${trackId}/edit/review`,
       disabled: shouldDisable("review"),
     },

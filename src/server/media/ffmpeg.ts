@@ -10,8 +10,8 @@ export async function resolveBins() {
   const envFFMPEG = process.env.FFMPEG_PATH?.trim();
   const envFFPROBE = process.env.FFPROBE_PATH?.trim();
 
-  let ffmpeg = envFFMPEG && envFFMPEG.length > 0 ? envFFMPEG : "ffmpeg";
-  let ffprobe = envFFPROBE && envFFPROBE.length > 0 ? envFFPROBE : "ffprobe";
+  const ffmpeg = envFFMPEG && envFFMPEG.length > 0 ? envFFMPEG : "ffmpeg";
+  const ffprobe = envFFPROBE && envFFPROBE.length > 0 ? envFFPROBE : "ffprobe";
 
   // sanity check
   const okFfmpeg = await checkBin(ffmpeg);
@@ -21,7 +21,7 @@ export async function resolveBins() {
     throw new Error(
       `Binarios no disponibles: ${!okFfmpeg ? `ffmpeg NO (intentado: ${ffmpeg})` : ""} ${
         !okFfprobe ? `ffprobe NO (intentado: ${ffprobe})` : ""
-      }`.trim()
+      }`.trim(),
     );
   }
 
@@ -50,7 +50,8 @@ export async function probeAudio(ffprobe: string, url: string) {
   ]);
   const info = JSON.parse(stdout);
   // Buscamos stream de audio principal
-  const a = (info.streams || []).find((s: any) => s.codec_type === "audio") || {};
+  const a =
+    (info.streams || []).find((s: any) => s.codec_type === "audio") || {};
   const fmt = info.format || {};
   const durationSec = Number.parseFloat(fmt.duration || a.duration || "0") || 0;
 
@@ -76,7 +77,7 @@ export async function measureLoudness(ffmpeg: string, url: string) {
     "-i",
     url,
     "-filter_complex",
-    'loudnorm=I=-16:TP=-1:LRA=11:print_format=json',
+    "loudnorm=I=-16:TP=-1:LRA=11:print_format=json",
     "-f",
     "null",
     "-",
@@ -87,7 +88,11 @@ export async function measureLoudness(ffmpeg: string, url: string) {
   const jsonStart = txt.indexOf("{");
   const jsonEnd = txt.lastIndexOf("}");
   if (jsonStart === -1 || jsonEnd === -1) {
-    return { loudnessLufs: null as number | null, loudnessRangeLu: null, truePeakDbfs: null };
+    return {
+      loudnessLufs: null as number | null,
+      loudnessRangeLu: null,
+      truePeakDbfs: null,
+    };
   }
   const json = txt.substring(jsonStart, jsonEnd + 1);
   const data = JSON.parse(json);
@@ -105,12 +110,25 @@ function toNumberOrNull(x: any) {
 // Genera waveform [0..1] con 256 muestras aprox. usando s16le por pipe
 export async function buildWaveform256(ffmpeg: string, url: string) {
   // 1) downmix mono, 2) 8kHz, 3) 16-bit signed PCM, 4) enviamos a stdout
-  const args = ["-hide_banner", "-nostats", "-i", url, "-ac", "1", "-ar", "8000", "-f", "s16le", "pipe:1"];
+  const args = [
+    "-hide_banner",
+    "-nostats",
+    "-i",
+    url,
+    "-ac",
+    "1",
+    "-ar",
+    "8000",
+    "-f",
+    "s16le",
+    "pipe:1",
+  ];
   const proc = execa(ffmpeg, args, { stdout: "pipe" });
 
   const chunks: Buffer[] = [];
   if (!proc.stdout) throw new Error("No stdout from ffmpeg");
-  for await (const c of Readable.from(proc.stdout)) chunks.push(Buffer.from(c as Buffer));
+  for await (const c of Readable.from(proc.stdout))
+    chunks.push(Buffer.from(c as Buffer));
   await proc; // Throw si fallo
 
   const pcm = Buffer.concat(chunks); // 16-bit little-endian
@@ -141,9 +159,15 @@ export async function buildWaveform256(ffmpeg: string, url: string) {
 export async function normalizeIfNeeded(
   ffmpeg: string,
   url: string,
-  opts: { targetLufs: number; measuredLufs: number | null; outFile: string; toPublicUrl: (key: string) => string },
+  opts: {
+    targetLufs: number;
+    measuredLufs: number | null;
+    outFile: string;
+    toPublicUrl: (key: string) => string;
+  },
 ) {
-  if (opts.measuredLufs == null) return { normalized: false, uploaded: {} as Record<string, string> };
+  if (opts.measuredLufs == null)
+    return { normalized: false, uploaded: {} as Record<string, string> };
 
   const gainDb = opts.targetLufs - opts.measuredLufs;
   // Si el ajuste es minúsculo (< 0.1dB) no hacemos nada
@@ -152,7 +176,16 @@ export async function normalizeIfNeeded(
   }
 
   // Renderiza WAV con volume
-  await execa(ffmpeg, ["-hide_banner", "-nostats", "-i", url, "-filter:a", `volume=${gainDb}dB`, "-y", opts.outFile]);
+  await execa(ffmpeg, [
+    "-hide_banner",
+    "-nostats",
+    "-i",
+    url,
+    "-filter:a",
+    `volume=${gainDb}dB`,
+    "-y",
+    opts.outFile,
+  ]);
 
   // *** Aquí NO subimos por S3 directamente para no tocar tu flujo actual ***
   // Devolvemos key+URL "públicos" esperados por tu R2 si deseas moverlo ahí

@@ -20,7 +20,7 @@ import "./src/env.js";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: { ignoreDuringBuilds: true }, // desactiva lint en build (solo temporal)
+  serverExternalPackages: ["ffmpeg-static", "ffprobe-static"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "picsum.photos" },
@@ -29,17 +29,6 @@ const nextConfig = {
       { protocol: "https", hostname: "www.placecats.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
-  },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      const externals = config.externals ?? [];
-      config.externals = Array.isArray(externals) ? externals : [externals];
-      config.externals.push({
-        "ffmpeg-static": "commonjs ffmpeg-static",
-        "ffprobe-static": "commonjs ffprobe-static",
-      });
-    }
-    return config;
   },
 };
 

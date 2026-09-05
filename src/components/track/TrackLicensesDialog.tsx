@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { buildDummyBeatLeaseContract } from "@/lib/licenses/dummy-beat-lease-contract";
-import {
-  getLicenseMapRows,
-} from "@/lib/licenses/license-view";
+import { getLicenseMapRows } from "@/lib/licenses/license-view";
 import { CompactSelectableCard } from "@/components/ui/compact-selectable-card";
-import type { TrackLicenseDialogTab, TrackLicenseViewModel } from "@/lib/licenses/types";
+import type {
+  TrackLicenseDialogTab,
+  TrackLicenseViewModel,
+} from "@/lib/licenses/types";
 
 type Props = {
   trackTitle: string;
@@ -24,7 +25,10 @@ type Props = {
   licenses: TrackLicenseViewModel[];
 };
 
-function formatCurrency(amount: number | null, currency: "CLP" | "USD" | "EUR") {
+function formatCurrency(
+  amount: number | null,
+  currency: "CLP" | "USD" | "EUR",
+) {
   if (amount === null || !Number.isFinite(amount)) return "A cotizar";
   try {
     return new Intl.NumberFormat("es-CL", {
@@ -37,27 +41,40 @@ function formatCurrency(amount: number | null, currency: "CLP" | "USD" | "EUR") 
   }
 }
 
-export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses }: Props) {
-  const [selectedLicenseId, setSelectedLicenseId] = React.useState<string | null>(
-    licenses[0]?.id ?? null,
-  );
+export default function TrackLicensesDialog({
+  trackTitle,
+  trackArtist,
+  licenses,
+}: Props) {
+  const [selectedLicenseId, setSelectedLicenseId] = React.useState<
+    string | null
+  >(licenses[0]?.id ?? null);
   const [tab, setTab] = React.useState<TrackLicenseDialogTab>("summary");
   const mapScrollRef = React.useRef<HTMLDivElement | null>(null);
-  const [showMapScrollToBottom, setShowMapScrollToBottom] = React.useState(false);
+  const [showMapScrollToBottom, setShowMapScrollToBottom] =
+    React.useState(false);
 
   React.useEffect(() => {
     if (!licenses.length) {
       setSelectedLicenseId(null);
       return;
     }
-    if (!selectedLicenseId || !licenses.some((license) => license.id === selectedLicenseId)) {
+    if (
+      !selectedLicenseId ||
+      !licenses.some((license) => license.id === selectedLicenseId)
+    ) {
       setSelectedLicenseId(licenses[0]?.id ?? null);
     }
   }, [licenses, selectedLicenseId]);
 
   const selectedLicense =
-    licenses.find((license) => license.id === selectedLicenseId) ?? licenses[0] ?? null;
-  const mapRows = selectedLicense ? getLicenseMapRows(selectedLicense) : [];
+    licenses.find((license) => license.id === selectedLicenseId) ??
+    licenses[0] ??
+    null;
+  const mapRows = React.useMemo(
+    () => (selectedLicense ? getLicenseMapRows(selectedLicense) : []),
+    [selectedLicense],
+  );
   const mapRowsSplit = React.useMemo(() => {
     if (mapRows.length === 0) return [[], []] as Array<typeof mapRows>;
     const midpoint = Math.ceil(mapRows.length / 2);
@@ -70,7 +87,10 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
         beatTitle: trackTitle,
         producerName: "ODR Records",
         artistName: trackArtist || "Artista",
-        priceLabel: formatCurrency(selectedLicense.priceAmount, selectedLicense.currency),
+        priceLabel: formatCurrency(
+          selectedLicense.priceAmount,
+          selectedLicense.currency,
+        ),
         currencyLabel: selectedLicense.currency,
       })
     : "";
@@ -82,7 +102,9 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
       return;
     }
     const canScroll = container.scrollHeight - container.clientHeight > 6;
-    const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 6;
+    const atBottom =
+      container.scrollTop + container.clientHeight >=
+      container.scrollHeight - 6;
     setShowMapScrollToBottom(canScroll && !atBottom);
   }, []);
 
@@ -106,13 +128,13 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
       <DialogTrigger asChild>
         <button
           type="button"
-          className="flex h-10 w-full items-center justify-center rounded border border-foreground bg-foreground px-4 text-sm font-semibold text-background hover:opacity-90"
+          className="border-foreground bg-foreground text-background flex h-10 w-full items-center justify-center rounded border px-4 text-sm font-semibold hover:opacity-90"
         >
           Ver Licencias
         </button>
       </DialogTrigger>
 
-      <DialogContent className="odr-scrollbar max-h-[95vh] overflow-y-auto border-border bg-background text-foreground sm:max-w-5xl">
+      <DialogContent className="odr-scrollbar border-border bg-background text-foreground max-h-[95vh] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>Licencias disponibles</DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -121,7 +143,7 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
         </DialogHeader>
 
         {licenses.length === 0 ? (
-          <div className="rounded border border-border bg-card/60 p-4 text-sm text-muted-foreground">
+          <div className="border-border bg-card/60 text-muted-foreground rounded border p-4 text-sm">
             Este track aún no tiene licencias configuradas.
           </div>
         ) : (
@@ -133,7 +155,10 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
                   <CompactSelectableCard
                     key={license.id}
                     title={license.name}
-                    value={formatCurrency(license.priceAmount, license.currency)}
+                    value={formatCurrency(
+                      license.priceAmount,
+                      license.currency,
+                    )}
                     meta={license.formats.join(", ") || "Sin formatos"}
                     highlightLabel={license.isPopular ? "Popular" : null}
                     isActive={isActive}
@@ -146,9 +171,9 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
             <Tabs
               value={tab}
               onValueChange={(next) => setTab(next as TrackLicenseDialogTab)}
-              className="h-[clamp(420px,64vh,640px)] rounded border border-border bg-card/40 p-3"
+              className="border-border bg-card/40 h-[clamp(420px,64vh,640px)] rounded border p-3"
             >
-              <TabsList className="h-9 bg-muted/80">
+              <TabsList className="bg-muted/80 h-9">
                 <TabsTrigger value="summary" className="text-xs">
                   <Check className="h-4 w-4" />
                   Resumen
@@ -159,24 +184,27 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="summary" className="mt-3 min-h-0 overflow-hidden">
+              <TabsContent
+                value="summary"
+                className="mt-3 min-h-0 overflow-hidden"
+              >
                 {selectedLicense ? (
                   mapRows.length > 0 ? (
                     <div className="relative h-full">
                       <div
                         ref={mapScrollRef}
                         onScroll={updateMapScrollButtonVisibility}
-                        className="odr-scrollbar h-full overflow-y-auto overflow-x-hidden rounded border border-border bg-background/65"
+                        className="odr-scrollbar border-border bg-background/65 h-full overflow-x-hidden overflow-y-auto rounded border"
                       >
                         <div className="grid gap-3 p-2 md:grid-cols-2">
                           {mapRowsSplit.map((columnRows, columnIndex) =>
                             columnRows.length > 0 ? (
                               <div
                                 key={`${selectedLicense.id}-map-column-${columnIndex}`}
-                                className="overflow-hidden rounded border border-border/80 bg-background/80"
+                                className="border-border/80 bg-background/80 overflow-hidden rounded border"
                               >
                                 <table className="w-full text-sm">
-                                  <thead className="bg-muted/60 text-left text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                                  <thead className="bg-muted/60 text-muted-foreground text-left text-[10px] tracking-[0.12em] uppercase">
                                     <tr>
                                       <th className="px-2.5 py-2">Variable</th>
                                       <th className="px-2.5 py-2">Condición</th>
@@ -190,10 +218,10 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
                                           rowIndex % 2 ? "bg-card/25" : ""
                                         } hover:bg-foreground/[0.04]`}
                                       >
-                                        <td className="w-[42%] whitespace-normal break-words [overflow-wrap:anywhere] px-2.5 py-2 align-top text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                                        <td className="text-muted-foreground w-[42%] px-2.5 py-2 align-top text-[10px] font-medium tracking-[0.12em] [overflow-wrap:anywhere] break-words whitespace-normal uppercase">
                                           {row.label}
                                         </td>
-                                        <td className="whitespace-normal break-words [overflow-wrap:anywhere] px-2.5 py-2 align-top text-sm font-semibold leading-snug text-foreground">
+                                        <td className="text-foreground px-2.5 py-2 align-top text-sm leading-snug font-semibold [overflow-wrap:anywhere] break-words whitespace-normal">
                                           {row.value}
                                         </td>
                                       </tr>
@@ -210,7 +238,7 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
                         <button
                           type="button"
                           onClick={handleScrollMapToBottom}
-                          className="absolute bottom-2 right-6 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background/90 text-foreground hover:bg-accent"
+                          className="border-border bg-background/90 text-foreground hover:bg-accent absolute right-6 bottom-2 flex h-7 w-7 items-center justify-center rounded-full border"
                           aria-label="Ir al final del resumen"
                           title="Ir al final"
                         >
@@ -219,18 +247,22 @@ export default function TrackLicensesDialog({ trackTitle, trackArtist, licenses 
                       ) : null}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Sin mapa de términos para esta licencia.
                     </p>
                   )
                 ) : null}
               </TabsContent>
 
-              <TabsContent value="agreement" className="mt-3 min-h-0 overflow-hidden">
+              <TabsContent
+                value="agreement"
+                className="mt-3 min-h-0 overflow-hidden"
+              >
                 {selectedLicense ? (
-                  <div className="odr-scrollbar h-full overflow-y-auto rounded border border-border bg-background/80 p-3">
-                    <pre className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                      {agreementText || "Sin texto de contrato para esta licencia."}
+                  <div className="odr-scrollbar border-border bg-background/80 h-full overflow-y-auto rounded border p-3">
+                    <pre className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                      {agreementText ||
+                        "Sin texto de contrato para esta licencia."}
                     </pre>
                   </div>
                 ) : null}

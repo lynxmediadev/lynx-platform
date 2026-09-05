@@ -40,7 +40,7 @@ export function UseChips({
     initialUses.map((u) => {
       const label = toTitleCase(u);
       return { label, value: label, meta: { slug: slugify(label) } };
-    })
+    }),
   );
   const [saving, setSaving] = React.useState(false);
 
@@ -54,7 +54,12 @@ export function UseChips({
     mapItem: (i: any) => {
       const name = toTitleCase((i?.name ?? i?.label ?? "").toString());
       if (!name) return null as unknown as TagChip;
-      return { id: i?.id, label: name, value: name, meta: { slug: slugify(name) } };
+      return {
+        id: i?.id,
+        label: name,
+        value: name,
+        meta: { slug: slugify(name) },
+      };
     },
     buildCreateBody: (label) => ({ name: toTitleCase(label) }),
     buildSaveBody: (values, normalizeLabel) => ({
@@ -83,7 +88,7 @@ export function UseChips({
                 const label = toTitleCase(item.name ?? item.slug ?? "");
                 const slug = slugify(label);
                 return { id: item.id, label, value: label, meta: { slug } };
-              })
+              }),
             );
           }
           onSaveState?.("saved");
@@ -91,7 +96,7 @@ export function UseChips({
         } else {
           onSaveState?.("error");
         }
-      } catch (_e) {
+      } catch {
         onSaveState?.("error");
       } finally {
         setSaving(false);
@@ -105,7 +110,7 @@ export function UseChips({
     if (!trackId) return;
     if ((initialUses?.length ?? 0) > 0) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const res = await fetch(`/api/tracks/${trackId}/uses`);
         const data = await res.json().catch(() => ({}));
@@ -120,7 +125,7 @@ export function UseChips({
             .filter((c: TagChip) => Boolean(c.label));
           setSelected(next);
         }
-      } catch (_e) {
+      } catch {
         /* ignore */
       }
     })();
@@ -129,12 +134,9 @@ export function UseChips({
     };
   }, [trackId, initialUses]);
 
-  const handleChange = React.useCallback(
-    (chips: TagChip[]) => {
-      setSelected(chips);
-    },
-    [],
-  );
+  const handleChange = React.useCallback((chips: TagChip[]) => {
+    setSelected(chips);
+  }, []);
 
   return (
     <div className="space-y-2">
@@ -157,7 +159,8 @@ export function UseChips({
         onDeleteCatalog={async (chip) => {
           const payload: Record<string, string> = {};
           if (chip.id) payload.id = chip.id;
-          else if (chip.value || chip.label) payload.name = (chip.value ?? chip.label) as string;
+          else if (chip.value || chip.label)
+            payload.name = (chip.value ?? chip.label) as string;
           else return false;
           const res = await fetch("/api/uses", {
             method: "DELETE",
@@ -168,23 +171,32 @@ export function UseChips({
         }}
         initialCatalogItems={initialCatalog.map((item) => {
           const label = toTitleCase(item.name);
-          return { id: item.id, label, value: label, meta: { slug: item.slug } };
+          return {
+            id: item.id,
+            label,
+            value: label,
+            meta: { slug: item.slug },
+          };
         })}
         renderAboveToggle={
-          <div className="flex gap-2 mb-1 w-full">
+          <div className="mb-1 flex w-full gap-2">
             <button
               type="button"
               onClick={() => persist(selected)}
               disabled={saving}
-              className="h-7 px-3 border border-current w-full justify-center items-center text-foreground bg-transparent hover:bg-foreground/10 dark:hover:bg-foreground/15 transition-colors inline-flex text-xs font-semibold rounded-md"
+              className="text-foreground hover:bg-foreground/10 dark:hover:bg-foreground/15 inline-flex h-7 w-full items-center justify-center rounded-md border border-current bg-transparent px-3 text-xs font-semibold transition-colors"
             >
               {saving ? "Guardando…" : "Guardar Usos"}
             </button>
           </div>
         }
       />
-      <input type="hidden" name={name} value={selected.map((c) => c.label).join("\n")} />
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      <input
+        type="hidden"
+        name={name}
+        value={selected.map((c) => c.label).join("\n")}
+      />
+      {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
   );
 }

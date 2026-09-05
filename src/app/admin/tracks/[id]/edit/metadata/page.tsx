@@ -12,9 +12,7 @@ import { TrackEditShell } from "@/components/admin/track/edit/TrackEditShell";
 import { getTrackEditModuleNavItems } from "@/components/admin/track/edit/module-nav";
 import { MetadataModuleForm } from "@/components/admin/track/edit/MetadataModuleForm";
 import { TrackLicenseAssignmentsForm } from "@/components/admin/track/edit/TrackLicenseAssignmentsForm";
-import {
-  getTrackMetadataPageData,
-} from "@/server/track-edit/queries";
+import { getTrackMetadataPageData } from "@/server/track-edit/queries";
 
 export default async function AdminTrackEditMetadataPage({
   params,
@@ -29,11 +27,15 @@ export default async function AdminTrackEditMetadataPage({
     notFound();
   }
 
-  const templateWhere: Prisma.LicenseTemplateWhereInput = metadataPageData.ownerUserId
-    ? {
-        OR: [{ ownerUserId: metadataPageData.ownerUserId }, { ownerUserId: null }],
-      }
-    : { ownerUserId: null };
+  const templateWhere: Prisma.LicenseTemplateWhereInput =
+    metadataPageData.ownerUserId
+      ? {
+          OR: [
+            { ownerUserId: metadataPageData.ownerUserId },
+            { ownerUserId: null },
+          ],
+        }
+      : { ownerUserId: null };
   const assignedTemplateIds = metadataPageData.licenseAssignments.map(
     (assignment) => assignment.licenseTemplateId,
   );
@@ -61,7 +63,7 @@ export default async function AdminTrackEditMetadataPage({
     },
   });
 
-  const modules = getTrackEditModuleNavItems(metadataPageData.id, { includeFull: true });
+  const modules = getTrackEditModuleNavItems(metadataPageData.id);
 
   return (
     <TrackEditShell
@@ -76,13 +78,12 @@ export default async function AdminTrackEditMetadataPage({
             id={metadataPageData.id}
             audioUrl={metadataPageData.audioUrl}
           />
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${metadataPageData.id}/edit/full`}>Vista completa</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${metadataPageData.id}/edit`}>Overview</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="w-full text-xs sm:w-auto">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full text-xs sm:w-auto"
+          >
             <Link href="/admin/tracks">Volver al listado</Link>
           </Button>
         </>

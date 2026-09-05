@@ -9,9 +9,7 @@ import { TrackAnalyzeHeaderButtons } from "@/components/admin/AnalyzeActions";
 import { TrackEditShell } from "@/components/admin/track/edit/TrackEditShell";
 import { getTrackEditModuleNavItems } from "@/components/admin/track/edit/module-nav";
 import { RightsModuleForm } from "@/components/admin/track/edit/RightsModuleForm";
-import {
-  getTrackRightsPageData,
-} from "@/server/track-edit/queries";
+import { getTrackRightsPageData } from "@/server/track-edit/queries";
 
 export default async function AdminTrackEditRightsPage({
   params,
@@ -26,7 +24,7 @@ export default async function AdminTrackEditRightsPage({
     notFound();
   }
 
-  const modules = getTrackEditModuleNavItems(rightsPageData.id, { includeFull: true });
+  const modules = getTrackEditModuleNavItems(rightsPageData.id);
 
   return (
     <TrackEditShell
@@ -41,13 +39,12 @@ export default async function AdminTrackEditRightsPage({
             id={rightsPageData.id}
             audioUrl={rightsPageData.audioUrl}
           />
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${rightsPageData.id}/edit/full`}>Vista completa</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="hidden text-xs md:inline-flex">
-            <Link href={`/admin/tracks/${rightsPageData.id}/edit`}>Overview</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm" className="w-full text-xs sm:w-auto">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="w-full text-xs sm:w-auto"
+          >
             <Link href="/admin/tracks">Volver al listado</Link>
           </Button>
         </>
