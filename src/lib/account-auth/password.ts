@@ -53,7 +53,11 @@ export async function hashPassword(rawPassword: string) {
   return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${toBase64Url(salt)}$${toBase64Url(derived)}`;
 }
 
-export async function verifyPassword(rawPassword: string, encodedHash: string) {
+export async function verifyPassword(
+  rawPassword: string,
+  encodedHash: string | null | undefined,
+) {
+  if (!encodedHash) return false;
   if (!encodedHash.startsWith("scrypt$")) return false;
 
   const parts = encodedHash.split("$");
@@ -65,7 +69,8 @@ export async function verifyPassword(rawPassword: string, encodedHash: string) {
   const n = Number(nRaw);
   const r = Number(rRaw);
   const p = Number(pRaw);
-  if (!Number.isFinite(n) || !Number.isFinite(r) || !Number.isFinite(p)) return false;
+  if (!Number.isFinite(n) || !Number.isFinite(r) || !Number.isFinite(p))
+    return false;
 
   const salt = fromBase64Url(saltB64 ?? "");
   const expected = fromBase64Url(hashB64 ?? "");

@@ -10,6 +10,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRouteAdminOrStaff } from "@/lib/account-auth/route-guards";
 
 const ALLOWED = new Set([
   "NEW",
@@ -23,6 +24,12 @@ export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }, // 👈 params Promise
 ) {
+  if (!(await requireRouteAdminOrStaff())) {
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 401 },
+    );
+  }
   try {
     // ✅ Aguardar params antes de usar
     const { id } = await ctx.params;

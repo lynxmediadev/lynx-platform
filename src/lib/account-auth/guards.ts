@@ -3,14 +3,16 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { UserRole } from "@prisma/client";
 import {
-  APP_SESSION_COOKIE,
   VIEW_AS_ROLE_COOKIE,
-  getSessionUserFromCookie,
   normalizeViewAsRole,
 } from "@/lib/account-auth/session";
+import { allowsLegacyAuth } from "@/lib/account-auth/mode";
+import { getAuthenticatedAppUser } from "@/lib/account-auth/principal";
 import { verifyAdminTokenV1 } from "@/lib/auth";
 
-type SessionUser = NonNullable<Awaited<ReturnType<typeof getSessionUserFromCookie>>>;
+type SessionUser = NonNullable<
+  Awaited<ReturnType<typeof getAuthenticatedAppUser>>
+>;
 type EffectiveSessionUser = SessionUser & {
   realRole: UserRole;
   viewAsRole: UserRole | null;
@@ -19,12 +21,12 @@ type EffectiveSessionUser = SessionUser & {
 
 export async function getCurrentUser() {
   const c = await cookies();
-  const rawSession = c.get(APP_SESSION_COOKIE)?.value;
-  const user = await getSessionUserFromCookie(rawSession);
+  const user = await getAuthenticatedAppUser();
   if (!user) return null;
 
   const viewAsRole = normalizeViewAsRole(c.get(VIEW_AS_ROLE_COOKIE)?.value);
-  const canViewAs = user.role === "ADMIN" && viewAsRole && viewAsRole !== "ADMIN";
+  const canViewAs =
+    user.role === "ADMIN" && viewAsRole && viewAsRole !== "ADMIN";
 
   const effectiveRole = canViewAs ? viewAsRole : user.role;
   return {
@@ -45,7 +47,10 @@ export async function requireAuth(options?: { redirectTo?: string }) {
   return null;
 }
 
-export async function requireRole(roles: UserRole[], options?: { redirectTo?: string }) {
+export async function requireRole(
+  roles: UserRole[],
+  options?: { redirectTo?: string },
+) {
   const user = await getCurrentUser();
   if (user && roles.includes(user.role)) return user;
   if (options?.redirectTo) {
@@ -59,13 +64,17 @@ export async function requireAdminOrStaffAction() {
   if (user && (user.role === "ADMIN" || user.role === "STAFF")) return user;
 
   // Compatibilidad temporal: admin legacy por cookie firmada.
-  const c = await cookies();
-  const legacyToken = c.get("admin_session")?.value ?? "";
-  const legacySecret = (process.env.ADMIN_SESSION_SECRET ?? "").trim();
-  if (legacyToken && legacySecret) {
-    const payload = verifyAdminTokenV1(legacyToken, legacySecret);
-    if (payload?.sub === "admin") {
-      return { id: "legacy-admin", role: "ADMIN" as const };
+  if (allowsLegacyAuth()) {
+    const c = await cookies();
+    const legacyToken = c.get("admin_session")?.value ?? "";
+    const legacySecret =
+      (process.env.ADMIN_SESSION_SECRET ?? "").trim() ||
+      (process.env.AUTH_SESSION_SECRET ?? "").trim();
+    if (legacyToken && legacySecret) {
+      const payload = verifyAdminTokenV1(legacyToken, legacySecret);
+      if (payload?.sub === "admin") {
+        return { id: "legacy-admin", role: "ADMIN" as const };
+      }
     }
   }
 

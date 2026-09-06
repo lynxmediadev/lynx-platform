@@ -24,8 +24,13 @@ export const env = createEnv({
     S3_ACCESS_KEY_ID: z.string().optional(),
     S3_SECRET_ACCESS_KEY: z.string().optional(),
     S3_PUBLIC_BASE_URL: z.string().url().optional(),
+    AUTH_MODE: z.enum(["legacy", "hybrid", "supabase"]).default("legacy"),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   },
-  client: {},
+  client: {
+    NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
+  },
 
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
@@ -37,6 +42,11 @@ export const env = createEnv({
     S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
     S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
     S3_PUBLIC_BASE_URL: process.env.S3_PUBLIC_BASE_URL,
+    AUTH_MODE: process.env.AUTH_MODE,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

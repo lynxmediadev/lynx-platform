@@ -4,6 +4,7 @@
  * con fallback legacy por clave admin mientras dura la migración.
  */
 import { AuthTurnstileField } from "@/components/auth/AuthTurnstileField";
+import { allowsLegacyAuth } from "@/lib/account-auth/mode";
 export const dynamic = "force-dynamic";
 
 type AdminLoginPageProps = {
@@ -25,55 +26,72 @@ export default async function Page({ searchParams }: AdminLoginPageProps) {
         ? "Completa email y password."
         : err === "unverified"
           ? "Debes verificar tu email antes de ingresar al panel."
-        : err === "rate_limited"
-          ? "Demasiados intentos. Espera un momento e inténtalo nuevamente."
-        : undefined;
+          : err === "config"
+            ? "Supabase Auth aún no está configurado. Usa AUTH_MODE=legacy hasta completar las llaves."
+            : err === "rate_limited"
+              ? "Demasiados intentos. Espera un momento e inténtalo nuevamente."
+              : undefined;
+  const showLegacy = allowsLegacyAuth();
 
   return (
     <main className="mx-auto max-w-sm px-6 py-16">
       <h1 className="mb-2 text-2xl font-semibold">Ingreso al panel</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Accede con tu cuenta ADMIN/STAFF. Legacy por clave seguirá disponible temporalmente.
+      <p className="text-muted-foreground mb-6 text-sm">
+        Accede con tu cuenta ADMIN/STAFF.
       </p>
-      <form method="POST" action="/admin/login/submit" className="space-y-4 rounded-2xl border border-border bg-card p-6">
+      <form
+        method="POST"
+        action="/admin/login/submit"
+        className="border-border bg-card space-y-4 rounded-2xl border p-6"
+      >
         <div>
-          <label className="mb-1 block text-xs uppercase text-muted-foreground">Email</label>
+          <label className="text-muted-foreground mb-1 block text-xs uppercase">
+            Email
+          </label>
           <input
             type="email"
             name="email"
             autoComplete="email"
-            className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="border-border bg-muted focus-visible:ring-ring w-full rounded-lg border px-3 py-2.5 outline-none focus-visible:ring-2"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs uppercase text-muted-foreground">Password</label>
+          <label className="text-muted-foreground mb-1 block text-xs uppercase">
+            Password
+          </label>
           <input
             type="password"
             name="password"
             autoComplete="current-password"
-            className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="border-border bg-muted focus-visible:ring-ring w-full rounded-lg border px-3 py-2.5 outline-none focus-visible:ring-2"
           />
         </div>
-        <div>
-          <label className="mb-1 block text-xs uppercase text-muted-foreground">Clave legacy (temporal)</label>
-          <input
-            type="password"
-            name="legacy_key"
-            autoComplete="off"
-            className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </div>
-        {message ? <p className="text-xs text-destructive">{message}</p> : null}
+        {showLegacy ? (
+          <div>
+            <label className="text-muted-foreground mb-1 block text-xs uppercase">
+              Clave legacy (temporal)
+            </label>
+            <input
+              type="password"
+              name="legacy_key"
+              autoComplete="off"
+              className="border-border bg-muted focus-visible:ring-ring w-full rounded-lg border px-3 py-2.5 outline-none focus-visible:ring-2"
+            />
+          </div>
+        ) : null}
+        {message ? <p className="text-destructive text-xs">{message}</p> : null}
         {err === "unverified" ? (
           <a href="/auth/verify-email" className="text-xs underline">
             Reenviar verificación
           </a>
         ) : null}
         {err === "captcha" ? (
-          <p className="text-xs text-destructive">Valida el captcha para continuar.</p>
+          <p className="text-destructive text-xs">
+            Valida el captcha para continuar.
+          </p>
         ) : null}
         <AuthTurnstileField />
-        <button className="w-full rounded-lg border border-border bg-muted px-3 py-2.5 text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
+        <button className="border-border bg-muted hover:bg-accent focus-visible:ring-ring w-full rounded-lg border px-3 py-2.5 text-sm focus-visible:ring-2">
           Entrar
         </button>
       </form>

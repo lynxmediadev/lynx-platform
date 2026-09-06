@@ -1,16 +1,38 @@
 import { NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import { APP_SESSION_COOKIE, getSessionUserFromCookie } from "@/lib/account-auth/session";
+import { allowsLegacyAuth } from "@/lib/account-auth/mode";
+import { getAuthenticatedAppUser } from "@/lib/account-auth/principal";
+import { verifyAdminTokenV1 } from "@/lib/auth";
+
+async function getLegacyRouteAdmin() {
+  if (!allowsLegacyAuth()) return null;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_session")?.value ?? "";
+  const secret =
+    (process.env.ADMIN_SESSION_SECRET ?? "").trim() ||
+    (process.env.AUTH_SESSION_SECRET ?? "").trim();
+  const payload = secret ? verifyAdminTokenV1(token, secret) : null;
+  return payload?.sub === "admin"
+    ? { id: "legacy-admin", role: "ADMIN" as const }
+    : null;
+}
 
 export async function getRouteUser() {
-  const cookieStore = await cookies();
-  return getSessionUserFromCookie(cookieStore.get(APP_SESSION_COOKIE)?.value);
+  const user = await getAuthenticatedAppUser();
+  if (user) return user;
+  return getLegacyRouteAdmin();
 }
 
 export async function requireRouteAdmin() {
   const user = await getRouteUser();
-  if (!user || user.role !== "ADMIN") return null;
-  return user;
+  if (user?.role === "ADMIN") return user;
+  return null;
+}
+
+export async function requireRouteAdminOrStaff() {
+  const user = await getRouteUser();
+  if (user && (user.role === "ADMIN" || user.role === "STAFF")) return user;
+  return null;
 }
 
 export function safeRouteRedirect(req: NextRequest, path: string) {
@@ -20,4 +42,3 @@ export function safeRouteRedirect(req: NextRequest, path: string) {
   }
   return url;
 }
-

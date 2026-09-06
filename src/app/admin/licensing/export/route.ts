@@ -12,8 +12,9 @@
  * │ - Seguridad: va bajo /admin/* y hereda tu middleware (Basic/Key).           │
  * └─────────────────────────────────────────────────────────────────────────────┘
  */
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { requireRouteAdminOrStaff } from "@/lib/account-auth/route-guards";
 
 /** Escapa valores para CSV (comillas y saltos de línea) */
 function csvEscape(s: string) {
@@ -28,8 +29,17 @@ function parseDateBoundary(s?: string, end = false): Date | undefined {
   const parts = s.split("-").map((v) => parseInt(v, 10));
   if (parts.length < 3) return undefined;
   const [y, m, d] = parts as [number, number, number];
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return undefined;
-  const dt = new Date(y, m - 1, d, end ? 23 : 0, end ? 59 : 0, end ? 59 : 0, end ? 999 : 0);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d))
+    return undefined;
+  const dt = new Date(
+    y,
+    m - 1,
+    d,
+    end ? 23 : 0,
+    end ? 59 : 0,
+    end ? 59 : 0,
+    end ? 999 : 0,
+  );
   return isNaN(dt.getTime()) ? undefined : dt;
 }
 
@@ -42,6 +52,12 @@ const ALLOWED_STATUS = new Set([
 ]);
 
 export async function GET(req: NextRequest) {
+  if (!(await requireRouteAdminOrStaff())) {
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 401 },
+    );
+  }
   // ───────────────────────── Lee querystring ─────────────────────────
   const { searchParams } = new URL(req.url);
   const get = (k: string) => (searchParams.get(k) || "").trim();
@@ -50,13 +66,18 @@ export async function GET(req: NextRequest) {
   const from = get("from");
   const to = get("to");
   const whitelist = get("whitelist"); // "1" para true
-  const mfn = get("mfn");             // "1" para true
+  const mfn = get("mfn"); // "1" para true
   const status = get("status").toUpperCase();
   const assignee = get("assignee");
-  const order = (get("order").toLowerCase() === "asc" ? "asc" : "desc") as "asc" | "desc";
+  const order = (get("order").toLowerCase() === "asc" ? "asc" : "desc") as
+    | "asc"
+    | "desc";
 
   const limitNum = parseInt(get("limit") || "1000", 10);
-  const limit = Math.min(Math.max(Number.isFinite(limitNum) ? limitNum : 1000, 1), 5000);
+  const limit = Math.min(
+    Math.max(Number.isFinite(limitNum) ? limitNum : 1000, 1),
+    5000,
+  );
 
   // ───────────────────────── Construye el filtro ─────────────────────
   const where: any = {};
@@ -127,8 +148,8 @@ export async function GET(req: NextRequest) {
     [
       r.id,
       r.createdAt.toISOString(),
-      (r as any).status ?? "",          // ← status (enum en Prisma)
-      r.assignee ?? "",                 // ← assignee (AHORA INCLUIDO)
+      (r as any).status ?? "", // ← status (enum en Prisma)
+      r.assignee ?? "", // ← assignee (AHORA INCLUIDO)
       (r.internalNotes ?? "").replace(/\r?\n/g, " "), // ⬅️ NUEVO (plano para CSV)
       r.name,
       r.email,
@@ -152,7 +173,7 @@ export async function GET(req: NextRequest) {
       r.pageUrl ?? "",
     ]
       .map((v) => csvEscape(String(v)))
-      .join(",")
+      .join(","),
   );
 
   const csv = [header.join(","), ...lines].join("\n");

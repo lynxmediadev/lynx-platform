@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { requireRouteAdminOrStaff } from "@/lib/account-auth/route-guards";
 
 const MAX_LEN = 20000; // límite suave para evitar basura enorme
 
@@ -19,6 +20,12 @@ export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }, // Next 15
 ) {
+  if (!(await requireRouteAdminOrStaff())) {
+    return NextResponse.json(
+      { ok: false, error: "No autorizado" },
+      { status: 401 },
+    );
+  }
   try {
     const { id } = await ctx.params;
 

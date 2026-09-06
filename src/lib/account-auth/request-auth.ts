@@ -1,24 +1,34 @@
 import "server-only";
 import { NextRequest } from "next/server";
 import { verifyAdminTokenV1 } from "@/lib/auth";
-import { APP_SESSION_COOKIE, getSessionUserFromCookie } from "@/lib/account-auth/session";
+import { allowsLegacyAuth } from "@/lib/account-auth/mode";
+import { getAuthenticatedRequestUser } from "@/lib/account-auth/principal";
 import { prisma } from "@/lib/prisma";
 
 type AuthRequestUser =
-  | { id: string; role: "ADMIN" | "STAFF" | "CREATOR" | "CLIENT"; source: "session" }
+  | {
+      id: string;
+      role: "ADMIN" | "STAFF" | "CREATOR" | "CLIENT";
+      source: "session" | "supabase";
+    }
   | { id: string | null; role: "ADMIN"; source: "legacy" };
 
-export async function getRequestAuthUser(req: NextRequest): Promise<AuthRequestUser | null> {
-  const appSessionRaw = req.cookies.get(APP_SESSION_COOKIE)?.value;
-  if (appSessionRaw) {
-    const user = await getSessionUserFromCookie(appSessionRaw);
-    if (user) {
-      return { id: user.id, role: user.role, source: "session" };
-    }
+export async function getRequestAuthUser(
+  req: NextRequest,
+): Promise<AuthRequestUser | null> {
+  const user = await getAuthenticatedRequestUser(req);
+  if (user) {
+    return {
+      id: user.id,
+      role: user.role,
+      source: req.cookies.get("app_session") ? "session" : "supabase",
+    };
   }
 
-  const legacySecret = (process.env.ADMIN_SESSION_SECRET ?? "").trim();
-  if (legacySecret) {
+  const legacySecret =
+    (process.env.ADMIN_SESSION_SECRET ?? "").trim() ||
+    (process.env.AUTH_SESSION_SECRET ?? "").trim();
+  if (allowsLegacyAuth() && legacySecret) {
     const legacyRaw = req.cookies.get("admin_session")?.value ?? "";
     const payload = verifyAdminTokenV1(legacyRaw, legacySecret);
     if (payload?.sub === "admin") {

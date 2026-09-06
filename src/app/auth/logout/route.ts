@@ -6,6 +6,8 @@ import {
   clearViewAsRoleCookie,
   destroyUserSessionByCookie,
 } from "@/lib/account-auth/session";
+import { allowsSupabaseAuth } from "@/lib/account-auth/mode";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function redirectUrl(req: NextRequest, path: string) {
   const url = new URL(path, req.url);
@@ -61,6 +63,12 @@ export async function POST(req: NextRequest) {
   await destroyUserSessionByCookie(rawSession);
   await clearSessionCookie();
   await clearViewAsRoleCookie();
+  if (allowsSupabaseAuth()) {
+    const client = await createSupabaseServerClient();
+    if (client) await client.auth.signOut();
+  }
 
-  return NextResponse.redirect(redirectUrl(req, "/auth/login"), { status: 303 });
+  return NextResponse.redirect(redirectUrl(req, "/auth/login"), {
+    status: 303,
+  });
 }

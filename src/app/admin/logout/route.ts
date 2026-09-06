@@ -18,6 +18,8 @@ import {
   clearViewAsRoleCookie,
   destroyUserSessionByCookie,
 } from "@/lib/account-auth/session";
+import { allowsSupabaseAuth } from "@/lib/account-auth/mode";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function redirectUrl(req: NextRequest, path: string) {
   const url = new URL(path, req.url);
@@ -69,13 +71,19 @@ export async function GET() {
 
 // POST: borra cookies y redirige al login
 export async function POST(req: NextRequest) {
-  const res = NextResponse.redirect(redirectUrl(req, "/admin/login"), { status: 303 });
+  const res = NextResponse.redirect(redirectUrl(req, "/admin/login"), {
+    status: 303,
+  });
   const c = await cookies();
   const rawSession = c.get(APP_SESSION_COOKIE)?.value;
 
   await destroyUserSessionByCookie(rawSession);
   await clearSessionCookie();
   await clearViewAsRoleCookie();
+  if (allowsSupabaseAuth()) {
+    const client = await createSupabaseServerClient();
+    if (client) await client.auth.signOut();
+  }
 
   // Token firmado (HMAC)
   c.set("admin_session", "", {

@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { hashPassword } from "@/lib/account-auth/password";
 import { consumeRateLimit } from "@/lib/account-auth/rate-limit";
 import { verifyTurnstile } from "@/lib/account-auth/turnstile";
-import { consumePasswordResetToken, findValidPasswordResetToken } from "@/lib/account-auth/reset";
+import {
+  consumePasswordResetToken,
+  findValidPasswordResetToken,
+} from "@/lib/account-auth/reset";
 import { prisma } from "@/lib/prisma";
+import {
+  allowsLegacyAuth,
+  allowsSupabaseAuth,
+  getAuthMode,
+} from "@/lib/account-auth/mode";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function redirectUrl(req: NextRequest, path: string) {
   const url = new URL(path, req.url);
@@ -24,7 +33,10 @@ function withToken(path: string, token: string, extra?: string) {
 }
 
 function fingerprintFromRequest(req: NextRequest, token: string) {
-  const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown-ip";
+  const ip =
+    req.headers.get("x-forwarded-for") ??
+    req.headers.get("x-real-ip") ??
+    "unknown-ip";
   const ua = req.headers.get("user-agent") ?? "unknown-ua";
   return `${ip}|${ua}|${token.slice(0, 16)}`;
 }
@@ -33,12 +45,17 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const token = (formData.get("token")?.toString() ?? "").trim();
   const password = (formData.get("password")?.toString() ?? "").trim();
-  const passwordConfirm = (formData.get("passwordConfirm")?.toString() ?? "").trim();
-  const turnstileToken = (formData.get("cf-turnstile-response")?.toString() ?? "").trim();
+  const passwordConfirm = (
+    formData.get("passwordConfirm")?.toString() ?? ""
+  ).trim();
+  const turnstileToken = (
+    formData.get("cf-turnstile-response")?.toString() ?? ""
+  ).trim();
 
   const captcha = await verifyTurnstile({
     token: turnstileToken,
-    remoteIp: req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "",
+    remoteIp:
+      req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "",
   });
   if (!captcha.ok) {
     return NextResponse.redirect(
@@ -56,23 +73,62 @@ export async function POST(req: NextRequest) {
   });
   if (!throttle.allowed) {
     return NextResponse.redirect(
-      redirectUrl(req, withToken("/auth/reset-password", token, "err=rate_limited")),
+      redirectUrl(
+        req,
+        withToken("/auth/reset-password", token, "err=rate_limited"),
+      ),
       { status: 303 },
     );
   }
 
-  if (!token) {
-    return NextResponse.redirect(redirectUrl(req, "/auth/reset-password?err=invalid"), { status: 303 });
-  }
   if (password.length < 8) {
     return NextResponse.redirect(
-      redirectUrl(req, withToken("/auth/reset-password", token, "err=password")),
+      redirectUrl(
+        req,
+        withToken("/auth/reset-password", token, "err=password"),
+      ),
       { status: 303 },
     );
   }
   if (password !== passwordConfirm) {
     return NextResponse.redirect(
-      redirectUrl(req, withToken("/auth/reset-password", token, "err=mismatch")),
+      redirectUrl(
+        req,
+        withToken("/auth/reset-password", token, "err=mismatch"),
+      ),
+      { status: 303 },
+    );
+  }
+
+  const mode = getAuthMode();
+  if (allowsSupabaseAuth(mode) && !token) {
+    const client = await createSupabaseServerClient();
+    if (client) {
+      const { data } = await client.auth.getUser();
+      if (data.user) {
+        const { error } = await client.auth.updateUser({ password });
+        if (!error) {
+          await client.auth.signOut();
+          return NextResponse.redirect(
+            redirectUrl(req, "/auth/login?ok=password_reset"),
+            {
+              status: 303,
+            },
+          );
+        }
+      }
+    }
+    return NextResponse.redirect(
+      redirectUrl(req, "/auth/reset-password?err=invalid"),
+      {
+        status: 303,
+      },
+    );
+  }
+
+  if (!token || !allowsLegacyAuth(mode)) {
+    return NextResponse.redirect(
+      redirectUrl(req, "/auth/reset-password?err=invalid"),
       { status: 303 },
     );
   }
@@ -101,5 +157,8 @@ export async function POST(req: NextRequest) {
 
   await consumePasswordResetToken(resetToken.id);
 
-  return NextResponse.redirect(redirectUrl(req, "/auth/login?ok=password_reset"), { status: 303 });
+  return NextResponse.redirect(
+    redirectUrl(req, "/auth/login?ok=password_reset"),
+    { status: 303 },
+  );
 }

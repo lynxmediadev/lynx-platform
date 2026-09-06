@@ -31,32 +31,35 @@ enum UserStatus {
 }
 
 model User {
-  id              String     @id @default(cuid())
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  email           String     @unique @db.Citext
-  passwordHash    String
-  name            String?
-  role            UserRole   @default(CREATOR)
-  status          UserStatus @default(ACTIVE)
-  emailVerifiedAt DateTime?
-  lastLoginAt     DateTime?
+  id                 String     @id @default(cuid())
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  email              String     @unique @db.Citext
+  // Nullable durante la transición: Supabase Auth pasa a custodiar la contraseña.
+  passwordHash       String?
+  supabaseAuthUserId String?    @unique @db.Uuid
+  authLinkedAt       DateTime?
+  name               String?
+  role               UserRole   @default(CREATOR)
+  status             UserStatus @default(ACTIVE)
+  emailVerifiedAt    DateTime?
+  lastLoginAt        DateTime?
 
   sessions     UserSession[]
   resetTokens  PasswordResetToken[]
   verifyTokens EmailVerificationToken[]
   inviteTokens InviteToken[]
 
-  ownedTracks     Track[]            @relation("TrackOwner")
-  ownedLicensing  LicensingRequest[] @relation("LicensingOwner")
-  ownedLicenseTemplates LicenseTemplate[] @relation("LicenseTemplateOwner")
-  ownedPlaylists  Playlist[]         @relation("PlaylistOwner")
-  sharedPlaylists PlaylistViewer[]   @relation("PlaylistViewerUser")
-  ownedSoundKits  SoundKit[]         @relation("SoundKitOwner")
-  ownedServices   ServiceOffer[]     @relation("ServiceOwner")
-  ownedContracts  ContractRecord[]   @relation("ContractOwner")
-  reportedTickets SupportTicket[]    @relation("TicketReporter")
-  resolvedTickets SupportTicket[]    @relation("TicketResolver")
+  ownedTracks           Track[]            @relation("TrackOwner")
+  ownedLicensing        LicensingRequest[] @relation("LicensingOwner")
+  ownedLicenseTemplates LicenseTemplate[]  @relation("LicenseTemplateOwner")
+  ownedPlaylists        Playlist[]         @relation("PlaylistOwner")
+  sharedPlaylists       PlaylistViewer[]   @relation("PlaylistViewerUser")
+  ownedSoundKits        SoundKit[]         @relation("SoundKitOwner")
+  ownedServices         ServiceOffer[]     @relation("ServiceOwner")
+  ownedContracts        ContractRecord[]   @relation("ContractOwner")
+  reportedTickets       SupportTicket[]    @relation("TicketReporter")
+  resolvedTickets       SupportTicket[]    @relation("TicketResolver")
 }
 
 model UserSession {
@@ -222,15 +225,15 @@ model Track {
   analysisAt      DateTime?
 
   // Versiones y stems (relaciones)
-  versions    TrackVersion[]
-  stems       TrackStem[]
-  tags        TrackTag[]
-  moodLinks   TrackMood[]
+  versions           TrackVersion[]
+  stems              TrackStem[]
+  tags               TrackTag[]
+  moodLinks          TrackMood[]
   licenseAssignments TrackLicenseAssignment[]
-  playlists   PlaylistTrack[]
-  contracts   ContractRecord[]
-  ownerUserId String?
-  owner       User?            @relation("TrackOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  playlists          PlaylistTrack[]
+  contracts          ContractRecord[]
+  ownerUserId        String?
+  owner              User?                    @relation("TrackOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
 
   @@index([artist])
   @@index([title])
@@ -543,27 +546,27 @@ enum LicenseTemplateStatus {
 }
 
 model LicenseTemplate {
-  id        String               @id @default(cuid())
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   ownerUserId String?
-  owner       User?              @relation("LicenseTemplateOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  owner       User?   @relation("LicenseTemplateOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
 
   name      String
-  slug      String               @unique
+  slug      String                @unique
   status    LicenseTemplateStatus @default(DRAFT)
-  sortOrder Int                  @default(0)
-  isPopular Boolean              @default(false)
+  sortOrder Int                   @default(0)
+  isPopular Boolean               @default(false)
 
   priceAmount Int?
-  currency   Currency            @default(USD)
-  formats    String[]            @default([])
+  currency    Currency @default(USD)
+  formats     String[] @default([])
 
   summaryJson     Json?
   termsMatrixJson Json?
-  agreementText   String         @db.Text
-  notes           String?        @db.Text
+  agreementText   String  @db.Text
+  notes           String? @db.Text
 
   assignments TrackLicenseAssignment[]
 
@@ -584,10 +587,10 @@ model TrackLicenseAssignment {
   sortOrder Int     @default(0)
   isEnabled Boolean @default(true)
 
-  priceOverride          Int?
-  summaryOverrideJson    Json?
-  termsOverrideJson      Json?
-  agreementOverrideText  String? @db.Text
+  priceOverride         Int?
+  summaryOverrideJson   Json?
+  termsOverrideJson     Json?
+  agreementOverrideText String? @db.Text
 
   @@unique([trackId, licenseTemplateId])
   @@index([trackId, isEnabled, sortOrder])
@@ -652,25 +655,25 @@ model SupportTicket {
 }
 
 model Playlist {
-  id          String             @id @default(cuid())
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  name        String
-  publicId    String             @unique @db.Citext
-  slug        String             @unique @db.Citext
-  description String?
-  status      PlaylistStatus     @default(DRAFT)
-  visibility  PlaylistVisibility @default(INTERNAL)
-  isMainCatalog Boolean          @default(false)
-  embedEnabled  Boolean          @default(true)
-  isAutoAllTracks Boolean        @default(false)
-  coverUrl    String?
-  featured    Boolean            @default(false)
-  sortOrder   Int                @default(0)
-  ownerUserId String?
-  owner       User?              @relation("PlaylistOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  tracks      PlaylistTrack[]
-  sharedWith  PlaylistViewer[]
+  id              String             @id @default(cuid())
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  name            String
+  publicId        String             @unique @db.Citext
+  slug            String             @unique @db.Citext
+  description     String?
+  status          PlaylistStatus     @default(DRAFT)
+  visibility      PlaylistVisibility @default(INTERNAL)
+  isMainCatalog   Boolean            @default(false)
+  embedEnabled    Boolean            @default(true)
+  isAutoAllTracks Boolean            @default(false)
+  coverUrl        String?
+  featured        Boolean            @default(false)
+  sortOrder       Int                @default(0)
+  ownerUserId     String?
+  owner           User?              @relation("PlaylistOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  tracks          PlaylistTrack[]
+  sharedWith      PlaylistViewer[]
 
   @@index([status, updatedAt])
   @@index([visibility, updatedAt])
@@ -751,14 +754,14 @@ model ServiceOffer {
 }
 
 model PromotionSlot {
-  id          String             @id @default(cuid())
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  key         String             @unique
+  id          String              @id @default(cuid())
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  key         String              @unique
   name        String
   format      PromotionSlotFormat @default(HERO)
   description String?
-  isEnabled   Boolean            @default(true)
+  isEnabled   Boolean             @default(true)
   settings    Json?
   campaigns   BannerPromotion[]
 
@@ -767,16 +770,16 @@ model PromotionSlot {
 }
 
 model BannerPromotion {
-  id        String          @id @default(cuid())
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id        String                  @id @default(cuid())
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
   name      String
   placement BannerPlacement?
   slotId    String?
-  slot      PromotionSlot?  @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  slot      PromotionSlot?          @relation(fields: [slotId], references: [id], onDelete: SetNull)
   status    PromotionCampaignStatus @default(DRAFT)
-  priority  Int             @default(0)
-  isActive  Boolean         @default(false)
+  priority  Int                     @default(0)
+  isActive  Boolean                 @default(false)
   startsAt  DateTime?
   endsAt    DateTime?
   notes     String?

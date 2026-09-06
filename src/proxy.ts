@@ -5,6 +5,16 @@
  * - /creator/** => CREATOR.
  */
 import { NextRequest, NextResponse } from "next/server";
+import {
+  allowsLegacyAuth,
+  allowsSupabaseAuth,
+  getAuthMode,
+} from "@/lib/account-auth/mode";
+import {
+  copySupabaseResponseCookies,
+  refreshSupabaseProxySession,
+} from "@/lib/supabase/request";
+import { prisma } from "@/lib/prisma";
 
 export const config = { matcher: ["/admin/:path*", "/creator/:path*"] };
 
@@ -49,6 +59,7 @@ async function sha256hex(s: string) {
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const authMode = getAuthMode();
   const viewAsRole = (req.cookies.get("app_view_as_role")?.value ?? "")
     .trim()
     .toUpperCase();
@@ -67,7 +78,9 @@ export async function proxy(req: NextRequest) {
   const AUTH_SECRET =
     (process.env.AUTH_SESSION_SECRET ?? "").trim() ||
     (process.env.ADMIN_SESSION_SECRET ?? "").trim();
-  const LEGACY_SECRET = (process.env.ADMIN_SESSION_SECRET ?? "").trim();
+  const LEGACY_SECRET =
+    (process.env.ADMIN_SESSION_SECRET ?? "").trim() ||
+    (process.env.AUTH_SESSION_SECRET ?? "").trim();
   const BIND_UA = (process.env.ADMIN_BIND_UA ?? "") === "1";
   const ALLOW_LEGACY = (process.env.ADMIN_ALLOW_LEGACY ?? "") === "1";
   const EXPECTED_LEGACY =
@@ -77,9 +90,65 @@ export async function proxy(req: NextRequest) {
   const isCreatorArea =
     pathname === "/creator" || pathname.startsWith("/creator/");
 
+  let supabaseResponse: NextResponse | null = null;
+  if (allowsSupabaseAuth(authMode)) {
+    const refreshed = await refreshSupabaseProxySession(req);
+    supabaseResponse = refreshed.response;
+    if (refreshed.user) {
+      const profile = await prisma.user.findUnique({
+        where: { supabaseAuthUserId: refreshed.user.id },
+        select: { role: true, status: true },
+      });
+      if (profile?.status === "INVITED") {
+        return copySupabaseResponseCookies(
+          refreshed.response,
+          NextResponse.redirect(new URL("/auth/register?supabase=1", req.url), {
+            status: 303,
+          }),
+        );
+      }
+      if (profile?.status === "ACTIVE") {
+        if (
+          isAdminArea &&
+          (profile.role === "ADMIN" || profile.role === "STAFF")
+        ) {
+          if (profile.role === "ADMIN" && isViewAsCreator) {
+            return copySupabaseResponseCookies(
+              refreshed.response,
+              NextResponse.redirect(new URL("/creator", req.url), {
+                status: 303,
+              }),
+            );
+          }
+          return refreshed.response;
+        }
+        if (
+          isCreatorArea &&
+          (profile.role === "CREATOR" ||
+            (profile.role === "ADMIN" && isViewAsCreator))
+        ) {
+          return refreshed.response;
+        }
+      }
+    }
+    if (!allowsLegacyAuth(authMode)) {
+      const target = isCreatorArea
+        ? (() => {
+            const to = new URL("/auth/login", req.url);
+            to.searchParams.set("next", pathname);
+            return to;
+          })()
+        : new URL("/admin/login", req.url);
+      return copySupabaseResponseCookies(
+        refreshed.response,
+        NextResponse.redirect(target, { status: 303 }),
+      );
+    }
+  }
+
   // 1) Validar sesión nueva (app_session: v2.payload.sig)
   const appToken = (req.cookies.get("app_session")?.value ?? "").trim();
-  if (AUTH_SECRET && appToken) {
+  if (allowsLegacyAuth(authMode) && AUTH_SECRET && appToken) {
     try {
       const [v, payloadB64, sigB64] = appToken.split(".");
       if (v === "v2" && payloadB64 && sigB64) {
@@ -104,13 +173,13 @@ export async function proxy(req: NextRequest) {
                   status: 303,
                 });
               }
-              return NextResponse.next();
+              return supabaseResponse ?? NextResponse.next();
             }
             if (
               isCreatorArea &&
               (p.role === "CREATOR" || (p.role === "ADMIN" && isViewAsCreator))
             ) {
-              return NextResponse.next();
+              return supabaseResponse ?? NextResponse.next();
             }
           }
         }
@@ -121,7 +190,7 @@ export async function proxy(req: NextRequest) {
   }
 
   // 2) Legacy temporal solo para /admin
-  if (isAdminArea && LEGACY_SECRET) {
+  if (allowsLegacyAuth(authMode) && isAdminArea && LEGACY_SECRET) {
     const token = (req.cookies.get("admin_session")?.value ?? "").trim();
     if (token) {
       try {
@@ -151,7 +220,7 @@ export async function proxy(req: NextRequest) {
                   );
                 }
               }
-              return NextResponse.next();
+              return supabaseResponse ?? NextResponse.next();
             }
           }
         }
@@ -162,10 +231,15 @@ export async function proxy(req: NextRequest) {
   }
 
   // 3) Legacy cookie admin_key solo para /admin y solo si está permitido
-  if (isAdminArea && ALLOW_LEGACY && EXPECTED_LEGACY) {
+  if (
+    allowsLegacyAuth(authMode) &&
+    isAdminArea &&
+    ALLOW_LEGACY &&
+    EXPECTED_LEGACY
+  ) {
     const legacy = (req.cookies.get("admin_key")?.value ?? "").trim();
     if (legacy === EXPECTED_LEGACY) {
-      return NextResponse.next();
+      return supabaseResponse ?? NextResponse.next();
     }
   }
 
@@ -173,10 +247,16 @@ export async function proxy(req: NextRequest) {
   if (isCreatorArea) {
     const to = new URL("/auth/login", req.url);
     to.searchParams.set("next", pathname);
-    return NextResponse.redirect(to, { status: 303 });
+    const redirect = NextResponse.redirect(to, { status: 303 });
+    return supabaseResponse
+      ? copySupabaseResponseCookies(supabaseResponse, redirect)
+      : redirect;
   }
 
-  return NextResponse.redirect(new URL("/admin/login", req.url), {
+  const redirect = NextResponse.redirect(new URL("/admin/login", req.url), {
     status: 303,
   });
+  return supabaseResponse
+    ? copySupabaseResponseCookies(supabaseResponse, redirect)
+    : redirect;
 }

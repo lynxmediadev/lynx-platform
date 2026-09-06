@@ -35,7 +35,7 @@ function sanitizeInviteInput(input: CreateInviteInput) {
 }
 
 export function normalizeBaseUrl(raw: string | undefined) {
-  const fallback = "http://localhost:3000";
+  const fallback = "http://localhost:3004";
   const value = (raw ?? "").trim();
   if (!value) return fallback;
   try {
