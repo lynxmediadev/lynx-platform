@@ -21,8 +21,8 @@ En Supabase Dashboard:
 2. Mantén la confirmación de email habilitada.
 3. Evita signup público irrestricto; LYNX usa invitaciones administradas.
 4. En **Authentication > URL Configuration**, configura:
-   - Site URL local: `http://localhost:3004`
-   - Redirect local: `http://localhost:3004/auth/callback`
+   - Site URL local: `http://localhost:3000`
+   - Redirect local: `http://localhost:3000/auth/callback`
    - Agrega después los callbacks exactos de staging/producción.
 5. Copia Project URL, publishable key y service-role key. La service-role nunca va al navegador.
 
@@ -43,7 +43,7 @@ hora al usar SMTP personalizado. No se requiere contratar un plan.
 ### 3. Completar `.env.local`
 
 ```dotenv
-APP_BASE_URL=http://localhost:3004
+APP_BASE_URL=http://localhost:3000
 AUTH_MODE=legacy
 NEXT_PUBLIC_SUPABASE_URL=https://PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...

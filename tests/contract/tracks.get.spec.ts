@@ -16,10 +16,10 @@ import { describe, it, expect } from "vitest";
 // Robust BASE to avoid inputs like "//api/..." when BASE_URL is unset or malformed.
 const BASE = (() => {
   const raw = process.env.BASE_URL?.trim();
-  if (!raw) return "http://localhost:3004";
+  if (!raw) return "http://localhost:3000";
   if (raw.startsWith("http")) return raw;
-  if (raw.startsWith("/")) return "http://localhost:3004";
-  if (raw.startsWith("//")) return "http://localhost:3004";
+  if (raw.startsWith("/")) return "http://localhost:3000";
+  if (raw.startsWith("//")) return "http://localhost:3000";
   return raw;
 })();
 const CONTRACT_COOKIE = process.env.CONTRACT_COOKIE?.trim() ?? "";
