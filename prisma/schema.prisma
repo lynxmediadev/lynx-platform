@@ -227,6 +227,7 @@ model Track {
   // Versiones y stems (relaciones)
   versions           TrackVersion[]
   stems              TrackStem[]
+  assets             TrackAsset[]
   tags               TrackTag[]
   moodLinks          TrackMood[]
   licenseAssignments TrackLicenseAssignment[]
@@ -240,6 +241,57 @@ model Track {
   @@index([ownerUserId, updatedAt, id])
   @@index([createdAt, id]) // ← nuevo
   @@index([updatedAt, id])
+}
+
+enum TrackAssetType {
+  MASTER
+  PREVIEW
+  STEM
+  ALTERNATE
+  DELIVERABLE
+}
+
+enum TrackAssetAccess {
+  PUBLIC
+  PRIVATE
+}
+
+enum TrackAssetStatus {
+  PENDING
+  UPLOADED
+  VERIFIED
+  FAILED
+  MISSING
+}
+
+enum TrackAssetBucket {
+  PREVIEWS
+  PRIVATE
+}
+
+model TrackAsset {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trackId String
+  track   Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  type            TrackAssetType
+  access          TrackAssetAccess
+  status          TrackAssetStatus @default(PENDING)
+  bucket          TrackAssetBucket
+  storageKey      String
+  mime            String?
+  sizeBytes       BigInt?
+  checksumSha256  String?
+  uploadedAt      DateTime?
+  verifiedAt      DateTime?
+  createdByUserId String?
+
+  @@unique([bucket, storageKey])
+  @@index([trackId, type, status, updatedAt])
+  @@index([createdByUserId, createdAt])
 }
 
 enum TrackType {

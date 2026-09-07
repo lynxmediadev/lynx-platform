@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import type { Track } from "@/lib/catalog/types";
 import type { Prisma } from "@prisma/client";
+import { resolvePublicTrackAudio } from "@/lib/storage/public-track-audio";
 
 type CatalogTrack = Track & {
   waveformB64?: string | null;
@@ -109,6 +110,13 @@ export async function fetchCatalogTracks({
       bpm: true,
       key: true,
       audioUrl: true,
+      assetKey: true,
+      assets: {
+        where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+        select: { storageKey: true, type: true, access: true, status: true },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+      },
       durationSec: true,
       waveform: includeWaveform,
     },
@@ -132,7 +140,7 @@ export async function fetchCatalogTracks({
     duration: formatDurationSec(t.durationSec),
     durationSec: t.durationSec ?? null,
     key: t.key ?? undefined,
-    audioUrl: t.audioUrl,
+    audioUrl: resolvePublicTrackAudio(t),
     waveformB64: includeWaveform ? bytesToBase64(t.waveform as any) : undefined,
   }));
 }

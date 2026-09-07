@@ -1,6 +1,6 @@
 import PublicAudioBar from "@/components/public/PublicAudioBar";
 import { formatBytes } from "@/lib/format";
-import { getS3PublicUrl } from "@/lib/storage/s3";
+import { resolvePublicTrackAudio } from "@/lib/storage/public-track-audio";
 import { getTrackAudioModule } from "@/server/track-edit/queries";
 
 type AudioAnalysisSectionProps = {
@@ -34,9 +34,7 @@ export default async function AudioAnalysisSection({
     );
   }
 
-  const publicSrc = trackAudio.assetKey
-    ? getS3PublicUrl(trackAudio.assetKey)
-    : (trackAudio.audioUrl ?? null);
+  const publicSrc = resolvePublicTrackAudio(trackAudio) || null;
 
   const waveformB64 = trackAudio.waveform
     ? bytesToBase64(trackAudio.waveform as any)
@@ -193,7 +191,7 @@ export default async function AudioAnalysisSection({
 
         <div className="pt-1 text-[11px]">
           <div className="text-[11px] font-black text-muted-foreground">Asset</div>
-          {trackAudio.assetKey || trackAudio.audioUrl ? (
+          {publicSrc ? (
             <div className="flex flex-col gap-1">
               <a
                 href={publicSrc ?? "#"}

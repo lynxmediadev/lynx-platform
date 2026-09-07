@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { getAudioCheckStatus } from "@/lib/audio/audio-check";
 import { canAccessTrackByRole, getRequestAuthUser } from "@/lib/account-auth/request-auth";
+import { resolvePublicTrackAudio } from "@/lib/storage/public-track-audio";
 
 export const dynamic = "force-dynamic";
 
@@ -30,21 +31,31 @@ export async function GET(
 
   const track = await db.track.findUnique({
     where: { id },
-    select: { audioUrl: true },
+    select: {
+      audioUrl: true,
+      assetKey: true,
+      assets: {
+        where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+        select: { storageKey: true, type: true, access: true, status: true },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+      },
+    },
   });
 
-  if (!track?.audioUrl) {
+  const audioUrl = track ? resolvePublicTrackAudio(track) : "";
+  if (!audioUrl) {
     return NextResponse.json({ ok: false, error: "Audio URL vacío" }, { status: 400 });
   }
 
-  const audioCheck = await getAudioCheckStatus(track.audioUrl, {
+  const audioCheck = await getAudioCheckStatus(audioUrl, {
     cacheKey: id,
   });
 
   if (audioCheck.status === "ok") {
     return NextResponse.json({
       ok: true,
-      audioUrl: track.audioUrl,
+      audioUrl,
       resolvedAudioUrl: audioCheck.resolvedAudioUrl,
     });
   }

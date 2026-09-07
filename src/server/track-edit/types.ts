@@ -62,6 +62,7 @@ export type TrackAudioModuleDTO = {
   truePeakDbfs: number | null;
   waveform: Buffer | Uint8Array | null;
   analysisAt: Date | null;
+  assets: Array<{ storageKey: string; type: string; access: string; status: string }>;
 };
 
 export type TrackAudioHeaderDTO = {

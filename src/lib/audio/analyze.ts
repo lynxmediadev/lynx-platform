@@ -202,14 +202,25 @@ export async function analyzeTrackById(id: string): Promise<{
   warnings: string[];
   debug?: any;
 }> {
-  const track = await db.track.findUnique({ where: { id } });
+  const track = await db.track.findUnique({
+    where: { id },
+    include: {
+      assets: {
+        where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+      },
+    },
+  });
   if (!track) throw new Error("Track not found");
-  if (!track.audioUrl) throw new Error("Track has no audioUrl"); // mantenemos audioUrl como fuente
+  const { resolvePublicTrackAudio } = await import("@/lib/storage/public-track-audio");
+  const sourceAudioUrl = resolvePublicTrackAudio(track);
+  if (!sourceAudioUrl) throw new Error("Track has no public preview");
 
   const warnings: string[] = [];
   const debug: any = {};
   let tmpFile: string | null = null;
-  const resolvedAudioUrl = resolveAudioUrl(track.audioUrl);
+  const resolvedAudioUrl = resolveAudioUrl(sourceAudioUrl);
 
   try {
     await preflightAudioUrl(resolvedAudioUrl);
@@ -337,7 +348,7 @@ export async function analyzeTrackById(id: string): Promise<{
     // Debug extra
     debug.ffprobePath = getFfprobePath();
     debug.ffmpegPath = getFfmpegPath();
-    debug.audioUrl = track.audioUrl;
+    debug.audioUrl = sourceAudioUrl;
     debug.resolvedAudioUrl = resolvedAudioUrl;
     debug.tmpFile = tmpFile;
     debug.lufsSource = lufsSource;

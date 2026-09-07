@@ -77,6 +77,12 @@ export const getTrackAudioModule = cache(async (id: string): Promise<TrackAudioM
       truePeakDbfs: true,
       waveform: true,
       analysisAt: true,
+      assets: {
+        where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+        select: { storageKey: true, type: true, access: true, status: true },
+        orderBy: { updatedAt: "desc" },
+        take: 1,
+      },
     },
   });
 });

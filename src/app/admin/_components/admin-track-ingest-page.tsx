@@ -35,6 +35,8 @@ type SignUploadResponse = {
   url: string;
   assetKey: string;
   publicUrl: string;
+  uploadToken: string;
+  headers: Record<string, string>;
   // Para compatibilidad futura dejamos fields opcional,
   // pero para R2 + PUT no lo usamos.
   fields?: Record<string, string>;
@@ -45,6 +47,7 @@ type UploadedAsset = {
   publicUrl: string;
   mime: string;
   size: number;
+  uploadToken: string;
 };
 
 export default function AdminTrackIngestPage(props: AdminTrackIngestPageProps) {
@@ -127,6 +130,7 @@ export default function AdminTrackIngestPage(props: AdminTrackIngestPageProps) {
           fileName: file.name,
           mime: file.type,
           size: file.size,
+          assetType: "PREVIEW",
         }),
       });
 
@@ -142,7 +146,7 @@ export default function AdminTrackIngestPage(props: AdminTrackIngestPageProps) {
 
       const signJson = (await signRes.json()) as SignUploadResponse;
 
-      if (!signJson.url || !signJson.assetKey || !signJson.publicUrl) {
+      if (!signJson.url || !signJson.assetKey || !signJson.publicUrl || !signJson.uploadToken) {
         console.error(
           "[AdminTrackIngest] respuesta de sign incompleta:",
           signJson,
@@ -160,9 +164,7 @@ export default function AdminTrackIngestPage(props: AdminTrackIngestPageProps) {
       //   - Ahora: PUT + body: file, con Content-Type alineado al mime usado en la firma.
       const uploadRes = await fetch(signJson.url, {
         method: "PUT",
-        headers: {
-          "Content-Type": file.type || "application/octet-stream",
-        },
+        headers: signJson.headers,
         body: file,
       });
 
@@ -184,6 +186,7 @@ export default function AdminTrackIngestPage(props: AdminTrackIngestPageProps) {
         publicUrl: signJson.publicUrl,
         mime: file.type || "audio/*",
         size: file.size ?? 0,
+        uploadToken: signJson.uploadToken,
       };
 
       setUploadedAsset(uploaded);
@@ -245,6 +248,7 @@ export default function AdminTrackIngestPage(props: AdminTrackIngestPageProps) {
           assetKey: uploadedAsset.assetKey,
           assetMime: uploadedAsset.mime,
           assetSize: uploadedAsset.size,
+          assetUploadToken: uploadedAsset.uploadToken,
         }),
       });
 
@@ -290,8 +294,8 @@ export default function AdminTrackIngestPage(props: AdminTrackIngestPageProps) {
             Archivo de audio
           </label>
           <p className="text-[11px] text-muted-foreground">
-            Selecciona el master (WAV/AIFF/MP3). El archivo se subirá a
-            Cloudflare R2 y quedará vinculado como asset del track.
+            Selecciona el preview público (MP3 recomendado). Los masters,
+            stems y entregables se guardan aparte como assets privados.
           </p>
           <input
             type="file"

@@ -32,6 +32,7 @@
     "auth:preflight": "node scripts/auth-email-preflight.mjs",
     "auth:provision-supabase": "tsx prisma/provision.supabase-auth.ts",
     "auth:set-supabase-password": "tsx prisma/set-supabase-password.ts",
+    "assets:migrate-r2": "tsx --env-file=.env.local prisma/migrate.track-assets.ts",
     "test": "vitest run -c vitest.config.ts",
     "test:contract": "vitest run -c vitest.contract.config.ts"
   },

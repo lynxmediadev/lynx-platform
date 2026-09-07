@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import type { Track } from "@/lib/catalog/types";
+import { resolvePublicTrackAudio } from "@/lib/storage/public-track-audio";
 
 type CatalogTrack = Track & {
   waveformB64?: string | null;
@@ -27,6 +28,8 @@ function mapTrackToCatalogTrack(track: {
   budgetCurrency: string | null;
   clearedForSync: boolean | null;
   audioUrl: string;
+  assetKey: string;
+  assets: Array<{ storageKey: string; type: string; access: string; status: string }>;
   coverUrl: string | null;
   durationSec: number | null;
   tags: Array<{ tag: { name: string; type: string } | null }>;
@@ -54,7 +57,7 @@ function mapTrackToCatalogTrack(track: {
     clearedForSync: track.clearedForSync,
     durationSec: track.durationSec ?? null,
     duration: formatDurationSec(track.durationSec),
-    audioUrl: track.audioUrl,
+    audioUrl: resolvePublicTrackAudio(track),
     coverUrl: track.coverUrl,
     // La grilla usa una forma de onda liviana de respaldo. La forma real se
     // reserva para la ficha individual para no serializar cientos de KB.
@@ -89,6 +92,13 @@ export async function fetchPlaylistCatalogTracks(params: {
         budgetCurrency: true,
         clearedForSync: true,
         audioUrl: true,
+        assetKey: true,
+        assets: {
+          where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+          select: { storageKey: true, type: true, access: true, status: true },
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+        },
         coverUrl: true,
         durationSec: true,
         tags: {
@@ -120,6 +130,13 @@ export async function fetchPlaylistCatalogTracks(params: {
           budgetCurrency: true,
           clearedForSync: true,
           audioUrl: true,
+          assetKey: true,
+          assets: {
+            where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+            select: { storageKey: true, type: true, access: true, status: true },
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+          },
           coverUrl: true,
           durationSec: true,
           tags: {

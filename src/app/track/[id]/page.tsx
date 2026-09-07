@@ -18,7 +18,7 @@ import type {
   LicenseTermRow,
   TrackLicenseViewModel,
 } from "@/lib/licenses/types";
-import { getS3PublicUrl, getUploadConfig } from "@/lib/storage/s3";
+import { resolvePublicTrackAudio } from "@/lib/storage/public-track-audio";
 import { db } from "@/server/db";
 
 type PageProps = {
@@ -32,6 +32,12 @@ const trackBaseSelect = {
   coverUrl: true,
   audioUrl: true,
   assetKey: true,
+  assets: {
+    where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+    select: { storageKey: true, type: true, access: true, status: true },
+    orderBy: { updatedAt: "desc" },
+    take: 1,
+  },
   durationSec: true,
   bpm: true,
   key: true,
@@ -145,30 +151,11 @@ function normalizeStrings(values?: string[] | null, limit = 8): string[] {
 }
 
 function publicAudioUrl(input: {
+  assets?: Array<{ storageKey: string; type: string; access: string; status: string }>;
   assetKey: string | null;
   audioUrl: string | null;
 }): string | null {
-  const directUrl = input.audioUrl?.trim() || null;
-  const rawAssetKey = input.assetKey?.trim() || null;
-
-  // Seeds/local fixtures can store a pseudo key like: external:///audio/demo.mp3
-  if (rawAssetKey?.startsWith("external:///")) {
-    return `/${rawAssetKey.replace(/^external:\/\/\//, "")}`;
-  }
-  if (rawAssetKey?.startsWith("external://")) {
-    const externalPath = rawAssetKey.replace(/^external:\/\//, "");
-    if (/^https?:\/\//i.test(externalPath)) return externalPath;
-    return externalPath.startsWith("/") ? externalPath : `/${externalPath}`;
-  }
-
-  if (rawAssetKey) {
-    const cfg = getUploadConfig();
-    if (cfg.publicBaseUrl) {
-      return getS3PublicUrl(rawAssetKey);
-    }
-  }
-
-  return directUrl;
+  return resolvePublicTrackAudio(input) || null;
 }
 
 function hashToPositiveInt(value: string): number {
@@ -465,6 +452,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
   const genres = normalizeStrings(track.genres ?? [], 6);
 
   const audioSrc = publicAudioUrl({
+    assets: track.assets,
     assetKey: track.assetKey,
     audioUrl: track.audioUrl,
   });
@@ -544,6 +532,12 @@ export default async function TrackPublicPage({ params }: PageProps) {
           coverUrl: true,
           audioUrl: true,
           assetKey: true,
+          assets: {
+            where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
+            select: { storageKey: true, type: true, access: true, status: true },
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+          },
           durationSec: true,
           bpm: true,
           key: true,
@@ -634,7 +628,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
       title: item.title,
       artist: item.artist || "Artista",
       audioUrl:
-        publicAudioUrl({ assetKey: item.assetKey, audioUrl: item.audioUrl }) ??
+        publicAudioUrl({ assets: item.assets, assetKey: item.assetKey, audioUrl: item.audioUrl }) ??
         "",
       coverUrl: resolveCover(item.coverUrl, item.id),
       durationSec: item.durationSec,

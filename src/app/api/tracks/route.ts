@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { TagType } from "@prisma/client";
+import { HeadObjectCommand } from "@aws-sdk/client-s3";
 import {
   APP_SESSION_COOKIE,
   getSessionUserFromCookie,
@@ -31,6 +32,9 @@ import { getRequestAuthUser } from "@/lib/account-auth/request-auth";
 import { slugify } from "@/lib/slugify";
 import { syncTrackTagsByType } from "@/server/tags/syncTrackTagsByType";
 import { db } from "@/server/db";
+import { isSafeStorageKey } from "@/lib/storage/asset-policy";
+import { getPublicPreviewUrl, getR2Client, getStorageConfig } from "@/lib/storage/s3";
+import { verifyUploadClaim } from "@/lib/storage/upload-claim";
 
 const TRACK_TYPE_VALUES = [
   "INSTRUMENTAL",
@@ -137,6 +141,7 @@ const incomingTrackSchema = z.object({
   assetKey: z.string().optional(),
   assetMime: z.string().optional(),
   assetSize: z.number().int().nonnegative().optional(),
+  assetUploadToken: z.string().min(1).optional(),
 
   // Rights / sync
   licenseType: licenseTypeSchema.optional(),
@@ -278,6 +283,7 @@ function normalizeIncoming(input: z.infer<typeof incomingTrackSchema>) {
     typeof input.assetSize === "number" && input.assetSize >= 0
       ? input.assetSize
       : 0;
+  const assetUploadToken = input.assetUploadToken ?? null;
 
   const bpm =
     typeof input.bpm === "number" && Number.isFinite(input.bpm)
@@ -328,6 +334,7 @@ function normalizeIncoming(input: z.infer<typeof incomingTrackSchema>) {
     assetKey,
     assetMime,
     assetSize,
+    assetUploadToken,
     bpm,
     key,
     trackType,
@@ -425,12 +432,40 @@ export async function POST(req: NextRequest) {
 
     const data = normalizeIncoming(parsed.data);
 
+    const uploadClaim = data.assetUploadToken
+      ? verifyUploadClaim(data.assetUploadToken)
+      : null;
+    if (data.assetUploadToken && !uploadClaim) {
+      return NextResponse.json({ ok: false, error: "Token de subida inválido o expirado" }, { status: 400 });
+    }
+    let verifiedChecksum: string | null = null;
+    if (uploadClaim) {
+      const sameActor = uploadClaim.actorId === authUser.id;
+      const validNewPreview = uploadClaim.trackId === null && uploadClaim.assetType === "PREVIEW" && uploadClaim.bucket === "PREVIEWS";
+      const matchesPayload = uploadClaim.key === data.assetKey && uploadClaim.mime === data.assetMime && uploadClaim.size === data.assetSize;
+      if (!sameActor || !validNewPreview || !matchesPayload || !isSafeStorageKey(uploadClaim.key)) {
+        return NextResponse.json({ ok: false, error: "La subida no corresponde a este usuario o payload" }, { status: 400 });
+      }
+      const cfg = getStorageConfig(uploadClaim.bucket);
+      try {
+        const head = await getR2Client().send(new HeadObjectCommand({ Bucket: cfg.bucket, Key: uploadClaim.key, ChecksumMode: "ENABLED" }));
+        if (Number(head.ContentLength ?? -1) !== uploadClaim.size || (head.ContentType ?? "").toLowerCase() !== uploadClaim.mime.toLowerCase()) {
+          return NextResponse.json({ ok: false, error: "El objeto subido no coincide con tamaño o MIME firmados" }, { status: 400 });
+        }
+        verifiedChecksum = head.ChecksumSHA256 ?? null;
+      } catch {
+        return NextResponse.json({ ok: false, error: "No se pudo verificar el objeto subido" }, { status: 400 });
+      }
+    }
+
     const created = await db.track.create({
       data: {
         ownerUserId,
         title: data.title,
         artist: data.artist,
-        audioUrl: data.audioUrl ?? "",
+        // Dual-write temporal: URL pública derivada (nunca firmada) para rollback.
+        // TrackAsset.storageKey sigue siendo la fuente de verdad.
+        audioUrl: uploadClaim ? getPublicPreviewUrl(uploadClaim.key) : data.audioUrl ?? "",
         coverUrl: data.coverUrl ?? "",
         durationSec: data.durationSec ?? undefined,
         restrictions: data.restrictions,
@@ -456,9 +491,27 @@ export async function POST(req: NextRequest) {
         budgetCurrency: data.budgetCurrency ?? undefined,
 
         // NUEVO: metadatos del asset en R2
-        assetKey: data.assetKey,
-        assetMime: data.assetMime,
-        assetSize: data.assetSize,
+        assetKey: uploadClaim ? "" : data.assetKey,
+        assetMime: uploadClaim ? "" : data.assetMime,
+        assetSize: uploadClaim ? 0 : data.assetSize,
+
+        assets: uploadClaim
+          ? {
+              create: {
+                type: uploadClaim.assetType,
+                access: "PUBLIC",
+                status: "VERIFIED",
+                bucket: uploadClaim.bucket,
+                storageKey: uploadClaim.key,
+                mime: uploadClaim.mime,
+                sizeBytes: BigInt(uploadClaim.size),
+                checksumSha256: verifiedChecksum,
+                uploadedAt: new Date(),
+                verifiedAt: new Date(),
+                createdByUserId: authUser.id,
+              },
+            }
+          : undefined,
 
         publishingShares: data.publishingShares.length
           ? { create: data.publishingShares }
