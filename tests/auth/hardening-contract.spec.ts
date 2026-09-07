@@ -50,6 +50,17 @@ describe("phase 1 hardening contract", () => {
     expect(source).toContain("already_linked");
   });
 
+  it("keeps the local password bootstrap interactive and scoped to a linked user", async () => {
+    const source = await readFile(
+      resolve(root, "prisma/set-supabase-password.ts"),
+      "utf8",
+    );
+    expect(source).toContain("process.stdin.setRawMode(true)");
+    expect(source).toContain("Active linked Prisma user not found");
+    expect(source).toContain("updateUserById");
+    expect(source).not.toContain("--password");
+  });
+
   it("exchanges the Supabase PKCE callback before resolving the Prisma profile", async () => {
     const source = await readFile(
       resolve(root, "src/app/auth/callback/route.ts"),

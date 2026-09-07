@@ -71,6 +71,16 @@ Supabase/Brevo enviará una invitación o recuperación para definir la password
 Si una cuenta ya está correctamente enlazada, una nueva ejecución solo informa
 `already_linked`: no crea otro usuario ni vuelve a enviar correo.
 
+Si un filtro de correo consume un enlace de un solo uso durante el bootstrap, un operador local
+puede definir la contraseña de una cuenta ya enlazada sin mostrarla en consola:
+
+```bash
+npm run auth:set-supabase-password -- --email usuario@dominio.cl
+```
+
+El comando exige una terminal interactiva, solicita la contraseña dos veces sin eco y nunca
+acepta una contraseña como argumento.
+
 ### 5. Transición y corte
 
 1. Cambia a `AUTH_MODE=hybrid` y reinicia `npm run dev -- --hostname 0.0.0.0`.
