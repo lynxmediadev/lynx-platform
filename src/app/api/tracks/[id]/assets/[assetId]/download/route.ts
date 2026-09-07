@@ -16,7 +16,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!decision.allowed) return NextResponse.json({ error: decision.error }, { status: decision.status });
   if (!track || !asset) return NextResponse.json({ error: "Asset no encontrado" }, { status: 404 });
   if (asset.status !== "VERIFIED" || !isSafeStorageKey(asset.storageKey)) return NextResponse.json({ error: "Asset no disponible" }, { status: 409 });
-  if (asset.access === "PUBLIC") return NextResponse.json({ url: `${getStorageConfig("PREVIEWS").publicBaseUrl}/${asset.storageKey}`, expiresIn: null }, { headers: { "Cache-Control": "no-store" } });
+  if (asset.access === "PUBLIC") {
+    if (asset.bucket !== "PREVIEWS") {
+      return NextResponse.json({ error: "Configuración pública inconsistente" }, { status: 409 });
+    }
+    const publicBaseUrl = getStorageConfig("PREVIEWS").publicBaseUrl;
+    if (!publicBaseUrl) {
+      return NextResponse.json({ error: "R2 público no configurado" }, { status: 501 });
+    }
+    return NextResponse.json(
+      { url: `${publicBaseUrl}/${asset.storageKey}`, expiresIn: null },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const cfg = getStorageConfig(asset.bucket);
   if (!cfg.ok) return NextResponse.json({ error: "R2 no configurado", missing: cfg.missing }, { status: 501 });
   const expiresIn = 60;

@@ -40,6 +40,8 @@
     "worker:audio": "tsx --env-file=.env.local workers/audio-worker.ts",
     "worker:audio:once": "tsx --env-file=.env.local workers/audio-worker.ts --once",
     "worker:audio:e2e": "tsx --env-file=.env.local scripts/audio-worker-e2e.ts",
+    "maintenance:r2": "tsx --env-file=.env.local scripts/reconcile-r2.ts",
+    "maintenance:audio-jobs": "tsx --env-file=.env.local scripts/reconcile-audio-jobs.ts",
     "test": "vitest run -c vitest.config.ts",
     "test:contract": "vitest run -c vitest.contract.config.ts"
   },

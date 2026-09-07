@@ -26,7 +26,7 @@ Nunca copies valores reales a este documento. `NEXT_PUBLIC_*` llega al navegador
 | `R2_PREVIEWS_BUCKET`, `R2_PRIVATE_BUCKET`, `R2_PUBLIC_PREVIEW_URL` | Web, worker | Servidor/config | R2 | Buckets lógico-público/privado y URL de previews. |
 | `ASSET_UPLOAD_SIGNING_SECRET` | Web | Secreta | Upload firmado | Firma claims de subida. |
 | `UPLOAD_MAX_PREVIEW_MB`, `UPLOAD_MAX_PRIVATE_MB`, `UPLOAD_ALLOWED_MIME` | Web | Servidor/config | Upload | Límites de ingest. |
-| `AUDIO_PROCESSING_MODE`, `AUDIO_WORKER_POLL_MS`, `FFMPEG_PATH`, `FFPROBE_PATH` | Worker; `MODE` también web | Servidor | Worker | Cola, polling y binarios. No entregar al contenedor web salvo `MODE` si se requiere. |
+| `AUDIO_WORKER_POLL_MS`, `FFMPEG_PATH`, `FFPROBE_PATH` | Worker | Servidor | Worker | Polling y binarios. No entregar al contenedor web. |
 | `S3_*` legacy | Web/scripts | Secreta/config | Solo dual-read rollback | Retirar en Fase 5, no usar para assets nuevos. |
 | `GOOGLE_SCRIPT_URL`, `GOOGLE_SCRIPT_TOKEN`, `LICENSING_*` | Web server | URL/secret | Integraciones opcionales | Webhooks/Google Apps Script. |
 | `CATALOG_USE_LEGACY`, `DB_OPTIONAL`, `DEBUG_*` | Web | Servidor | Solo desarrollo/diagnóstico | No activar en producción sin revisión. |
@@ -35,7 +35,7 @@ Nunca copies valores reales a este documento. `NEXT_PUBLIC_*` llega al navegador
 ## Distribución por proceso
 
 - **Web:** DB runtime, auth, Supabase pública/service-role cuando una ruta administrativa lo requiera, R2 para firma/lectura privada, upload limits, Turnstile, Brevo, URLs de aplicación e integraciones activas.
-- **Worker:** DB runtime, R2, `AUDIO_*`, FFmpeg/FFprobe. No necesita Turnstile, Brevo, claves de sesión, service-role ni secretos de upload.
+- **Worker:** DB runtime, R2, `AUDIO_WORKER_POLL_MS` y FFmpeg/FFprobe. No necesita Turnstile, Brevo, claves de sesión, service-role ni secretos de upload.
 - **Migración única:** `DIRECT_URL` más las variables que Prisma necesite. Nunca incluirla en logs.
 
 En un deploy futuro crea conjuntos de variables separados para web y worker. `.env.local` es solo una comodidad local y nunca debe subirse ni copiarse a una imagen.

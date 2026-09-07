@@ -6,12 +6,6 @@ import { nextRetryAt, sanitizeAudioJobError } from "./state";
 export const AUDIO_JOB_LEASE_MS = 10 * 60 * 1000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 
-export function audioProcessingMode(): "sync" | "queue" {
-  return process.env.AUDIO_PROCESSING_MODE?.trim().toLowerCase() === "sync"
-    ? "sync"
-    : "queue";
-}
-
 export function audioJobIdempotencyKey(trackId: string, assetId?: string | null) {
   return `process-asset:${assetId ?? trackId}`;
 }

@@ -24,4 +24,10 @@ describe("FASE 4: CSRF de producción", () => {
     mutableEnv.CSRF_SECRET = "test-csrf-secret-with-enough-length-123456";
     expect(verifyCsrfToken(issueCsrfToken())).toBe(true);
   });
+
+  it("rechaza secretos de producción menores a 32 caracteres", () => {
+    mutableEnv.NODE_ENV = "production";
+    mutableEnv.CSRF_SECRET = "short-production-secret";
+    expect(() => issueCsrfToken()).toThrow(/32 characters/);
+  });
 });

@@ -33,7 +33,7 @@ export const env = createEnv({
     R2_PRIVATE_BUCKET: z.string().optional(),
     R2_PUBLIC_PREVIEW_URL: z.string().url().optional(),
     ASSET_UPLOAD_SIGNING_SECRET: z.string().min(32).optional(),
-    CSRF_SECRET: z.string().min(16).optional(),
+    CSRF_SECRET: z.string().min(32).optional(),
     APP_BASE_URL: z.string().url().optional(),
     APP_URL: z.string().url().optional(),
     AUTH_MODE: z.enum(["legacy", "hybrid", "supabase"]).default("legacy"),

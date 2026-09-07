@@ -6,12 +6,20 @@ const root = process.cwd();
 const file = (name: string) => readFileSync(resolve(root, name), "utf8");
 
 describe("FASE 4: contratos de portabilidad", () => {
-  it("mantiene salida standalone y excluye binarios de audio del tracing web", () => {
+  it("mantiene salida standalone y no configura FFmpeg en la web", () => {
     const config = file("next.config.js");
     expect(config).toContain('output: "standalone"');
-    expect(config).toContain("outputFileTracingExcludes");
-    expect(config).toContain("ffmpeg-static");
-    expect(config).toContain("ffprobe-static");
+    expect(config).not.toContain("outputFileTracingExcludes");
+    expect(config).not.toContain("ffmpeg-static");
+    expect(config).not.toContain("ffprobe-static");
+  });
+
+  it("la ruta HTTP solo encola y no importa procesamiento pesado", () => {
+    const route = file("src/app/api/tracks/[id]/analyze/route.ts");
+    expect(route).toContain("enqueueAudioJob");
+    expect(route).toContain("status: 202");
+    expect(route).not.toContain("analyzeTrackById");
+    expect(route).not.toMatch(/from\s+["'][^"']*(?:audio\/analyze|audio\/lufs|audio\/paths)/i);
   });
 
   it("mantiene web y worker en contenedores distintos", () => {

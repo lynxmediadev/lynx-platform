@@ -11,7 +11,7 @@
 
 | Problema | Impacto | Solución | Fase/costo |
 |---|---|---|---|
-| La ruta legacy `AUDIO_PROCESSING_MODE=sync` conserva dependencias de FFmpeg para rollback. | No debe usarse en web productiva ni Edge. | Mantener `queue`; retirar sync y sus dependencias después de ventana estable. | Fase 5, gratis. |
+| ~~La ruta legacy `AUDIO_PROCESSING_MODE=sync` conservaba FFmpeg en web.~~ | Resuelto en Fase 5: la ruta HTTP solo encola y responde `202`. | Mantener worker separado. | Cerrado, USD 0. |
 | La web y worker locales comparten `.env.local`. | Un deploy futuro podría sobreentregar secretos. | Crear secretos/variables separados por proceso al desplegar. | Operación futura, gratis. |
 
 ## P2 — Recomendable
@@ -27,4 +27,10 @@
 | Problema | Impacto | Solución | Fase/costo |
 |---|---|---|---|
 | Métricas de hosting/worker aún son manuales. | No hay umbral observado todavía. | Registrar jobs/día, backlog, duración, RAM/CPU y uptime durante beta. | Fase 5 o posterior; PostgreSQL primero, gratis. |
-| El staging `pending/` conserva objetos previos a crear el track. | Puede requerir limpieza/reconciliación futura. | Inventario y limpieza segura solo después de política de retención. | Fase 5, gratis. |
+| El staging `pending/` conserva objetos previos a crear el track. | Puede acumular uploads abandonados. | `maintenance:r2` clasifica con TTL de 24 h, protege referencias/VERIFIED y parte en dry-run. | Implementado en Fase 5, USD 0. |
+
+## Bloqueos de cierre identificados en Fase 5
+
+- **Auth legacy:** `BLOCKED — requires stable window / manual approval`. Solo 1 de 38 perfiles está enlazado con Supabase Auth y aún existen sesiones/tokens legacy.
+- **Storage dual-read:** `BLOCKED — requires stable window / manual approval`. Diez tracks siguen sin `TrackAsset` y dependen de `audioUrl`/`assetKey` legacy.
+- **Docker real:** continúa pendiente de prueba porque Docker no está instalado; los Dockerfiles se conservan inspeccionados.

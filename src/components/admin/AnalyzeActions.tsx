@@ -265,9 +265,9 @@ export default function AnalyzeActions({
           disabled={busy || !canAnalyze}
           size={iconOnly ? "controlIcon" : "row"}
           className={iconOnly ? "" : "w-24"}
-          title={busy ? "Analizando" : !canAnalyze ? "Sin audio" : "Analizar"}
+          title={busy ? "Enviando" : !canAnalyze ? "Sin audio" : "Encolar análisis"}
           aria-label={
-            busy ? "Analizando" : !canAnalyze ? "Sin audio" : "Analizar"
+            busy ? "Enviando" : !canAnalyze ? "Sin audio" : "Encolar análisis"
           }
         >
           {iconOnly ? (
@@ -277,7 +277,7 @@ export default function AnalyzeActions({
               <Microscope className="h-4 w-4" aria-hidden="true" />
             )
           ) : busy ? (
-            "Analizando…"
+            "Enviando…"
           ) : !canAnalyze ? (
             "Sin audio"
           ) : (

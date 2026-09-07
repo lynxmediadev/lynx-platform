@@ -40,6 +40,15 @@ npm test
 
 Al subir un preview/master desde administración, la web valida el objeto R2 y crea un `AudioJob`. Para procesar uno puntualmente: `npm run worker:audio:once`. Comprueba su estado mediante el endpoint autorizado `GET /api/audio-jobs/ID_DEL_JOB` o en Prisma Studio.
 
+Audita mantenimiento sin cambiar datos ni objetos:
+
+```bash
+npm run maintenance:r2 -- --dry-run
+npm run maintenance:audio-jobs -- --dry-run
+```
+
+No uses `--apply` sin backup reciente, revisión del inventario y aprobación manual. `maintenance:r2` nunca considera borrables objetos legacy y protege todo asset enlazado o `VERIFIED`.
+
 ## Problemas frecuentes
 
 - **Puerto ocupado:** inspecciona el listener antes de cerrarlo: `ss -ltnp '( sport = :3000 )'`.
@@ -47,3 +56,4 @@ Al subir un preview/master desde administración, la web valida el objeto R2 y c
 - **Job pendiente:** inicia el worker y revisa `errorMessage` sanitizado; no hay procesamiento si el PC está apagado.
 - **Callback Auth incorrecto:** añade exactamente el origen y `/auth/callback` usados a Supabase Redirect URLs.
 - **Producción/HTTPS:** define `APP_BASE_URL`, `APP_URL` y `CSRF_SECRET`; no uses el fallback de desarrollo.
+- **Restore/backup:** usa el [runbook dedicado](backup-restore.md); no pruebes restores sobre la base activa.

@@ -5,26 +5,23 @@ import { useRouter } from "next/navigation";
 
 export default function Actions({ trackId }: { trackId: string }) {
   const router = useRouter();
-  const [busy, setBusy] = React.useState<null | string>(null);
+  const [busy, setBusy] = React.useState(false);
   const [notice, setNotice] = React.useState<string | null>(null);
-  const post = async (normalize = false) => {
+  const post = async () => {
     try {
-      setBusy(normalize ? "normalize" : "analyze");
-      const url = normalize
-        ? `/api/tracks/${trackId}/analyze?normalize=1`
-        : `/api/tracks/${trackId}/analyze`;
-      const r = await fetch(url, { method: "POST" });
+      setBusy(true);
+      const r = await fetch(`/api/tracks/${trackId}/analyze`, { method: "POST" });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
         throw new Error(j?.error || `HTTP ${r.status}`);
       }
       const body = await r.json();
-      setNotice(body?.queued ? "Procesamiento enviado a la cola local." : "Análisis completado.");
+      setNotice(body?.queued ? "Procesamiento enviado a la cola." : "Solicitud completada.");
       router.refresh();
     } catch (e) {
       alert(`Error: ${(e as Error).message}`);
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
@@ -32,27 +29,11 @@ export default function Actions({ trackId }: { trackId: string }) {
     <div className="flex flex-wrap items-center gap-2">
       <button
         className="rounded-md border px-3 py-2"
-        disabled={!!busy}
-        onClick={() => post(false)}
-        title="Analiza LUFS/TP/LRA y genera waveform"
+        disabled={busy}
+        onClick={post}
+        title="Encola análisis LUFS/TP/LRA, preview y waveform para el worker"
       >
-        {busy === "analyze" ? "Enviando..." : "Analizar"}
-      </button>
-      <button
-        className="rounded-md bg-black text-white px-3 py-2"
-        disabled={!!busy}
-        onClick={() => post(true)}
-        title="Normaliza a -16 LUFS aprox, sube a R2 y regenera waveform"
-      >
-        {busy === "normalize" ? "Enviando..." : "Analizar + Normalizar"}
-      </button>
-      <button
-        className="rounded-md border px-3 py-2"
-        disabled={!!busy}
-        onClick={() => post(false)}
-        title="Sólo regenerar waveform sin normalizar"
-      >
-        Regenerar waveform
+        {busy ? "Enviando..." : "Procesar audio"}
       </button>
       {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
     </div>

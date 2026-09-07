@@ -1,30 +1,9 @@
 // src/app/api/tracks/[id]/analyze/route.ts
-/**
- * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │ Route Handler: POST /api/tracks/[id]/analyze                               │
- * ├─────────────────────────────────────────────────────────────────────────────┤
- * │ Qué hace                                                                    │
- * │ - Recibe el ID de un track desde la ruta dinámica `[id]`.                  │
- * │ - Ejecuta analyzeTrackById(id), que:                                       │
- * │     • Descarga el audio (assetKey/audioUrl).                               │
- * │     • Corre ffprobe (duración, sample rate, canales, bitrate).             │
- * │     • Corre ebur128/loudnorm (LUFS, LRA, True Peak).                       │
- * │     • Genera waveform y actualiza la fila del track en Prisma.            │
- * │ - Devuelve un JSON con:                                                    │
- * │     { ok: true, updated, warnings, debug }.                                │
- * │ - Publica el payload en globalThis.__lynx_last_payload para debug admin.   │
- * ├─────────────────────────────────────────────────────────────────────────────┤
- * │ Nota técnica (Next 15):                                                    │
- * │ - En Next 15, `params` en route handlers se recibe como Promise, por lo    │
- * │   que debes hacer `const { id } = await params;` en vez de usar            │
- * │   `context.params.id` directamente.                                        │
- * └─────────────────────────────────────────────────────────────────────────────┘
- */
+/** Encola análisis de audio. FFmpeg/FFprobe se ejecutan solo en el worker. */
 
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeTrackById } from "@/lib/audio/analyze";
 import { canAccessTrackByRole, getRequestAuthUser } from "@/lib/account-auth/request-auth";
-import { audioProcessingMode, enqueueAudioJob } from "@/lib/audio-jobs/queue";
+import { enqueueAudioJob } from "@/lib/audio-jobs/queue";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -50,54 +29,40 @@ export async function POST(
 
   if (!id) {
     const payload = { ok: false, error: "Falta id en la ruta" };
-    (globalThis as any).__lynx_last_payload = payload;
     return NextResponse.json(payload, { status: 400 });
   }
 
   try {
-    if (audioProcessingMode() === "queue") {
-      const asset = await prisma.trackAsset.findFirst({
-        where: { trackId: id, status: "VERIFIED", type: { in: ["MASTER", "PREVIEW"] } },
-        orderBy: [{ type: "asc" }, { updatedAt: "desc" }],
-        select: { id: true },
-      });
-      if (!asset) {
-        return NextResponse.json({ ok: false, error: "El track no tiene un master o preview verificado" }, { status: 409 });
-      }
-      const queued = await enqueueAudioJob({ trackId: id, assetId: asset.id });
-      return NextResponse.json({
-        ok: true,
-        queued: true,
-        job: { id: queued.job.id, status: queued.job.status, created: queued.created, requeued: queued.requeued },
-      }, { status: 202 });
+    const asset = await prisma.trackAsset.findFirst({
+      where: { trackId: id, status: "VERIFIED", type: { in: ["MASTER", "PREVIEW"] } },
+      orderBy: [{ type: "asc" }, { updatedAt: "desc" }],
+      select: { id: true },
+    });
+    if (!asset) {
+      return NextResponse.json(
+        { ok: false, error: "El track no tiene un master o preview verificado" },
+        { status: 409 },
+      );
     }
-
-    const { updated, warnings, debug } = await analyzeTrackById(id);
-
-    const payload = {
+    const queued = await enqueueAudioJob({ trackId: id, assetId: asset.id });
+    return NextResponse.json({
       ok: true,
-      updated,
-      warnings,
-      debug,
-    };
-
-    (globalThis as any).__lynx_last_payload = payload;
-    return NextResponse.json(payload);
-  } catch (e: any) {
-    const payload: any = {
-      ok: false,
-      error: e?.message ?? "Analyze error",
-    };
-
-    if (e?.code) {
-      payload.code = e.code;
-    }
-
-    if (process.env.DEBUG_AUDIO) {
-      payload.extra = { stack: e?.stack };
-    }
-
-    (globalThis as any).__lynx_last_payload = payload;
-    return NextResponse.json(payload, { status: 500 });
+      queued: true,
+      job: {
+        id: queued.job.id,
+        status: queued.job.status,
+        created: queued.created,
+        requeued: queued.requeued,
+      },
+    }, { status: 202 });
+  } catch (error: unknown) {
+    console.error(
+      "[audio-jobs] enqueue failed",
+      error instanceof Error ? error.name : "unknown error",
+    );
+    return NextResponse.json(
+      { ok: false, error: "No se pudo encolar el procesamiento" },
+      { status: 500 },
+    );
   }
 }

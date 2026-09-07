@@ -10,10 +10,9 @@ upload / análisis -> AudioJob PENDING -> worker local -> R2 + Track/TrackAsset 
 
 No hay Redis, SaaS de colas, Cloudflare Workers, GitHub Actions, Vercel Workflow ni servicio remoto. El worker solo hace conexiones salientes hacia Supabase/PostgreSQL y R2; no expone ningún puerto.
 
-1. Mantén `AUDIO_PROCESSING_MODE=queue` en `.env.local`.
-2. Ejecuta un job disponible y termina: `npm run worker:audio:once`.
-3. Para trabajar continuamente: `npm run worker:audio`.
-4. Para detenerlo de forma segura usa `Ctrl+C`. Un job en curso conserva su lease; tras diez minutos otro worker lo recuperará, o quedará `FAILED` al agotar tres intentos.
+1. Ejecuta un job disponible y termina: `npm run worker:audio:once`.
+2. Para trabajar continuamente: `npm run worker:audio`.
+3. Para detenerlo de forma segura usa `Ctrl+C`. Un job en curso conserva su lease; tras diez minutos otro worker lo recuperará, o quedará `FAILED` al agotar tres intentos.
 
 Si el PC se apaga, los jobs nuevos permanecen `PENDING` en PostgreSQL. Al iniciar de nuevo el worker, continúa con ellos. No se pierde el master ni se abre acceso público al bucket privado.
 
@@ -53,7 +52,7 @@ El `Dockerfile.audio-worker` instala FFmpeg/FFprobe dentro de la imagen y no cop
 
 ## Estado y recuperación
 
-`GET /api/audio-jobs/:id` devuelve el estado a un usuario que tenga acceso al track. `POST /api/audio-jobs/:id/retry` reintenta un job no procesando. Mientras se completa la transición, `AUDIO_PROCESSING_MODE=sync` conserva el análisis legado; úsalo solo como rollback temporal.
+`GET /api/audio-jobs/:id` devuelve el estado a un usuario que tenga acceso al track. `POST /api/audio-jobs/:id/retry` reintenta un job no procesando. Desde Fase 5 no existe modo síncrono: toda petición HTTP encola y responde `202`.
 
 ## Cuándo evaluar mover el worker
 

@@ -13,7 +13,7 @@ Browser
 AudioJob -> worker Docker/local separado -> FFmpeg + R2
 ```
 
-El worker no se inicia desde la web, no abre puertos y no entra al `Dockerfile.web`. La excepción temporal es `AUDIO_PROCESSING_MODE=sync`: existe solo como rollback compatible durante la transición y es utilizable con `next dev` local, donde están los binarios de desarrollo. La imagen web standalone excluye esos binarios; en un deploy debe operar obligatoriamente con `queue`.
+El worker no se inicia desde la web, no abre puertos y no entra al `Dockerfile.web`. Desde Fase 5 la cola es la única arquitectura soportada; la web no importa procesamiento pesado ni necesita binarios FFmpeg/FFprobe.
 
 ## Runtime y responsabilidades
 
@@ -68,5 +68,5 @@ Cuando exista evidencia, compara Vercel Pro y un host Docker/Node. Cualquier rec
 ## Rollback
 
 - Web: volver al commit anterior o desactivar la imagen nueva; no hay migración en esta fase.
-- Audio: mantener `AUDIO_PROCESSING_MODE=queue`; `sync` sigue disponible solo como rollback temporal.
+- Audio: los jobs ya creados permanecen durables. Si el worker falla, se detiene y se repara; no existe rollback a procesamiento FFmpeg dentro de HTTP.
 - Datos y R2: no se modificaron por Fase 4.
