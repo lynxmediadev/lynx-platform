@@ -10,8 +10,6 @@ import {
   Megaphone,
   Music2,
   ScrollText,
-  Settings,
-  Shield,
   SlidersHorizontal,
   UserCircle2,
 } from "lucide-react";
@@ -132,20 +130,6 @@ export const adminDashboardSections: DashboardSection[] = [
         label: "Soporte",
         href: "/admin/tickets",
         icon: LifeBuoy,
-        section: "system",
-      },
-      {
-        id: "audit-log",
-        label: "Registro de actividad",
-        href: "/admin/audit-log",
-        icon: Shield,
-        section: "system",
-      },
-      {
-        id: "settings",
-        label: "Configuración",
-        href: "/admin/settings",
-        icon: Settings,
         section: "system",
       },
       {
