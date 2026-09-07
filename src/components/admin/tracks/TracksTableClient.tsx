@@ -15,6 +15,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatStableSantiagoDateTime } from "@/lib/stable-date-format";
 import AnalyzeActions from "@/components/admin/AnalyzeActions";
 import {
   allSelected as computeAllSelected,
@@ -793,14 +794,7 @@ function MetadataSummary({ row }: { row: TrackListRow }) {
 }
 
 function formatDateTime(iso: string) {
-  try {
-    return new Intl.DateTimeFormat("es-CL", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
+  return formatStableSantiagoDateTime(iso);
 }
 
 function formatText(value: string | null | undefined) {
