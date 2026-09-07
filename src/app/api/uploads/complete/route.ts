@@ -5,6 +5,7 @@ import { getRequestAuthUser } from "@/lib/account-auth/request-auth";
 import { accessForAssetType, canManageTrack, isSafeStorageKey } from "@/lib/storage/asset-policy";
 import { getR2Client, getStorageConfig } from "@/lib/storage/s3";
 import { verifyUploadClaim } from "@/lib/storage/upload-claim";
+import { enqueueAudioJob } from "@/lib/audio-jobs/queue";
 import { db } from "@/server/db";
 
 export const dynamic = "force-dynamic";
@@ -38,5 +39,14 @@ export async function POST(req: NextRequest) {
     create: { trackId: claim.trackId, type: claim.assetType, access: accessForAssetType(claim.assetType), status: "VERIFIED", bucket: claim.bucket, storageKey: claim.key, mime: claim.mime, sizeBytes: BigInt(claim.size), checksumSha256: head.ChecksumSHA256 ?? null, uploadedAt: head.LastModified ?? new Date(), verifiedAt: new Date(), createdByUserId: actor.id },
     select: { id: true, type: true, access: true, status: true },
   });
-  return NextResponse.json({ ok: true, asset });
+  // Stems and deliverables remain private assets but must not replace the catalog
+  // preview or mutate the parent Track's analysis.
+  const job = asset.type === "MASTER" || asset.type === "PREVIEW"
+    ? await enqueueAudioJob({ trackId: claim.trackId, assetId: asset.id })
+    : null;
+  return NextResponse.json({
+    ok: true,
+    asset,
+    job: job ? { id: job.job.id, status: job.job.status, created: job.created, requeued: job.requeued } : null,
+  }, { status: job ? 202 : 200 });
 }

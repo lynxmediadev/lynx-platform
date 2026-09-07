@@ -228,6 +228,7 @@ model Track {
   versions           TrackVersion[]
   stems              TrackStem[]
   assets             TrackAsset[]
+  audioJobs          AudioJob[]
   tags               TrackTag[]
   moodLinks          TrackMood[]
   licenseAssignments TrackLicenseAssignment[]
@@ -269,6 +270,17 @@ enum TrackAssetBucket {
   PRIVATE
 }
 
+enum AudioJobType {
+  PROCESS_ASSET
+}
+
+enum AudioJobStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
 model TrackAsset {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -288,10 +300,38 @@ model TrackAsset {
   uploadedAt      DateTime?
   verifiedAt      DateTime?
   createdByUserId String?
+  audioJobs       AudioJob[]
 
   @@unique([bucket, storageKey])
   @@index([trackId, type, status, updatedAt])
   @@index([createdByUserId, createdAt])
+}
+
+model AudioJob {
+  id             String         @id @default(cuid())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  trackId        String
+  assetId        String?
+  jobType        AudioJobType   @default(PROCESS_ASSET)
+  status         AudioJobStatus @default(PENDING)
+  attempts       Int            @default(0)
+  maxAttempts    Int            @default(3)
+  lockedAt       DateTime?
+  lockedBy       String?
+  availableAt    DateTime       @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  errorMessage   String?
+  idempotencyKey String         @unique
+
+  track Track       @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  asset TrackAsset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([status, availableAt, createdAt])
+  @@index([trackId, status, updatedAt])
+  @@index([assetId, status])
+  @@index([lockedAt])
 }
 
 enum TrackType {

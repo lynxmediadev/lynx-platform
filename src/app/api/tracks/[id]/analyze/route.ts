@@ -24,6 +24,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeTrackById } from "@/lib/audio/analyze";
 import { canAccessTrackByRole, getRequestAuthUser } from "@/lib/account-auth/request-auth";
+import { audioProcessingMode, enqueueAudioJob } from "@/lib/audio-jobs/queue";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +55,23 @@ export async function POST(
   }
 
   try {
+    if (audioProcessingMode() === "queue") {
+      const asset = await prisma.trackAsset.findFirst({
+        where: { trackId: id, status: "VERIFIED", type: { in: ["MASTER", "PREVIEW"] } },
+        orderBy: [{ type: "asc" }, { updatedAt: "desc" }],
+        select: { id: true },
+      });
+      if (!asset) {
+        return NextResponse.json({ ok: false, error: "El track no tiene un master o preview verificado" }, { status: 409 });
+      }
+      const queued = await enqueueAudioJob({ trackId: id, assetId: asset.id });
+      return NextResponse.json({
+        ok: true,
+        queued: true,
+        job: { id: queued.job.id, status: queued.job.status, created: queued.created, requeued: queued.requeued },
+      }, { status: 202 });
+    }
+
     const { updated, warnings, debug } = await analyzeTrackById(id);
 
     const payload = {

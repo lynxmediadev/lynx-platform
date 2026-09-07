@@ -8,6 +8,12 @@
  * └─────────────────────────────────────────────────────────────────────────────┘
  */
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
+
+// `require` is not defined when this module is loaded by the standalone TS worker.
+// Keep CommonJS loading for the static binary packages, but make it explicit and
+// compatible with both Next's server runtime and tsx/Node ESM.
+const moduleRequire = createRequire(import.meta.url);
 
 function stripQuotes(p?: string | null) {
   if (!p) return p ?? "";
@@ -54,7 +60,7 @@ function pick(candidates: Array<string | undefined>, fallbackCmd: string) {
 export function getFfprobePath() {
   let modulePath: string | undefined;
   try {
-    modulePath = require("ffprobe-static").path as string;
+    modulePath = moduleRequire("ffprobe-static").path as string;
   } catch {
     // Usa el binario del PATH como fallback.
   }
@@ -64,7 +70,7 @@ export function getFfprobePath() {
 export function getFfmpegPath() {
   let modulePath: string | undefined;
   try {
-    modulePath = require("ffmpeg-static") as unknown as string;
+    modulePath = moduleRequire("ffmpeg-static") as unknown as string;
   } catch {
     // Usa el binario del PATH como fallback.
   }

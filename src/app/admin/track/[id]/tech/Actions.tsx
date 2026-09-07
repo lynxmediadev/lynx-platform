@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 export default function Actions({ trackId }: { trackId: string }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState<null | string>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
   const post = async (normalize = false) => {
     try {
       setBusy(normalize ? "normalize" : "analyze");
@@ -17,7 +18,8 @@ export default function Actions({ trackId }: { trackId: string }) {
         const j = await r.json().catch(() => ({}));
         throw new Error(j?.error || `HTTP ${r.status}`);
       }
-      await r.json();
+      const body = await r.json();
+      setNotice(body?.queued ? "Procesamiento enviado a la cola local." : "Análisis completado.");
       router.refresh();
     } catch (e) {
       alert(`Error: ${(e as Error).message}`);
@@ -27,14 +29,14 @@ export default function Actions({ trackId }: { trackId: string }) {
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         className="rounded-md border px-3 py-2"
         disabled={!!busy}
         onClick={() => post(false)}
         title="Analiza LUFS/TP/LRA y genera waveform"
       >
-        {busy === "analyze" ? "Analizando..." : "Analizar"}
+        {busy === "analyze" ? "Enviando..." : "Analizar"}
       </button>
       <button
         className="rounded-md bg-black text-white px-3 py-2"
@@ -42,7 +44,7 @@ export default function Actions({ trackId }: { trackId: string }) {
         onClick={() => post(true)}
         title="Normaliza a -16 LUFS aprox, sube a R2 y regenera waveform"
       >
-        {busy === "normalize" ? "Normalizando..." : "Analizar + Normalizar"}
+        {busy === "normalize" ? "Enviando..." : "Analizar + Normalizar"}
       </button>
       <button
         className="rounded-md border px-3 py-2"
@@ -52,6 +54,7 @@ export default function Actions({ trackId }: { trackId: string }) {
       >
         Regenerar waveform
       </button>
+      {notice ? <p className="text-sm text-muted-foreground">{notice}</p> : null}
     </div>
   );
 }

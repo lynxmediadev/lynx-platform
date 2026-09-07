@@ -34,6 +34,7 @@ import { syncTrackTagsByType } from "@/server/tags/syncTrackTagsByType";
 import { db } from "@/server/db";
 import { isSafeStorageKey } from "@/lib/storage/asset-policy";
 import { getPublicPreviewUrl, getR2Client, getStorageConfig } from "@/lib/storage/s3";
+import { enqueueAudioJob } from "@/lib/audio-jobs/queue";
 import { verifyUploadClaim } from "@/lib/storage/upload-claim";
 
 const TRACK_TYPE_VALUES = [
@@ -519,6 +520,7 @@ export async function POST(req: NextRequest) {
         versions: data.versions.length ? { create: data.versions } : undefined,
         stems: data.stems.length ? { create: data.stems } : undefined,
       },
+      include: { assets: { select: { id: true } } },
     });
 
     if (data.moods.length) {
@@ -543,6 +545,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const previewAsset = created.assets[0];
+    const job = previewAsset
+      ? await enqueueAudioJob({ trackId: created.id, assetId: previewAsset.id })
+      : null;
+
     return NextResponse.json(
       {
         ok: true,
@@ -551,6 +558,7 @@ export async function POST(req: NextRequest) {
           title: created.title,
           artist: created.artist,
         },
+        job: job ? { id: job.job.id, status: job.job.status, created: job.created } : null,
       },
       { status: 201 },
     );
