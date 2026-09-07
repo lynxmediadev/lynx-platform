@@ -1,7 +1,14 @@
-export NEXTAUTH_URL=http://192.168.100.5:3000
-export AUTH_TRUST_HOST=true
-export NEXT_PUBLIC_SITE_URL=http://192.168.100.5:3000 
+# Histórico / deprecado
 
-npm run dev -- --hostname 0.0.0.0 --port 3000
+Este archivo contenía instrucciones de NextAuth y direcciones IP de ejemplo que
+ya no corresponden a LYNX Platform. La aplicación usa Supabase Auth y no debe
+configurarse con `NEXTAUTH_URL`, `AUTH_TRUST_HOST` ni `NEXT_PUBLIC_SITE_URL`.
 
-http://192.168.1.XX:3000/admin/
+Usa el [runbook local](operations/runbook-local.md). Para desarrollo en WSL:
+
+```bash
+npm run dev -- --hostname 0.0.0.0
+```
+
+Abre `http://localhost:3000` en el host. El acceso por Wi-Fi depende del bridge
+de red configurado en Windows/WSL y no debe documentarse con una IP fija.

@@ -17,6 +17,9 @@ const DEFAULT_TTL_MS = 2 * 60 * 60 * 1000; // 2h
 function getSecret() {
   const s = process.env.CSRF_SECRET;
   if (!s || s.length < 16) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("[csrf] CSRF_SECRET must be configured in production");
+    }
     console.warn("[csrf] CSRF_SECRET no definido o muy corto. Usa `openssl rand -base64 32`.");
     return "dev-insecure-secret-change-me";
   }

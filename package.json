@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.20.0 <23",
+    "npm": ">=10"
+  },
   "scripts": {
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings=0",

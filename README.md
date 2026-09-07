@@ -1,75 +1,70 @@
-# Clean Base
-Este repo incluye una rama `clean-base` que guarda la versión mínima del proyecto:
-- Sin dummy data de T3.
-- Con mocks listos para empezar a trabajar diseño o features.
-- Con `.gitignore` limpio y carpeta `/notes` excluida.
+# LYNX Platform
 
-Usar esta rama como referencia si se requiere volver a un estado inicial sólido.
+Catálogo musical de LYNX con Next.js, Supabase, Prisma y Cloudflare R2. La web y el procesamiento de audio son procesos separados para que el catálogo responda rápido y el costo inicial se mantenga en USD 0.
 
-## Archivo de split
-
-La documentación histórica de la separación Landing/Platform quedó archivada en:
-
-- `docs/archive/landing-split/`
-
-
-## WSL (Windows Subsystem for Linux)
-
-Recomendado: clona el repo dentro de WSL (por ejemplo en /home/tu-usuario) para mejor performance.
-
-### Requisitos
-- WSL2 con una distro Linux (Ubuntu recomendado).
-- Docker Desktop o Podman Desktop para levantar la base de datos local.
-
-### Setup basico
-```bash
-sudo apt update
-sudo apt install -y curl ca-certificates build-essential
-curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-source ~/.bashrc
-nvm install 20
-nvm use 20
-
-npm install
+```text
+Web Next.js -> Supabase Auth + PostgreSQL + R2
+AudioJob PostgreSQL -> worker local/Docker -> FFmpeg -> R2 previews
 ```
 
-### Base de datos y dev server
+## Estado actual
+
+- Desarrollo local/Wi-Fi en puerto `3000`.
+- Web portable con `output: "standalone"` y `Dockerfile.web`.
+- Worker de audio independiente en `Dockerfile.audio-worker`.
+- R2: previews públicos y masters/entregables privados.
+- No existe hosting, despliegue ni plan pagado activado.
+
+## Inicio local
+
 ```bash
-# si no existe, crea tu .env.local desde el ejemplo
+npm ci
 cp .env.example .env.local
-
-./start-database.sh
-npm run db:push
-npm run dev
+# Completa .env.local sin subirlo al repositorio.
+npx prisma generate
+npx prisma migrate status
+npm run dev -- --hostname 0.0.0.0
 ```
 
+Abre `http://localhost:3000` y comprueba la web con:
 
-# Create T3 App
+```bash
+curl http://localhost:3000/api/health
+```
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+En otra terminal, procesa la cola de audio:
 
-## What's next? How do I make an app with this?
+```bash
+npm run worker:audio
+```
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+Si el worker está detenido, los jobs no se pierden: quedan `PENDING` en Supabase/PostgreSQL hasta reiniciarlo.
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## Variables y seguridad
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+No publiques `.env.local`, credenciales R2, URL de base de datos, service role de Supabase, Brevo ni secretos de sesión. Solo las variables `NEXT_PUBLIC_*` están disponibles para el navegador y no deben contener secretos.
 
-## Learn More
+Consulta la [matriz de variables](docs/operations/environment-matrix.md) para saber qué recibe web, worker o migraciones. En producción debes configurar HTTPS, `APP_BASE_URL`, `APP_URL` y `CSRF_SECRET`.
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+## Operación y despliegue futuro
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+- [Runbook local](docs/operations/runbook-local.md)
+- [Fase 4: portabilidad web](docs/hardening/phase-4-portability.md)
+- [Worker de audio](docs/hardening/phase-3-audio-worker.md)
+- [Runbook de deploy futuro](docs/operations/runbook-future-deploy.md)
+- [Revisión y deuda técnica](docs/hardening/post-phase-4-review.md)
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+No despliegues el worker dentro del runtime de la web ni ejecutes migrations en el arranque del contenedor. El procedimiento de despliegue futuro separa web, migraciones y worker.
 
-## How do I deploy this?
+## Validación
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+```bash
+npm run check
+npm test
+npm run test:contract
+npm run build
+npx prisma validate
+npx prisma migrate status
+```
+
+Docker no está instalado en el equipo de desarrollo actual. Los Dockerfiles quedan listos para validarse cuando se autorice Docker, pero no se instaló ni se ejecutó ningún contenedor durante esta fase.

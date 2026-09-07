@@ -6,7 +6,8 @@
  *   construir URLs de fetch del lado servidor (RSC/SSR), donde NO sirve usar
  *   rutas relativas tipo "/api/...".
  * - En desarrollo usa http://localhost:3000 (o el puerto definido).
- * - En producción intenta usar variables conocidas (Vercel/Render) o NEXT_PUBLIC_APP_URL.
+ * - En producción prefiere la variable server-only APP_URL y usa los aliases
+ *   públicos/de proveedor únicamente como fallback.
  * Por qué:
  * - Evita el error "Failed to parse URL from /api/..." cuando se hace fetch en
  *   el servidor sin contexto de request.
@@ -16,8 +17,8 @@
 export function getBaseUrl() {
   // 1) Si el deploy define una URL pública explícita, úsala
   const explicit =
-    process.env.NEXT_PUBLIC_APP_URL ??
     process.env.APP_URL ??
+    process.env.NEXT_PUBLIC_APP_URL ??
     process.env.URL;
   if (explicit) {
     return explicit.replace(/\/+$/, ""); // sin slash final
