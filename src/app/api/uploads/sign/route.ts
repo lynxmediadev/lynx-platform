@@ -10,7 +10,7 @@ import { hasUploadClaimSecret, signUploadClaim } from "@/lib/storage/upload-clai
 import { db } from "@/server/db";
 
 export const dynamic = "force-dynamic";
-const payloadSchema = z.object({ fileName: z.string().trim().min(1).max(180), mime: z.string().min(3).max(120), size: z.number().int().positive(), assetType: z.enum(TRACK_ASSET_TYPES).default("PREVIEW"), trackId: z.string().trim().min(1).optional() });
+const payloadSchema = z.object({ fileName: z.string().trim().min(1).max(180), label: z.string().trim().max(120).optional(), mime: z.string().min(3).max(120), size: z.number().int().positive(), assetType: z.enum(TRACK_ASSET_TYPES).default("PREVIEW"), trackId: z.string().trim().min(1).optional() });
 
 function slug(name: string) {
   return name.toLowerCase().replace(/\.[a-z0-9]+$/i, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "audio";
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const scope = trackId ? `tracks/${trackId}` : `pending/${actor.id ?? "legacy-admin"}`;
   const key = `${scope}/${assetType.toLowerCase()}/${date}/${crypto.randomUUID()}-${slug(fileName)}.${extension(metadata.mime, fileName)}`;
   const expiresIn = 60;
-  const claim = { key, bucket: logicalBucket, assetType, mime: metadata.mime, size, actorId: actor.id, trackId: trackId ?? null, exp: Math.floor(Date.now() / 1000) + 10 * 60 };
+  const claim = { key, bucket: logicalBucket, assetType, mime: metadata.mime, size, originalFilename: fileName, label: parsed.data.label || undefined, actorId: actor.id, trackId: trackId ?? null, exp: Math.floor(Date.now() / 1000) + 10 * 60 };
   const url = await getSignedUrl(getR2Client(), new PutObjectCommand({ Bucket: cfg.bucket, Key: key, ContentType: metadata.mime, IfNoneMatch: "*" }), { expiresIn });
 
   return NextResponse.json({ url, method: "PUT", headers: { "Content-Type": metadata.mime, "If-None-Match": "*" }, assetKey: key, assetType, access: accessForAssetType(assetType), bucket: logicalBucket, publicUrl: logicalBucket === "PREVIEWS" ? getPublicPreviewUrl(key) : null, uploadToken: signUploadClaim(claim), expiresIn });

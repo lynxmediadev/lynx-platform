@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { TRACK_ASSET_TYPES } from "./asset-policy";
 
-const schema = z.object({ key: z.string().min(1), bucket: z.enum(["PREVIEWS", "PRIVATE"]), assetType: z.enum(TRACK_ASSET_TYPES), mime: z.string().min(1), size: z.number().int().positive(), actorId: z.string().nullable(), trackId: z.string().nullable(), exp: z.number().int().positive() });
+const schema = z.object({ key: z.string().min(1), bucket: z.enum(["PREVIEWS", "PRIVATE"]), assetType: z.enum(TRACK_ASSET_TYPES), mime: z.string().min(1), size: z.number().int().positive(), originalFilename: z.string().min(1).max(180).optional(), label: z.string().max(120).optional(), actorId: z.string().nullable(), trackId: z.string().nullable(), exp: z.number().int().positive() });
 export type UploadClaim = z.infer<typeof schema>;
 const secret = () => (process.env.ASSET_UPLOAD_SIGNING_SECRET ?? process.env.AUTH_SESSION_SECRET ?? process.env.ADMIN_SESSION_SECRET ?? "").trim();
 export const hasUploadClaimSecret = () => secret().length >= 32;

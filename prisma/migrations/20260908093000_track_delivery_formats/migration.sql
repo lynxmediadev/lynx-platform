@@ -1,0 +1,1 @@
+ALTER TABLE "Track" ADD COLUMN "deliveryFormats" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

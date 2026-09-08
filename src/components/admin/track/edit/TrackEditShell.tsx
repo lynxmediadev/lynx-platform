@@ -12,7 +12,7 @@ export type TrackEditModuleNavItem = {
 export function TrackEditShell({
   title,
   artist,
-  trackId,
+  trackId: _trackId,
   headerActions,
   modules,
   activeModuleId,
@@ -37,9 +37,7 @@ export function TrackEditShell({
               {artist ?? "(sin artista)"}
             </span>
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            ID: <span className="font-mono">{trackId}</span>
-          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Gestión editorial y comercial del track.</p>
         </div>
 
         {headerActions ? (

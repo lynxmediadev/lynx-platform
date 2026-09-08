@@ -20,6 +20,8 @@ import type {
 } from "@/lib/licenses/types";
 import { resolvePublicTrackAudio } from "@/lib/storage/public-track-audio";
 import { db } from "@/server/db";
+import { getAuthenticatedAppUser } from "@/lib/account-auth/principal";
+import AdminAssetDownloads from "@/components/track/AdminAssetDownloads";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -405,6 +407,8 @@ function sortLicensesByPriceAsc(
 
 export default async function TrackPublicPage({ params }: PageProps) {
   const { id } = await params;
+  const viewer = await getAuthenticatedAppUser();
+  const canTestDownloads = viewer?.role === "ADMIN" || viewer?.role === "STAFF";
 
   let track: TrackWithLicenses | null = null;
   try {
@@ -436,6 +440,14 @@ export default async function TrackPublicPage({ params }: PageProps) {
   }
 
   if (!track) notFound();
+
+  const testDownloadAssets = canTestDownloads
+    ? await db.trackAsset.findMany({
+        where: { trackId: track.id, status: "VERIFIED" },
+        orderBy: [{ type: "asc" }, { updatedAt: "desc" }],
+        select: { id: true, type: true, originalFilename: true, label: true },
+      })
+    : [];
 
   const trackTags = (track.tags ?? []).map((tt) => tt.tag).filter(Boolean);
   const moodTags = trackTags.filter((tag) => tag.type === "MOOD");
@@ -638,6 +650,7 @@ export default async function TrackPublicPage({ params }: PageProps) {
 
   return (
     <div className="bg-background text-foreground">
+      {canTestDownloads && <AdminAssetDownloads trackId={track.id} assets={testDownloadAssets} />}
       <div className="mx-auto w-[90vw] max-w-[1700px] pt-3 pb-20 sm:pt-4">
         <header className="border-border mb-3 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
           <Link

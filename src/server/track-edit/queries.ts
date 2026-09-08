@@ -18,6 +18,7 @@ export const getTrackEditCore = cache(async (id: string): Promise<TrackEditCoreD
       id: true,
       title: true,
       artist: true,
+      isDraft: true,
       isrc: true,
       iswc: true,
       upc: true,
@@ -292,6 +293,7 @@ export const getTrackMetadataPageData = cache(async (id: string) => {
       id: true,
       title: true,
       artist: true,
+      deliveryFormats: true,
       audioUrl: true,
       coverUrl: true,
       assetKey: true,
@@ -360,6 +362,11 @@ export const getTrackDeliverablesPageData = cache(async (id: string) => {
   });
 });
 
+export const getTrackAssetsPageData = cache(async (id: string) => prisma.track.findUnique({
+  where: { id },
+  select: { id: true, title: true, artist: true, isDraft: true, audioUrl: true, assets: { orderBy: [{ type: "asc" }, { isCurrent: "desc" }, { updatedAt: "desc" }], select: { id: true, type: true, access: true, status: true, isCurrent: true, originalFilename: true, label: true, mime: true, sizeBytes: true, createdAt: true, storageKey: true } } },
+}));
+
 export const getTrackOverviewPageData = cache(async (id: string) => {
   return prisma.track.findUnique({
     where: { id },
@@ -367,6 +374,7 @@ export const getTrackOverviewPageData = cache(async (id: string) => {
       id: true,
       title: true,
       artist: true,
+      isDraft: true,
       isrc: true,
       iswc: true,
       upc: true,

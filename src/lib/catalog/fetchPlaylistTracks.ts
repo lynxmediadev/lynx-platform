@@ -29,7 +29,7 @@ function mapTrackToCatalogTrack(track: {
   clearedForSync: boolean | null;
   audioUrl: string;
   assetKey: string;
-  assets: Array<{ storageKey: string; type: string; access: string; status: string }>;
+  assets: Array<{ storageKey: string; type: string; access: string; status: string; isCurrent: boolean }>;
   coverUrl: string | null;
   durationSec: number | null;
   tags: Array<{ tag: { name: string; type: string } | null }>;
@@ -75,7 +75,7 @@ export async function fetchPlaylistCatalogTracks(params: {
 
   if (params.isAutoAllTracks && params.ownerUserId) {
     const tracks = await prisma.track.findMany({
-      where: { ownerUserId: params.ownerUserId },
+      where: { ownerUserId: params.ownerUserId, isDraft: false },
       orderBy: { updatedAt: "desc" },
       take,
       select: {
@@ -95,8 +95,8 @@ export async function fetchPlaylistCatalogTracks(params: {
         assetKey: true,
         assets: {
           where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
-          select: { storageKey: true, type: true, access: true, status: true },
-          orderBy: { updatedAt: "desc" },
+          select: { storageKey: true, type: true, access: true, status: true, isCurrent: true },
+          orderBy: [{ isCurrent: "desc" }, { updatedAt: "desc" }],
           take: 1,
         },
         coverUrl: true,
@@ -111,7 +111,7 @@ export async function fetchPlaylistCatalogTracks(params: {
   }
 
   const trackLinks = await prisma.playlistTrack.findMany({
-    where: { playlistId: params.playlistId },
+    where: { playlistId: params.playlistId, track: { isDraft: false } },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     take,
     select: {
@@ -133,8 +133,8 @@ export async function fetchPlaylistCatalogTracks(params: {
           assetKey: true,
           assets: {
             where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
-            select: { storageKey: true, type: true, access: true, status: true },
-            orderBy: { updatedAt: "desc" },
+            select: { storageKey: true, type: true, access: true, status: true, isCurrent: true },
+            orderBy: [{ isCurrent: "desc" }, { updatedAt: "desc" }],
             take: 1,
           },
           coverUrl: true,

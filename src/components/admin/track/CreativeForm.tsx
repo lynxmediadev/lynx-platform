@@ -242,7 +242,7 @@ export default function CreativeForm({
 
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Metadata musical</h3>
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           <FormField
             htmlFor="bpm"
             error={clientErrors.bpm ?? serverErrors.bpm?.[0] ?? null}
@@ -290,7 +290,8 @@ export default function CreativeForm({
           error={clientErrors.trackType ?? serverErrors.trackType?.[0] ?? null}
           label="Tipo de track"
           descriptionPosition="above"
-          description="Clasificación principal del track."
+          description="Clasificación principal."
+          className="md:col-span-1"
         >
           <input type="hidden" name="trackType" value={trackTypeInputValue} />
           <Select value={trackTypeValue} onValueChange={setTrackTypeValue}>

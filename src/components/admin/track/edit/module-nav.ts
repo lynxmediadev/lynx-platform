@@ -1,13 +1,6 @@
 import type { TrackEditModuleNavItem } from "./TrackEditShell";
 
-export type TrackEditModuleId =
-  | "overview"
-  | "creative"
-  | "rights"
-  | "metadata"
-  | "deliverables"
-  | "review"
-  | "full";
+export type TrackEditModuleId = "creative" | "assets" | "rights" | "metadata" | "full";
 
 export function getTrackEditModuleNavItems(
   trackId: string,
@@ -19,36 +12,24 @@ export function getTrackEditModuleNavItems(
     allow.length > 0 && !disableAllExceptSet.has(id);
 
   const items: TrackEditModuleNavItem[] = [
-    { id: "overview", label: "Resumen", href: `/admin/tracks/${trackId}/edit` },
     {
       id: "creative",
-      label: "Creativo",
+      label: "Ficha",
       href: `/admin/tracks/${trackId}/edit/creative`,
       disabled: shouldDisable("creative"),
+    },
+    { id: "assets", label: "Archivos", href: `/admin/tracks/${trackId}/edit/assets`, disabled: shouldDisable("assets") },
+    {
+      id: "metadata",
+      label: "Comercial",
+      href: `/admin/tracks/${trackId}/edit/metadata`,
+      disabled: shouldDisable("metadata"),
     },
     {
       id: "rights",
       label: "Derechos",
       href: `/admin/tracks/${trackId}/edit/rights`,
       disabled: shouldDisable("rights"),
-    },
-    {
-      id: "metadata",
-      label: "Metadata",
-      href: `/admin/tracks/${trackId}/edit/metadata`,
-      disabled: shouldDisable("metadata"),
-    },
-    {
-      id: "deliverables",
-      label: "Entregables",
-      href: `/admin/tracks/${trackId}/edit/deliverables`,
-      disabled: shouldDisable("deliverables"),
-    },
-    {
-      id: "review",
-      label: "Revisión",
-      href: `/admin/tracks/${trackId}/edit/review`,
-      disabled: shouldDisable("review"),
     },
   ];
 

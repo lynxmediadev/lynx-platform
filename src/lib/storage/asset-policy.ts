@@ -4,6 +4,9 @@ export type AssetActor = { id: string | null; role: "ADMIN" | "STAFF" | "CREATOR
 
 export const bucketForAssetType = (type: TrackAssetTypeValue) => type === "PREVIEW" ? "PREVIEWS" as const : "PRIVATE" as const;
 export const accessForAssetType = (type: TrackAssetTypeValue) => type === "PREVIEW" ? "PUBLIC" as const : "PRIVATE" as const;
+/** Un preview reemplaza deliberadamente al anterior; un master nuevo queda en historial salvo el primero. */
+export const becomesCurrentOnUpload = (type: TrackAssetTypeValue, currentCount: number) => type === "PREVIEW" || (type === "MASTER" && currentCount === 0);
+export const shouldProcessAsset = (type: TrackAssetTypeValue, isCurrent: boolean) => isCurrent && (type === "PREVIEW" || type === "MASTER");
 export function isSafeStorageKey(key: string) {
   return Boolean(key && !key.startsWith("/") && !key.includes("\\") && !key.includes("..") && /^[a-z0-9][a-zA-Z0-9._/-]*$/.test(key));
 }

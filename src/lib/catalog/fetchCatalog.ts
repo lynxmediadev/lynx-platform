@@ -40,6 +40,7 @@ export async function fetchCatalogTracks({
   includeWaveform = false,
 }: CatalogFilters): Promise<CatalogTrack[]> {
   const whereAND: Prisma.TrackWhereInput[] = [];
+  whereAND.push({ isDraft: false });
 
   if (catalogSlug) {
     whereAND.push({
@@ -113,8 +114,8 @@ export async function fetchCatalogTracks({
       assetKey: true,
       assets: {
         where: { type: "PREVIEW", access: "PUBLIC", status: "VERIFIED" },
-        select: { storageKey: true, type: true, access: true, status: true },
-        orderBy: { updatedAt: "desc" },
+        select: { storageKey: true, type: true, access: true, status: true, isCurrent: true },
+        orderBy: [{ isCurrent: "desc" }, { updatedAt: "desc" }],
         take: 1,
       },
       durationSec: true,

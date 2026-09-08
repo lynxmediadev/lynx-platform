@@ -170,7 +170,7 @@ function ebuStatsAreSane(i: number | null, lra: number | null, peak: number | nu
 
 async function latestProcessableAsset(trackId: string) {
   return prisma.trackAsset.findFirst({
-    where: { trackId, status: "VERIFIED", type: { in: ["MASTER", "PREVIEW"] } },
+    where: { trackId, status: "VERIFIED", isCurrent: true, type: { in: ["MASTER", "PREVIEW"] } },
     orderBy: [{ type: "asc" }, { updatedAt: "desc" }],
   });
 }
@@ -182,7 +182,7 @@ async function processJob(job: Awaited<ReturnType<typeof claimNextAudioJob>>) {
     const track = await prisma.track.findUnique({ where: { id: job.trackId } });
     if (!track) throw new AudioWorkerError("DB_FAILURE", "Track no longer exists");
     const source = job.assetId
-      ? await prisma.trackAsset.findFirst({ where: { id: job.assetId, trackId: job.trackId, status: "VERIFIED" } })
+      ? await prisma.trackAsset.findFirst({ where: { id: job.assetId, trackId: job.trackId, status: "VERIFIED", isCurrent: true } })
       : await latestProcessableAsset(job.trackId);
     if (!source) throw new AudioWorkerError("SOURCE_MISSING", "No verified master or preview asset exists");
 
@@ -206,9 +206,13 @@ async function processJob(job: Awaited<ReturnType<typeof claimNextAudioJob>>) {
 
     let previewKey: string | null = source.type === "PREVIEW" ? source.storageKey : null;
     if (source.type === "MASTER") {
-      previewKey = `processed/${track.id}/previews/${source.id}.mp3`;
-      const exists = await objectExists(client, cfg.previewsBucket, previewKey);
-      if (!exists) {
+      const curatedPreview = await prisma.trackAsset.findFirst({ where: { trackId: track.id, type: "PREVIEW", access: "PUBLIC", status: "VERIFIED", isCurrent: true } });
+      if (curatedPreview) {
+        previewKey = curatedPreview.storageKey;
+      } else {
+        previewKey = `processed/${track.id}/previews/${source.id}.mp3`;
+        const exists = await objectExists(client, cfg.previewsBucket, previewKey);
+        if (!exists) {
         const previewFile = join(workDir, "preview.mp3");
         await transcodePreview(sourceFile, previewFile);
         try {
@@ -225,17 +229,19 @@ async function processJob(job: Awaited<ReturnType<typeof claimNextAudioJob>>) {
             throw new AudioWorkerError("R2_FAILURE", `Cannot upload preview (${error instanceof Error ? error.name : "unknown error"})`);
           }
         }
-      }
-      const previewHead = await client.send(new HeadObjectCommand({ Bucket: cfg.previewsBucket, Key: previewKey }));
-      await prisma.trackAsset.upsert({
+        }
+        const previewHead = await client.send(new HeadObjectCommand({ Bucket: cfg.previewsBucket, Key: previewKey }));
+        await prisma.trackAsset.upsert({
         where: { bucket_storageKey: { bucket: "PREVIEWS", storageKey: previewKey } },
         create: {
           trackId: track.id, type: "PREVIEW", access: "PUBLIC", status: "VERIFIED", bucket: "PREVIEWS",
           storageKey: previewKey, mime: "audio/mpeg", sizeBytes: BigInt(previewHead.ContentLength ?? 0),
-          checksumSha256: previewHead.ChecksumSHA256 ?? null, uploadedAt: previewHead.LastModified ?? new Date(), verifiedAt: new Date(),
+          checksumSha256: previewHead.ChecksumSHA256 ?? null, uploadedAt: previewHead.LastModified ?? new Date(), verifiedAt: new Date(), isCurrent: true,
         },
-        update: { status: "VERIFIED", mime: "audio/mpeg", sizeBytes: BigInt(previewHead.ContentLength ?? 0), checksumSha256: previewHead.ChecksumSHA256 ?? null, verifiedAt: new Date() },
-      });
+          update: { status: "VERIFIED", mime: "audio/mpeg", sizeBytes: BigInt(previewHead.ContentLength ?? 0), checksumSha256: previewHead.ChecksumSHA256 ?? null, verifiedAt: new Date(), isCurrent: true },
+        });
+        await prisma.track.update({ where: { id: track.id }, data: { isDraft: false } });
+      }
     }
 
     const selectedLoudness = fallback ?? loudness;

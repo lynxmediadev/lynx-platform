@@ -1,9 +1,10 @@
 import "server-only";
 import { getPublicPreviewUrl, getS3PublicUrl } from "@/lib/storage/s3";
 
-type PreviewAsset = { storageKey: string; status: string; access: string; type: string };
+type PreviewAsset = { storageKey: string; status: string; access: string; type: string; isCurrent?: boolean };
 export function resolvePublicTrackAudio(input: { assets?: PreviewAsset[] | null; assetKey?: string | null; audioUrl?: string | null }) {
-  const preview = input.assets?.find((asset) => asset.type === "PREVIEW" && asset.access === "PUBLIC" && asset.status === "VERIFIED");
+  const preview = input.assets?.find((asset) => asset.type === "PREVIEW" && asset.access === "PUBLIC" && asset.status === "VERIFIED" && asset.isCurrent)
+    ?? input.assets?.find((asset) => asset.type === "PREVIEW" && asset.access === "PUBLIC" && asset.status === "VERIFIED");
   if (preview) return getPublicPreviewUrl(preview.storageKey);
   const key = input.assetKey?.trim() || "";
   if (key.startsWith("external:///")) return `/${key.replace(/^external:\/\/\//, "")}`;

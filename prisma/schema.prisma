@@ -150,6 +150,10 @@ model Track {
   artist   String
   audioUrl String
   coverUrl String?
+  // Los borradores existen para permitir cargar masters antes del preview público.
+  isDraft Boolean @default(false)
+  // Formatos que se ofrecen comercialmente; independientes de los archivos privados.
+  deliveryFormats String[] @default([])
 
   // Metadata musical / creativa
   bpm       Float? // BPM promedio (permite decimales)
@@ -297,6 +301,10 @@ model TrackAsset {
   mime            String?
   sizeBytes       BigInt?
   checksumSha256  String?
+  originalFilename String?
+  label            String?
+  // Solo PREVIEW y MASTER usan este indicador como versión canónica.
+  isCurrent        Boolean  @default(false)
   uploadedAt      DateTime?
   verifiedAt      DateTime?
   createdByUserId String?

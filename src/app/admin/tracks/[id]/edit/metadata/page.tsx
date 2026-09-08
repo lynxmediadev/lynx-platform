@@ -12,6 +12,7 @@ import { TrackEditShell } from "@/components/admin/track/edit/TrackEditShell";
 import { getTrackEditModuleNavItems } from "@/components/admin/track/edit/module-nav";
 import { MetadataModuleForm } from "@/components/admin/track/edit/MetadataModuleForm";
 import { TrackLicenseAssignmentsForm } from "@/components/admin/track/edit/TrackLicenseAssignmentsForm";
+import { DeliveryFormatsForm } from "@/components/admin/track/edit/DeliveryFormatsForm";
 import { getTrackMetadataPageData } from "@/server/track-edit/queries";
 
 export default async function AdminTrackEditMetadataPage({
@@ -110,6 +111,8 @@ export default async function AdminTrackEditMetadataPage({
           budgetCurrency: metadataPageData.budgetCurrency,
         }}
       />
+
+      <DeliveryFormatsForm trackId={metadataPageData.id} initialFormats={metadataPageData.deliveryFormats} />
 
       <TrackLicenseAssignmentsForm
         trackId={metadataPageData.id}

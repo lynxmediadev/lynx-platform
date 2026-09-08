@@ -143,6 +143,7 @@ const incomingTrackSchema = z.object({
   assetMime: z.string().optional(),
   assetSize: z.number().int().nonnegative().optional(),
   assetUploadToken: z.string().min(1).optional(),
+  draft: z.boolean().optional(),
 
   // Rights / sync
   licenseType: licenseTypeSchema.optional(),
@@ -336,6 +337,7 @@ function normalizeIncoming(input: z.infer<typeof incomingTrackSchema>) {
     assetMime,
     assetSize,
     assetUploadToken,
+    draft: input.draft === true,
     bpm,
     key,
     trackType,
@@ -459,6 +461,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const isDraft = data.draft === true;
+    if (isDraft && uploadClaim) {
+      return NextResponse.json({ ok: false, error: "Un borrador no puede incluir preview" }, { status: 400 });
+    }
     const created = await db.track.create({
       data: {
         ownerUserId,
@@ -467,6 +473,7 @@ export async function POST(req: NextRequest) {
         // Dual-write temporal: URL pública derivada (nunca firmada) para rollback.
         // TrackAsset.storageKey sigue siendo la fuente de verdad.
         audioUrl: uploadClaim ? getPublicPreviewUrl(uploadClaim.key) : data.audioUrl ?? "",
+        isDraft,
         coverUrl: data.coverUrl ?? "",
         durationSec: data.durationSec ?? undefined,
         restrictions: data.restrictions,
@@ -510,6 +517,8 @@ export async function POST(req: NextRequest) {
                 uploadedAt: new Date(),
                 verifiedAt: new Date(),
                 createdByUserId: authUser.id,
+                originalFilename: uploadClaim.key.split("/").at(-1) ?? null,
+                isCurrent: true,
               },
             }
           : undefined,
