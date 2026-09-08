@@ -3,6 +3,10 @@
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { ViewAsControl } from "@/components/dashboard/ViewAsControl";
 import {
+  AdminAssetPlayerContent,
+  AdminAssetPlayerProvider,
+} from "@/components/admin/player/admin-asset-player-context";
+import {
   adminDashboardSections,
   getAdminDashboardSectionsForRole,
 } from "@/components/dashboard/nav-config.admin";
@@ -20,17 +24,21 @@ export function AdminDashboardLayoutClient({
   const sections = role ? getAdminDashboardSectionsForRole(role) : adminDashboardSections;
 
   return (
-    <DashboardShell
-      sections={sections}
-      brandTitle="Lynx Admin"
-      brandSubtitle="Sync · Catalogo · Tech"
-      hiddenPaths={["/admin/login"]}
-      topbarCustomActions={<ViewAsControl realRole={realRole} effectiveRole={role} />}
-      mobileFooterCustomActions={
-        <ViewAsControl realRole={realRole} effectiveRole={role} compact />
-      }
-    >
-      {children}
-    </DashboardShell>
+    <AdminAssetPlayerProvider>
+      <DashboardShell
+        sections={sections}
+        brandTitle="Lynx Admin"
+        brandSubtitle="Sync · Catalogo · Tech"
+        hiddenPaths={["/admin/login"]}
+        topbarCustomActions={
+          <ViewAsControl realRole={realRole} effectiveRole={role} />
+        }
+        mobileFooterCustomActions={
+          <ViewAsControl realRole={realRole} effectiveRole={role} compact />
+        }
+      >
+        <AdminAssetPlayerContent>{children}</AdminAssetPlayerContent>
+      </DashboardShell>
+    </AdminAssetPlayerProvider>
   );
 }

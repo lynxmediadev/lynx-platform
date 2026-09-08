@@ -22,6 +22,8 @@ export function CreativeModuleForm({
     id: string;
     title: string | null;
     artist: string | null;
+    isDraft: boolean;
+    coverUrl: string | null;
     bpm: number | null;
     key: string | null;
     trackType: string | null;
@@ -37,9 +39,9 @@ export function CreativeModuleForm({
 }) {
   const [pending, setPending] = React.useState(false);
   const [status, setStatus] = React.useState<UpdateCreativeResult | null>(null);
-  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>(
-    {},
-  );
+  const [fieldErrors, setFieldErrors] = React.useState<
+    Record<string, string[]>
+  >({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

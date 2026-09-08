@@ -11,8 +11,12 @@ Este roadmap describe evolución pendiente. El código y las migraciones vigente
 ## NEXT
 
 - Consolidar la clasificación en vocabularios controlados para Genre, Subgenre, Mood, Use, Category y tags genéricos. Condición: inventario de `Mood`, `TrackMood`, `Tag`, `Catalog`, `genres` y `subgenres`, con un mapeo reversible y filtros actuales cubiertos.
-- Integrar semánticamente `TrackStem` y `TrackVersion` con `TrackAsset`: los primeros describen el significado editorial; el segundo representa el archivo físico. Condición: cada relación debe poder vincularse de forma inequívoca, con historial y sin duplicar archivos.
-- Modernizar Licencias: definir asignaciones, formatos, pricing, territorios y restricciones como experiencia coherente. Condición: conservar los templates, asignaciones y datos comerciales existentes.
+- Integrar semánticamente `TrackStem` y `TrackVersion` con `TrackAsset`: los primeros describen el significado editorial; el segundo representa el archivo físico. Condición: cada relación debe poder vincularse de forma inequívoca, con historial y sin duplicar archivos. Hasta entonces, no inferir vínculos por nombre/label ni limpiar registros semánticos automáticamente; una referencia legacy exacta debe bloquear el hard-delete hasta desvincularse de forma explícita.
+- Profundizar el modelado de grupos de stems (Drums, Percussion, Bass, Harmony, Melody, Vocals, FX y Other). Condición: ampliar el vocabulario actual de `StemGroup` con migración aditiva y permitir asociar cada `TrackStem` creado desde un asset, sin perder grupos existentes.
+- Hacer que una `TrackVersion` enlace explícitamente a su asset, `kind`, duración y etiqueta editorial. Condición: migración aditiva, vínculo verificable y compatibilidad con versiones legacy sin archivo asociado.
+- Modernizar Licencias hacia propuestas explícitas Artist y Sync, con pocas opciones claras. Condición: clasificar plantillas sin inferirlas por nombre, conservar templates/asignaciones existentes y definir el alcance comercial de cada propuesta.
+- Relacionar formatos incluidos con assets verificables y deliverables reales. Condición: una licencia debe poder declarar exactamente qué tipos de asset habilita sin exponer archivos privados ni duplicar su metadata.
+- Generar/anexar análisis y waveform por `TrackAsset` cuando masters, stems o versiones requieran visualización individual. Condición: definir persistencia y generación en `AudioJob` sin duplicar el análisis técnico canónico del `Track`.
 
 ## LATER
 

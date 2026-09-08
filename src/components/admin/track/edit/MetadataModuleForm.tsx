@@ -38,9 +38,9 @@ export function MetadataModuleForm({
 }) {
   const [pending, setPending] = React.useState(false);
   const [status, setStatus] = React.useState<UpdateMetadataResult | null>(null);
-  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string[]>>(
-    {},
-  );
+  const [fieldErrors, setFieldErrors] = React.useState<
+    Record<string, string[]>
+  >({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,7 +81,7 @@ export function MetadataModuleForm({
           fieldErrors={fieldErrors}
         />
 
-        <div className="mt-2 border-t border-border/60 pt-2">
+        <div className="border-border/60 mt-2 border-t pt-2">
           <SyncMetaForm
             track={{
               licenseType: track.licenseType,
@@ -105,9 +105,9 @@ export function MetadataModuleForm({
 
       <ModuleSaveBar
         status={status}
-        hint="Guarda identificadores y metadata comercial del modulo."
+        hint="Guarda identificadores y reglas comerciales del track."
         pending={pending}
-        submitLabel="Guardar metadata"
+        submitLabel="Guardar licencias"
       />
     </form>
   );

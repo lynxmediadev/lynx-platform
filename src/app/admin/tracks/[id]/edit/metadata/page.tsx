@@ -90,6 +90,41 @@ export default async function AdminTrackEditMetadataPage({
         </>
       }
     >
+      <section className="border-border bg-card rounded-xl border p-4">
+        <div className="border-border border-b pb-3">
+          <p className="text-primary text-xs font-semibold tracking-[.14em] uppercase">
+            Oferta comercial
+          </p>
+          <h2 className="mt-1 text-lg font-semibold">Licencias</h2>
+          <p className="text-muted-foreground mt-1 max-w-3xl text-sm">
+            Archivos define qué existe; Licencias define qué se ofrece y bajo
+            qué condiciones. Esta pantalla no expone assets privados.
+          </p>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          <article className="border-border bg-background/40 rounded-lg border p-3">
+            <p className="text-muted-foreground text-xs font-semibold tracking-[.12em] uppercase">
+              Artist
+            </p>
+            <h3 className="mt-1 font-semibold">Artistas y canciones</h3>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Una propuesta principal, simple y justa. Se configurará con las
+              plantillas que correspondan a este track.
+            </p>
+          </article>
+          <article className="border-border bg-background/40 rounded-lg border p-3">
+            <p className="text-muted-foreground text-xs font-semibold tracking-[.12em] uppercase">
+              Sync
+            </p>
+            <h3 className="mt-1 font-semibold">Publicidad y audiovisual</h3>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Define alcance, territorios, exclusividad, restricciones y
+              presupuesto para briefs profesionales.
+            </p>
+          </article>
+        </div>
+      </section>
+
       <MetadataModuleForm
         track={{
           id: metadataPageData.id,
@@ -112,7 +147,10 @@ export default async function AdminTrackEditMetadataPage({
         }}
       />
 
-      <DeliveryFormatsForm trackId={metadataPageData.id} initialFormats={metadataPageData.deliveryFormats} />
+      <DeliveryFormatsForm
+        trackId={metadataPageData.id}
+        initialFormats={metadataPageData.deliveryFormats}
+      />
 
       <TrackLicenseAssignmentsForm
         trackId={metadataPageData.id}

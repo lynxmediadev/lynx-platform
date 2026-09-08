@@ -27,7 +27,7 @@ export function TrackEditShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-full flex-col gap-4">
+    <div className="mx-auto flex min-h-full w-full max-w-[1360px] flex-col gap-4">
       <header className="flex flex-col gap-3 border-b border-border pb-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Editar track</h1>

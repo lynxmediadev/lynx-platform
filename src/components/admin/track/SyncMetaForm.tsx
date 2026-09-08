@@ -70,16 +70,22 @@ export default function SyncMetaForm({
   fieldErrors,
 }: SyncMetaFormProps) {
   const serverErrors: FieldErrors = fieldErrors ?? {};
-  const [exclusiveTermMonthsValue, setExclusiveTermMonthsValue] = React.useState(
-    track.exclusiveTermMonths === null || track.exclusiveTermMonths === undefined
-      ? ""
-      : String(track.exclusiveTermMonths),
-  );
+  const [exclusiveTermMonthsValue, setExclusiveTermMonthsValue] =
+    React.useState(
+      track.exclusiveTermMonths === null ||
+        track.exclusiveTermMonths === undefined
+        ? ""
+        : String(track.exclusiveTermMonths),
+    );
   const [budgetMinValue, setBudgetMinValue] = React.useState(
-    track.budgetMin === null || track.budgetMin === undefined ? "" : String(track.budgetMin),
+    track.budgetMin === null || track.budgetMin === undefined
+      ? ""
+      : String(track.budgetMin),
   );
   const [budgetMaxValue, setBudgetMaxValue] = React.useState(
-    track.budgetMax === null || track.budgetMax === undefined ? "" : String(track.budgetMax),
+    track.budgetMax === null || track.budgetMax === undefined
+      ? ""
+      : String(track.budgetMax),
   );
   const [licenseTypeValue, setLicenseTypeValue] = React.useState(
     track.licenseType ? track.licenseType : NONE_VALUE,
@@ -98,204 +104,215 @@ export default function SyncMetaForm({
   const budgetCurrencyInputValue =
     budgetCurrencyValue === NONE_VALUE ? "" : budgetCurrencyValue;
 
-  const exclusiveTerritoriesDefault = (track.exclusiveTerritories ?? []).join("\n");
-  const restrictedTerritoriesDefault = (track.restrictedTerritories ?? []).join("\n");
-  const restrictedIndustriesDefault = (track.restrictedIndustries ?? []).join("\n");
-  const restrictedPlatformsDefault = (track.restrictedPlatforms ?? []).join("\n");
+  const exclusiveTerritoriesDefault = (track.exclusiveTerritories ?? []).join(
+    "\n",
+  );
+  const restrictedTerritoriesDefault = (track.restrictedTerritories ?? []).join(
+    "\n",
+  );
+  const restrictedIndustriesDefault = (track.restrictedIndustries ?? []).join(
+    "\n",
+  );
+  const restrictedPlatformsDefault = (track.restrictedPlatforms ?? []).join(
+    "\n",
+  );
   const restrictedBrandsDefault = (track.restrictedBrands ?? []).join("\n");
   const restrictionsDefault = (track.restrictions ?? []).join("\n");
 
   return (
     <div className="space-y-4">
-      <div className="border-b border-border pb-3">
-        <h2 className="text-base font-semibold text-foreground">
-          Metadata sync
+      <div className="border-border border-b pb-3">
+        <h2 className="text-foreground text-base font-semibold">
+          Reglas para Sync
         </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Licencia base, exclusividad, restricciones y pricing.
+        <p className="text-muted-foreground mt-1 text-xs">
+          Alcance, exclusividad, restricciones y referencia de presupuesto para
+          audiovisual.
         </p>
       </div>
 
       <div className="space-y-4">
-          <div className="space-y-3 rounded-lg border border-border bg-card/80 p-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              Exclusividad y restricciones
-            </h3>
+        <div className="border-border bg-card/80 space-y-3 rounded-lg border p-3">
+          <h3 className="text-foreground text-sm font-semibold">
+            Exclusividad y restricciones
+          </h3>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <FormField
-                htmlFor="licenseType"
-                error={firstError(serverErrors, "licenseType")}
-                label="Tipo de licencia"
-                descriptionPosition="above"
-                description="Define el tipo de licencia para este track."
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormField
+              htmlFor="licenseType"
+              error={firstError(serverErrors, "licenseType")}
+              label="Tipo de licencia"
+              descriptionPosition="above"
+              description="Define el tipo de licencia para este track."
+            >
+              <input
+                type="hidden"
+                name="licenseType"
+                value={licenseTypeInputValue}
+              />
+              <Select
+                value={licenseTypeValue}
+                onValueChange={setLicenseTypeValue}
               >
-                <input
-                  type="hidden"
-                  name="licenseType"
-                  value={licenseTypeInputValue}
-                />
-                <Select
-                  value={licenseTypeValue}
-                  onValueChange={setLicenseTypeValue}
-                >
                 <SelectTrigger id="licenseType" className="w-full text-xs">
                   <SelectValue />
                 </SelectTrigger>
-                  <SelectContent>
-                    {LICENSE_TYPES.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormField>
+                <SelectContent>
+                  {LICENSE_TYPES.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
 
-              <FormField
-                htmlFor="exclusiveTermMonths"
-                error={firstError(serverErrors, "exclusiveTermMonths")}
-                label="Plazo (meses)"
-                descriptionPosition="above"
-                description="Dejar vacío si no aplica."
-              >
-                <NumericSelectInput
-                  id="exclusiveTermMonths"
-                  name="exclusiveTermMonths"
-                  min={0}
-                  step={1}
-                  value={exclusiveTermMonthsValue}
-                  onChange={setExclusiveTermMonthsValue}
-                  className="w-full text-xs"
-                  placeholder="Ej: 12"
-                />
-              </FormField>
+            <FormField
+              htmlFor="exclusiveTermMonths"
+              error={firstError(serverErrors, "exclusiveTermMonths")}
+              label="Plazo (meses)"
+              descriptionPosition="above"
+              description="Dejar vacío si no aplica."
+            >
+              <NumericSelectInput
+                id="exclusiveTermMonths"
+                name="exclusiveTermMonths"
+                min={0}
+                step={1}
+                value={exclusiveTermMonthsValue}
+                onChange={setExclusiveTermMonthsValue}
+                className="w-full text-xs"
+                placeholder="Ej: 12"
+              />
+            </FormField>
 
-              <FormField
-                htmlFor="mediaBuy"
-                error={firstError(serverErrors, "mediaBuy")}
-                label="Media buy / Paid media"
-                descriptionPosition="above"
-                description="Ej: Digital only, TV + Digital."
-              >
-                <Input
-                  id="mediaBuy"
-                  name="mediaBuy"
-                  type="text"
-                  defaultValue={track.mediaBuy ?? ""}
-                  className="w-full text-xs"
-                  placeholder="Ej: Digital only"
-                />
-              </FormField>
+            <FormField
+              htmlFor="mediaBuy"
+              error={firstError(serverErrors, "mediaBuy")}
+              label="Media buy / Paid media"
+              descriptionPosition="above"
+              description="Ej: Digital only, TV + Digital."
+            >
+              <Input
+                id="mediaBuy"
+                name="mediaBuy"
+                type="text"
+                defaultValue={track.mediaBuy ?? ""}
+                className="w-full text-xs"
+                placeholder="Ej: Digital only"
+              />
+            </FormField>
 
-              <FormField
-                htmlFor="exclusiveTerritories"
-                error={firstError(serverErrors, "exclusiveTerritories")}
-                label="Territorios permitidos"
-                descriptionPosition="above"
-                description="Uno por línea (códigos país o región)."
-              >
-                <Textarea
-                  id="exclusiveTerritories"
-                  name="exclusiveTerritories"
-                  defaultValue={exclusiveTerritoriesDefault}
-                  rows={3}
-                  className="w-full resize-y text-xs"
-                  placeholder="Ej: CL, US, LATAM"
-                />
-              </FormField>
+            <FormField
+              htmlFor="exclusiveTerritories"
+              error={firstError(serverErrors, "exclusiveTerritories")}
+              label="Territorios permitidos"
+              descriptionPosition="above"
+              description="Uno por línea (códigos país o región)."
+            >
+              <Textarea
+                id="exclusiveTerritories"
+                name="exclusiveTerritories"
+                defaultValue={exclusiveTerritoriesDefault}
+                rows={3}
+                className="w-full resize-y text-xs"
+                placeholder="Ej: CL, US, LATAM"
+              />
+            </FormField>
 
-              <FormField
-                htmlFor="restrictedTerritories"
-                error={firstError(serverErrors, "restrictedTerritories")}
-                label="Territorios restringidos"
-                descriptionPosition="above"
-                description="Uno por línea."
-              >
-                <Textarea
-                  id="restrictedTerritories"
-                  name="restrictedTerritories"
-                  defaultValue={restrictedTerritoriesDefault}
-                  rows={3}
-                  className="w-full resize-y text-xs"
-                  placeholder="Ej: RU, CN"
-                />
-              </FormField>
+            <FormField
+              htmlFor="restrictedTerritories"
+              error={firstError(serverErrors, "restrictedTerritories")}
+              label="Territorios restringidos"
+              descriptionPosition="above"
+              description="Uno por línea."
+            >
+              <Textarea
+                id="restrictedTerritories"
+                name="restrictedTerritories"
+                defaultValue={restrictedTerritoriesDefault}
+                rows={3}
+                className="w-full resize-y text-xs"
+                placeholder="Ej: RU, CN"
+              />
+            </FormField>
 
-              <FormField
-                htmlFor="restrictedIndustries"
-                error={firstError(serverErrors, "restrictedIndustries")}
-                label="Industrias restringidas"
-                descriptionPosition="above"
-                description="Una por línea."
-              >
-                <Textarea
-                  id="restrictedIndustries"
-                  name="restrictedIndustries"
-                  defaultValue={restrictedIndustriesDefault}
-                  rows={3}
-                  className="w-full resize-y text-xs"
-                  placeholder="Ej: Gambling, Tobacco"
-                />
-              </FormField>
+            <FormField
+              htmlFor="restrictedIndustries"
+              error={firstError(serverErrors, "restrictedIndustries")}
+              label="Industrias restringidas"
+              descriptionPosition="above"
+              description="Una por línea."
+            >
+              <Textarea
+                id="restrictedIndustries"
+                name="restrictedIndustries"
+                defaultValue={restrictedIndustriesDefault}
+                rows={3}
+                className="w-full resize-y text-xs"
+                placeholder="Ej: Gambling, Tobacco"
+              />
+            </FormField>
 
-              <FormField
-                htmlFor="restrictedPlatforms"
-                error={firstError(serverErrors, "restrictedPlatforms")}
-                label="Plataformas restringidas"
-                descriptionPosition="above"
-                description="Una por línea."
-              >
-                <Textarea
-                  id="restrictedPlatforms"
-                  name="restrictedPlatforms"
-                  defaultValue={restrictedPlatformsDefault}
-                  rows={3}
-                  className="w-full resize-y text-xs"
-                  placeholder="Ej: TV abierta, TikTok"
-                />
-              </FormField>
+            <FormField
+              htmlFor="restrictedPlatforms"
+              error={firstError(serverErrors, "restrictedPlatforms")}
+              label="Plataformas restringidas"
+              descriptionPosition="above"
+              description="Una por línea."
+            >
+              <Textarea
+                id="restrictedPlatforms"
+                name="restrictedPlatforms"
+                defaultValue={restrictedPlatformsDefault}
+                rows={3}
+                className="w-full resize-y text-xs"
+                placeholder="Ej: TV abierta, TikTok"
+              />
+            </FormField>
 
-              <FormField
-                htmlFor="restrictedBrands"
-                error={firstError(serverErrors, "restrictedBrands")}
-                label="Marcas restringidas"
-                descriptionPosition="above"
-                description="Una por línea."
-              >
-                <Textarea
-                  id="restrictedBrands"
-                  name="restrictedBrands"
-                  defaultValue={restrictedBrandsDefault}
-                  rows={3}
-                  className="w-full resize-y text-xs"
-                  placeholder="Ej: Marca A, Marca B"
-                />
-              </FormField>
+            <FormField
+              htmlFor="restrictedBrands"
+              error={firstError(serverErrors, "restrictedBrands")}
+              label="Marcas restringidas"
+              descriptionPosition="above"
+              description="Una por línea."
+            >
+              <Textarea
+                id="restrictedBrands"
+                name="restrictedBrands"
+                defaultValue={restrictedBrandsDefault}
+                rows={3}
+                className="w-full resize-y text-xs"
+                placeholder="Ej: Marca A, Marca B"
+              />
+            </FormField>
 
-              <FormField
-                htmlFor="restrictions"
-                error={firstError(serverErrors, "restrictions")}
-                label="Restricciones adicionales"
-                descriptionPosition="above"
-                description="Texto libre, una restriccion por linea."
-                className="md:col-span-2"
-              >
-                <Textarea
-                  id="restrictions"
-                  name="restrictions"
-                  defaultValue={restrictionsDefault}
-                  rows={4}
-                  className="w-full resize-y text-xs"
-                  placeholder="Ej: No usos politicos partidistas."
-                />
-              </FormField>
-            </div>
+            <FormField
+              htmlFor="restrictions"
+              error={firstError(serverErrors, "restrictions")}
+              label="Restricciones adicionales"
+              descriptionPosition="above"
+              description="Texto libre, una restriccion por linea."
+              className="md:col-span-2"
+            >
+              <Textarea
+                id="restrictions"
+                name="restrictions"
+                defaultValue={restrictionsDefault}
+                rows={4}
+                className="w-full resize-y text-xs"
+                placeholder="Ej: No usos politicos partidistas."
+              />
+            </FormField>
           </div>
         </div>
+      </div>
 
-      <div className="rounded-lg border border-border bg-card/80 p-3">
-        <h3 className="text-sm font-semibold text-foreground">Pricing</h3>
+      <div className="border-border bg-card/80 rounded-lg border p-3">
+        <h3 className="text-foreground text-sm font-semibold">
+          Referencia comercial Sync
+        </h3>
         <div className="mt-2 grid gap-3 md:grid-cols-4">
           <FormField
             htmlFor="pricingTier"
@@ -311,9 +328,9 @@ export default function SyncMetaForm({
               value={pricingTierValue}
               onValueChange={setPricingTierValue}
             >
-            <SelectTrigger id="pricingTier" className="w-full text-xs">
-              <SelectValue />
-            </SelectTrigger>
+              <SelectTrigger id="pricingTier" className="w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {PRICING_TIERS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
@@ -372,9 +389,9 @@ export default function SyncMetaForm({
               value={budgetCurrencyValue}
               onValueChange={setBudgetCurrencyValue}
             >
-            <SelectTrigger id="budgetCurrency" className="w-full text-xs">
-              <SelectValue />
-            </SelectTrigger>
+              <SelectTrigger id="budgetCurrency" className="w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {CURRENCIES.map((option) => (
                   <SelectItem key={option.value} value={option.value}>

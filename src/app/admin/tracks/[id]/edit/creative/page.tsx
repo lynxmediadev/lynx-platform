@@ -73,6 +73,8 @@ export default async function AdminTrackEditCreativePage({
           id: trackCreative.id,
           title: trackCreative.title,
           artist: trackCreative.artist,
+          isDraft: trackCreative.isDraft,
+          coverUrl: trackCreative.coverUrl,
           bpm: trackCreative.bpm,
           key: trackCreative.key,
           trackType: trackCreative.trackType,

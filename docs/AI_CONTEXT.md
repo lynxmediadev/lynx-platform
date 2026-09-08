@@ -73,6 +73,8 @@ LYNX/ODR Records es un catálogo musical para sync licensing: permite explorar y
 - Un track mantiene un master vigente y su historial. El primer master queda vigente; los posteriores se conservan hasta usar “Marcar vigente”.
 - Un preview nuevo reemplaza deliberadamente al preview vigente; un master nunca pisa un preview curado. Si no hay preview, el worker puede generar uno técnico desde el master vigente.
 - Al subir un stem físico, se crea el registro comercial `TrackStem` solo si no existe otro con el mismo nombre; no sobrescribe su metadata manual.
+- El editor permite hard-delete de assets históricos: el servidor resuelve bucket/key desde `TrackAsset`, elimina primero el objeto R2 y luego el registro, y marca `MISSING` si PostgreSQL falla después. Preview/master vigentes y referencias legacy exactas quedan bloqueados. `TrackStem`/`TrackVersion` no se eliminan por coincidencias de nombre porque todavía no tienen una relación formal con `TrackAsset`.
+- El Admin usa un reproductor persistente e independiente del player público. Reproduce un único asset mediante URL firmada corta obtenida por la ruta de descarga existente; no persiste URLs privadas. Incluye seek y volumen, pero usa barra de progreso porque la waveform actual es canónica del `Track`, no individual de cada asset.
 - Migración aplicada: `20260907110000_track_asset_editor` agrega `Track.isDraft` y a `TrackAsset` nombre original, etiqueta e indicador `isCurrent`.
 
 ### Editor de un track
