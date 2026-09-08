@@ -110,12 +110,12 @@ export default async function Page(props: {
               aria-hidden="true"
             />
           }
-          title="Playlists"
+          title="Colecciones"
           subtitle="Gestión editorial y orden de catálogo"
           count={
             <AdminStatusBadge>
-              Página {page} de {totalPages} · {total} playlist
-              {total === 1 ? "" : "s"}
+              Página {page} de {totalPages} · {total} colección
+              {total === 1 ? "" : "es"}
             </AdminStatusBadge>
           }
           actionSlot={

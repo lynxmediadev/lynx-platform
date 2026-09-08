@@ -420,7 +420,17 @@ export function UsersTableClient({
             </AdminStatusBadge>
           ) : null
         }
-        actionSlot={<UsersInviteDialog returnTo={returnTo} />}
+        actionSlot={
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/users/roles"
+              className="text-muted-foreground text-xs underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Matriz de roles
+            </Link>
+            <UsersInviteDialog returnTo={returnTo} />
+          </div>
+        }
       />
 
       <div className="px-3 pb-2 sm:px-4">

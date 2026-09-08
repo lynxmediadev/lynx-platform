@@ -4,15 +4,14 @@ import { Button } from "@/components/ui/button";
 
 const QUICK_LINKS = [
   {
-    title: "1. Subir audio",
-    description: "Carga el archivo original y crea una pista en el catálogo.",
+    title: "1. Nuevo track",
+    description: "Crea un track con el preview público que escuchará el catálogo.",
     href: "/admin/uploads",
-    cta: "Subir una pista",
+    cta: "Crear track",
   },
   {
     title: "2. Completar metadata",
-    description:
-      "Ordena información creativa, técnica, derechos y entregables.",
+    description: "Completa ficha, archivos, licencias y derechos.",
     href: "/admin/tracks",
     cta: "Administrar pistas",
   },

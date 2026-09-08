@@ -81,13 +81,20 @@ El editor quedó reducido a cuatro áreas visibles:
 
 1. **Ficha** (`/edit/creative`): título, artista, BPM, tonalidad, tipo, géneros, subgéneros, moods, usos y categorías.
 2. **Archivos** (`/edit/assets`): assets reales en R2, historial y cargas privadas/públicas.
-3. **Comercial** (`/edit/metadata`): identificadores, licencias, precios, territorios, restricciones y formatos ofrecidos.
+3. **Licencias** (`/edit/metadata`): identificadores, licencias, precios, territorios, restricciones y formatos ofrecidos.
 4. **Derechos** (`/edit/rights`): writers, publishers, titulares master, MFN, one-stop y Content ID.
 
 - Las rutas legacy `/edit`, `/edit/deliverables` y `/edit/review` redirigen a las áreas nuevas; los datos anteriores no se borraron.
 - Se eliminó la edición por sintaxis de texto de Entregables. Los formatos comerciales se seleccionan explícitamente: MP3, WAV, Stems, Trackouts, Instrumental, Alt Mix y Cutdowns.
 - Migración aplicada: `20260908093000_track_delivery_formats` agrega `Track.deliveryFormats`.
 - La UI debe mantener densidad razonable: grillas y cards compactas; evitar campos de ancho completo si su contenido no lo justifica.
+
+### Navegación Admin y clasificación
+
+- La navegación principal se simplificó a: **Inicio** (Panel principal), **Catálogo** (Tracks, Colecciones, Clasificación), **Comercial** (Solicitudes, Licencias, Contratos), **Contenido** (Promociones) y **Administración** (Usuarios).
+- Desde **Tracks** existe la acción `+ Nuevo track`, que usa el flujo vigente `/admin/uploads`. “Subir audio” ya no aparece como entrada separada.
+- Sound Kits, Servicios, Soporte, Mi cuenta y la ruta independiente de Roles se ocultaron del sidebar, pero sus rutas, componentes, modelos y datos no se eliminaron. La matriz de roles sigue accesible desde **Usuarios**.
+- `/admin/classification` es una vista de solo lectura de `Tag` y del vocabulario legacy `Mood`; géneros y subgéneros siguen viviendo en `Track`. No se consolidaron ni migraron vocabularios.
 
 ### Ficha pública y descargas de prueba
 

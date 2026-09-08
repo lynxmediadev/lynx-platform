@@ -15,7 +15,7 @@
  */
 
 import Link from "next/link";
-import { Music2 } from "lucide-react";
+import { Music2, Plus } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import {
@@ -156,8 +156,8 @@ export default async function Page(props: {
               aria-hidden="true"
             />
           }
-          title="Análisis técnico de tracks"
-          subtitle="Estado técnico, métricas de audio y acceso rápido a ficha"
+          title="Tracks"
+          subtitle="Catálogo, estado técnico y acceso a cada ficha"
           count={
             <AdminStatusBadge>
               Página {page} de {totalPages} · {total} track
@@ -166,6 +166,12 @@ export default async function Page(props: {
           }
           actionSlot={
             <div className="flex items-center gap-2">
+              <AdminListButton asChild size="pill" surface="background">
+                <Link href="/admin/uploads">
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  Nuevo track
+                </Link>
+              </AdminListButton>
               <AdminListButton asChild size="pill" surface="background">
                 <Link href={buildHref(prevPage)} aria-disabled={page <= 1}>
                   ← Anterior

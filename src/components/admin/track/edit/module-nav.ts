@@ -21,7 +21,7 @@ export function getTrackEditModuleNavItems(
     { id: "assets", label: "Archivos", href: `/admin/tracks/${trackId}/edit/assets`, disabled: shouldDisable("assets") },
     {
       id: "metadata",
-      label: "Comercial",
+      label: "Licencias",
       href: `/admin/tracks/${trackId}/edit/metadata`,
       disabled: shouldDisable("metadata"),
     },
